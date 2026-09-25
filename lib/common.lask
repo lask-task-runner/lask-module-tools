@@ -1,0 +1,55 @@
+// What every tool in lib/ is built from.
+//
+// These declarations are public within this tree so that each tool's
+// file can import them. A consumer reaches only what main.lask
+// re-exports — `ToolSetup` and `home` — because an import of a
+// dependency reaches its main.lask and nothing else (lask spec ch. 5).
+
+// What one tool needs from an environment it runs in, for another
+// tool's environment to carry: the Terraform AWS provider needs what
+// the AWS CLI needs. Pass it to a tool's `--with`.
+type ToolSetup = Record<env: Map<String>, volumes: Array<String>>
+
+// A path under the home directory of the user running Lask.
+//
+// Lask starts `docker` without a shell, so `~` in a mount would reach
+// the daemon as a directory named `~`; build the path with this.
+//
+// @param path  Relative to the home directory, e.g. ".aws".
+// @return The absolute host path.
+// @example lask eval home .aws
+home(path: String): String = "#{get_env("HOME")}/#{path}"
+
+// Drops the entries left null, so an argument that was not given sets
+// nothing. "" is a value: it sets its variable to the empty string.
+vars(m: Map<String | Null>): Map<String> =
+  cast(from_entries(filter(entries(m), \(e: Record<key: String, value: String | Null>) -> e.value != null)))
+
+// A host directory mounted at target, or no mount when dir is null.
+mount(dir: String | Null, target: String): Array<String> = case (dir) {
+  Null -> []
+  else -> ["#{dir}:#{target}"]
+}
+
+// A secret is a String (lask spec 6.10: a `!!` binding cannot be
+// String | Null), so a secret parameter still says "not given" with "".
+// This turns that into the null the other parameters use.
+unset_if_empty(v: String): String | Null = if (v == "") { null } else { v }
+
+// The variables of an environment, in layers where a later one wins:
+// the tool's own defaults, then --extra_env, then each setup of --with,
+// then the tool's named parameters, which arrive with the ones not
+// given already left out (vars). Named parameters are what the
+// caller said most specifically; --extra_env sits below --with so it
+// can override a default but cannot undo a credential a setup supplies.
+layered_env(
+  defaults: Map<String>,
+  extra: Map<String>,
+  with: Array<ToolSetup>,
+  own: Map<String>
+): Map<String> =
+  merge(reduce(with, merge(defaults, extra), \(acc: Map<String>, s: ToolSetup) -> merge(acc, s.env)), own)
+
+// The mounts of an environment: those of each setup, then its own.
+layered_volumes(with: Array<ToolSetup>, own: Array<String>): Array<String> =
+  concat_array(flat_map(with, \(s: ToolSetup) -> s.volumes), own)

@@ -1,0 +1,122 @@
+// Self-test of the environments in main.lask.
+//
+// An environment is a data value that compares structurally, so every
+// case here states the exact environment it expects, and none of it
+// needs Docker:
+//
+//   lask eval --module test/selftest.lask all
+//
+// `smoke` is the exception: it runs the AWS CLI, and so needs Docker.
+//
+//   lask eval --module test/selftest.lask smoke
+
+import { aws, aws_setup, home, ToolSetup } from "../main.lask"
+
+// The declarations must be accepted, not only the calls: a command's
+// environment may reach no effect (lask spec ch. 5).
+command { "aws" } on aws(profile = "selftest", config_dir = home(".aws"))
+
+internal expect(name: String, ok: Bool): String =
+  if (ok) { "ok  #{name}" } else { fail(error(1, "FAIL #{name}")) }
+
+// An expected setup. A record literal alone would be inferred as a
+// record of its own fields; the parameters give it the setup's type.
+internal setup(env: Map<String>, volumes: Array<String>): ToolSetup = {env: env, volumes: volumes}
+
+// Every case, in order; fails at the first mismatch.
+//
+// @return One line per case.
+all(): Array<String> = [
+  expect(
+    "a bare call sets only the pager",
+    aws() == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": ""}, volumes = [])
+  ),
+  expect(
+    "a parameter left null sets nothing",
+    aws(profile = null, region = null, config_dir = null) == aws()
+  ),
+  expect(
+    "an empty string is a value, and sets its variable",
+    aws(region = "")
+      == #docker(
+        "amazon/aws-cli:2.36.41",
+        env = {"AWS_PAGER": "", "AWS_REGION": "", "AWS_DEFAULT_REGION": ""},
+        volumes = []
+      )
+  ),
+  expect(
+    "a secret left \"\" sets nothing, since a secret cannot be null",
+    aws(secret_access_key = "", session_token = "") == aws()
+  ),
+  expect(
+    "the region sets both variables the CLI and the SDKs read",
+    aws(profile = "dev", region = "ap-northeast-1")
+      == #docker(
+        "amazon/aws-cli:2.36.41",
+        env = {
+          "AWS_PAGER": "",
+          "AWS_PROFILE": "dev",
+          "AWS_REGION": "ap-northeast-1",
+          "AWS_DEFAULT_REGION": "ap-northeast-1"
+        },
+        volumes = []
+      )
+  ),
+  expect(
+    "credentials and an endpoint become variables",
+    aws(access_key_id = "AKIA", secret_access_key = "s3cr3t", session_token = "tok", endpoint_url = "http://localstack:4566")
+      == #docker(
+        "amazon/aws-cli:2.36.41",
+        env = {
+          "AWS_PAGER": "",
+          "AWS_ACCESS_KEY_ID": "AKIA",
+          "AWS_SECRET_ACCESS_KEY": "s3cr3t",
+          "AWS_SESSION_TOKEN": "tok",
+          "AWS_ENDPOINT_URL": "http://localstack:4566"
+        },
+        volumes = []
+      )
+  ),
+  expect(
+    "the config directory is mounted read-only",
+    aws(config_dir = "/h/.aws")
+      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": ""}, volumes = ["/h/.aws:/root/.aws:ro"])
+  ),
+  expect(
+    "--extra_env overrides a default",
+    aws(extra_env = {"AWS_PAGER": "less", "AWS_MAX_ATTEMPTS": "5"})
+      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": "less", "AWS_MAX_ATTEMPTS": "5"}, volumes = [])
+  ),
+  expect(
+    "a setup in --with wins over --extra_env, and brings its mounts",
+    aws(extra_env = {"AWS_PROFILE": "extra"}, with = [aws_setup(profile = "with", config_dir = "/h/.aws")])
+      == #docker(
+        "amazon/aws-cli:2.36.41",
+        env = {"AWS_PAGER": "", "AWS_PROFILE": "with"},
+        volumes = ["/h/.aws:/root/.aws:ro"]
+      )
+  ),
+  expect(
+    "a named parameter wins over --with",
+    aws(profile = "own", with = [aws_setup(profile = "with")])
+      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": "", "AWS_PROFILE": "own"}, volumes = [])
+  ),
+  expect(
+    "a setup carries no default of the tool",
+    aws_setup(profile = "dev") == setup({"AWS_PROFILE": "dev"}, [])
+  ),
+  expect(
+    "home() builds a path under the home directory",
+    home(".aws") == "#{get_env("HOME")}/.aws"
+  )
+]
+
+// Runs the CLI in the environment, through the declared command word.
+// Needs Docker.
+//
+// @return The CLI's version line.
+smoke(): String = do {
+  r = $* aws --version
+  if (r.code != 0) { return fail(error(r.code, r.stderr)) }
+  trim(if (r.stdout != "") { r.stdout } else { r.stderr })
+}

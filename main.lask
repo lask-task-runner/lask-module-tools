@@ -1,0 +1,16 @@
+// lask-module-tools — pinned execution environments for the tools a
+// Lask task runs.
+//
+// Each tool is a function returning an Environment. Its keyword
+// parameters are what the tool needs from the environment it runs in:
+// the variables it reads, its credentials, and the host directories it
+// has to see. A parameter left "" sets nothing. Design: doc/design.md.
+//
+// This file is the public API: each tool lives in lib/<tool>.lask and
+// is re-exported here. Anything in lib/ that is not listed below stays
+// out of reach of a consumer.
+
+export { ToolSetup, home } from "./lib/common.lask"
+
+// AWS CLI v2.
+export { aws, aws_setup } from "./lib/aws.lask"

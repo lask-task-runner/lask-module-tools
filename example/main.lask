@@ -1,0 +1,58 @@
+// Using the AWS environment from a project.
+//
+// A project depends on this module as `tools`
+// (`lask deps add tools --git ...`) and imports it as a namespace. The
+// relative import below stands in for that here.
+//
+//   lask check --module example/main.lask
+//   lask cmd --module example/main.lask aws s3 ls
+//   lask run --module example/main.lask whoami
+
+import * as tools from "../main.lask"
+
+// Locally: log in on the host first (`aws sso login --profile dev`), then
+// let the container read the result. The environment is evaluated when a
+// command runs, so HOME is read then, on the machine that runs it.
+command { "aws" } on tools.aws(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
+
+// Which identity the declared environment runs as.
+//
+// @return The caller identity, as JSON.
+whoami(): String = $ aws sts get-caller-identity --output json
+
+// In CI: credentials arrive as variables of the Lask process, from an
+// OIDC role or a secret store. A container sees none of them unless
+// they are passed, and `!!` keeps them out of the command log. A
+// variable that is not set passes null, which sets nothing; a secret
+// cannot be null (lask spec 6.10), so it passes "" instead.
+//
+// @param region  Where to run.
+// @return The caller identity, as JSON.
+ci_whoami(
+  --region: String = "ap-northeast-1",
+  --access_key_id: String | Null = find_env("AWS_ACCESS_KEY_ID"),
+  --secret_access_key!!: String = get_env_or("AWS_SECRET_ACCESS_KEY", ""),
+  --session_token!!: String = get_env_or("AWS_SESSION_TOKEN", "")
+): String = do {
+  box = tools.aws(
+    region = region,
+    access_key_id = access_key_id,
+    secret_access_key = secret_access_key,
+    session_token = session_token
+  )
+  $[box] aws sts get-caller-identity --output json
+}
+
+// Against LocalStack instead of AWS.
+//
+// @param endpoint  Where LocalStack listens, as the container sees it.
+// @return The buckets LocalStack holds.
+local_buckets(--endpoint: String = "http://host.docker.internal:4566"): String = do {
+  box = tools.aws(
+    region = "us-east-1",
+    endpoint_url = endpoint,
+    access_key_id = "test",
+    secret_access_key = "test"
+  )
+  $[box] aws s3 ls
+}
