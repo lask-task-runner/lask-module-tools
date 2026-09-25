@@ -208,8 +208,7 @@ Defaults: `PYTHONUNBUFFERED=1`, so a playbook's output reaches the command log a
 | `--npm_token!!` | `NPM_TOKEN`, for an `.npmrc` that reads `${NPM_TOKEN}` |
 | `--cache_dir` | mounts at `/cache`; `npm_config_cache=/cache/npm` |
 
-Default: `npm_config_update_notifier=false`, so npm prints no update notice into
-the command log.
+Default: `npm_config_update_notifier=false`, so npm prints no update notice into the command log.
 
 ### 5.6 `python` (implemented)
 

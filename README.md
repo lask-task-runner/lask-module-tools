@@ -81,8 +81,7 @@ More in [example/main.lask](example/main.lask).
 
 ### `python` — Python, with pip
 
-Image `python:<tag>`, `3.12.14-alpine3.24` unless `--tag` says otherwise. Python works
-as it is, so its command words are exported — import the ones you run:
+Image `python:<tag>`, `3.12.14-alpine3.24` unless `--tag` says otherwise. Python works as it is, so its command words are exported — import the ones you run:
 
 ```lask
 import command { "python", "pip" } from "tools"
@@ -98,18 +97,13 @@ test(): String = $ pip install -q -r requirements.txt && python -m unittest
 | `--cache_dir` | mounts `<dir>` at `/cache`; `PIP_CACHE_DIR=/cache/pip` |
 | `--with`, `--extra_env` | as above |
 
-Defaults: `PYTHONUNBUFFERED=1`, so output reaches the command log as it happens;
-`PYTHONDONTWRITEBYTECODE=1`, so no root-owned `__pycache__` is left in the project;
-`PIP_DISABLE_PIP_VERSION_CHECK=1`.
+Defaults: `PYTHONUNBUFFERED=1`, so output reaches the command log as it happens; `PYTHONDONTWRITEBYTECODE=1`, so no root-owned `__pycache__` is left in the project; `PIP_DISABLE_PIP_VERSION_CHECK=1`.
 
-Exported words: `python`, `python3`, `pip`, `pip3`, on `python()` at its defaults.
-For another release or a cache, declare the words yourself:
-`command { "python", "pip" } on tools.python(tag = "3.13.5-alpine3.22")`.
+Exported words: `python`, `python3`, `pip`, `pip3`, on `python()` at its defaults. For another release or a cache, declare the words yourself: `command { "python", "pip" } on tools.python(tag = "3.13.5-alpine3.22")`.
 
 ### `node` — Node.js, with npm and npx
 
-Image `node:<tag>`, `24.21.0-alpine3.24` (an LTS release) unless `--tag` says
-otherwise. Its command words are exported too:
+Image `node:<tag>`, `24.21.0-alpine3.24` (an LTS release) unless `--tag` says otherwise. Its command words are exported too:
 
 ```lask
 import command { "node", "npm", "npx" } from "tools"
@@ -127,15 +121,11 @@ build(): String = $ cd web && npm ci && npm run build
 | `--cache_dir` | mounts `<dir>` at `/cache`; `npm_config_cache=/cache/npm` |
 | `--with`, `--extra_env` | as above |
 
-Default: `npm_config_update_notifier=false`, so npm prints no update notice into the
-command log.
+Default: `npm_config_update_notifier=false`, so npm prints no update notice into the command log.
 
-Exported words: `node`, `npm`, `npx`, `corepack`, on `node()` at its defaults. Declare
-them yourself for another release: `command { "node", "npm", "npx" } on
-tools.node(tag = "22.23.3-alpine3.24")`.
+Exported words: `node`, `npm`, `npx`, `corepack`, on `node()` at its defaults. Declare them yourself for another release: `command { "node", "npm", "npx" } on tools.node(tag = "22.23.3-alpine3.24")`.
 
-A command string runs in one environment, so `$ python … && node …` is a conflict:
-split it, or give the environment with `$[...]`.
+A command string runs in one environment, so `$ python … && node …` is a conflict: split it, or give the environment with `$[...]`.
 
 ## Layout
 
