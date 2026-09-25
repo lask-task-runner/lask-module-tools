@@ -1,0 +1,189 @@
+// Self-test of the environments in main.lask.
+//
+// An environment is a data value that compares structurally, so every
+// case here states the exact environment it expects, and none of it
+// needs Docker:
+//
+//   lask eval --module test/selftest.lask all
+//
+// `smoke` is the exception: it runs each tool, and so needs Docker and
+// the images, which a run never pulls.
+//
+//   docker pull amazon/aws-cli:2.36.41
+//   docker pull python:3.12.14-alpine3.24
+//   docker pull node:24.21.0-alpine3.24
+//   lask eval --module test/selftest.lask smoke
+
+import { aws, aws_setup, home, python, node, ToolSetup } from "../main.lask"
+
+// The command words python and node export arrive by name, with the
+// environment they were declared on.
+import command { "python", "node" } from "../main.lask"
+
+// The declarations must be accepted, not only the calls: a command's
+// environment may reach no effect (lask spec ch. 5).
+command { "aws" } on aws(profile = "selftest", config_dir = home(".aws"))
+
+internal expect(name: String, ok: Bool): String =
+  if (ok) { "ok  #{name}" } else { fail(error(1, "FAIL #{name}")) }
+
+// An expected setup. A record literal alone would be inferred as a
+// record of its own fields; the parameters give it the setup's type.
+internal setup(env: Map<String>, volumes: Array<String>): ToolSetup = {env: env, volumes: volumes}
+
+// Every case, in order; fails at the first mismatch.
+//
+// @return One line per case.
+all(): Array<String> = [
+  expect(
+    "a bare call sets only the pager",
+    aws() == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": ""}, volumes = [])
+  ),
+  expect(
+    "--tag picks the release of the image",
+    aws(tag = "2.37.0") == #docker("amazon/aws-cli:2.37.0", env = {"AWS_PAGER": ""}, volumes = [])
+  ),
+  expect(
+    "a parameter left null sets nothing",
+    aws(profile = null, region = null, config_dir = null) == aws()
+  ),
+  expect(
+    "an empty string is a value, and sets its variable",
+    aws(region = "")
+      == #docker(
+        "amazon/aws-cli:2.36.41",
+        env = {"AWS_PAGER": "", "AWS_REGION": "", "AWS_DEFAULT_REGION": ""},
+        volumes = []
+      )
+  ),
+  expect(
+    "a secret left null sets nothing",
+    aws(secret_access_key = null, session_token = null) == aws()
+  ),
+  expect(
+    "the region sets both variables the CLI and the SDKs read",
+    aws(profile = "dev", region = "ap-northeast-1")
+      == #docker(
+        "amazon/aws-cli:2.36.41",
+        env = {
+          "AWS_PAGER": "",
+          "AWS_PROFILE": "dev",
+          "AWS_REGION": "ap-northeast-1",
+          "AWS_DEFAULT_REGION": "ap-northeast-1"
+        },
+        volumes = []
+      )
+  ),
+  expect(
+    "credentials and an endpoint become variables",
+    aws(access_key_id = "AKIA", secret_access_key = "s3cr3t", session_token = "tok", endpoint_url = "http://localstack:4566")
+      == #docker(
+        "amazon/aws-cli:2.36.41",
+        env = {
+          "AWS_PAGER": "",
+          "AWS_ACCESS_KEY_ID": "AKIA",
+          "AWS_SECRET_ACCESS_KEY": "s3cr3t",
+          "AWS_SESSION_TOKEN": "tok",
+          "AWS_ENDPOINT_URL": "http://localstack:4566"
+        },
+        volumes = []
+      )
+  ),
+  expect(
+    "the config directory is mounted read-only",
+    aws(config_dir = "/h/.aws")
+      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": ""}, volumes = ["/h/.aws:/root/.aws:ro"])
+  ),
+  expect(
+    "--extra_env overrides a default",
+    aws(extra_env = {"AWS_PAGER": "less", "AWS_MAX_ATTEMPTS": "5"})
+      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": "less", "AWS_MAX_ATTEMPTS": "5"}, volumes = [])
+  ),
+  expect(
+    "a setup in --with wins over --extra_env, and brings its mounts",
+    aws(extra_env = {"AWS_PROFILE": "extra"}, with = [aws_setup(profile = "with", config_dir = "/h/.aws")])
+      == #docker(
+        "amazon/aws-cli:2.36.41",
+        env = {"AWS_PAGER": "", "AWS_PROFILE": "with"},
+        volumes = ["/h/.aws:/root/.aws:ro"]
+      )
+  ),
+  expect(
+    "a named parameter wins over --with",
+    aws(profile = "own", with = [aws_setup(profile = "with")])
+      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": "", "AWS_PROFILE": "own"}, volumes = [])
+  ),
+  expect(
+    "a setup carries no default of the tool",
+    aws_setup(profile = "dev") == setup({"AWS_PROFILE": "dev"}, [])
+  ),
+  expect(
+    "home() builds a path under the home directory",
+    home(".aws") == "#{get_env("HOME")}/.aws"
+  ),
+  expect(
+    "python runs with unbuffered output, no bytecode and no pip version check",
+    python()
+      == #docker(
+        "python:3.12.14-alpine3.24",
+        env = {"PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1", "PIP_DISABLE_PIP_VERSION_CHECK": "1"},
+        volumes = []
+      )
+  ),
+  expect(
+    "python: --tag, an index and a cache directory",
+    python(tag = "3.13.5-alpine3.22", index_url = "https://pypi.example/simple", cache_dir = "/h/cache")
+      == #docker(
+        "python:3.13.5-alpine3.22",
+        env = {
+          "PYTHONUNBUFFERED": "1",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+          "PIP_INDEX_URL": "https://pypi.example/simple",
+          "PIP_CACHE_DIR": "/cache/pip"
+        },
+        volumes = ["/h/cache:/cache"]
+      )
+  ),
+  expect(
+    "node runs without npm's update notice",
+    node() == #docker("node:24.21.0-alpine3.24", env = {"npm_config_update_notifier": "false"}, volumes = [])
+  ),
+  expect(
+    "node: NODE_ENV, a token and a cache directory",
+    node(node_env = "production", npm_token = "t0k3n", cache_dir = "/h/cache")
+      == #docker(
+        "node:24.21.0-alpine3.24",
+        env = {
+          "npm_config_update_notifier": "false",
+          "NODE_ENV": "production",
+          "NPM_TOKEN": "t0k3n",
+          "npm_config_cache": "/cache/npm"
+        },
+        volumes = ["/h/cache:/cache"]
+      )
+  ),
+  expect(
+    "a python or node parameter left null sets nothing",
+    python(index_url = null, cache_dir = null) == python() && node(registry = null, node_options = null) == node()
+  )
+]
+
+// A program's version line, run through its command word. Some print
+// it on stderr.
+internal version_of(r: CommandResult): String = do {
+  if (r.code != 0) { return fail(error(r.code, r.stderr)) }
+  trim(if (r.stdout != "") { r.stdout } else { r.stderr })
+}
+
+// Runs each tool through its command word: aws as declared here, python
+// and node as the module exports them. Needs Docker, and the images at
+// their default tags pulled.
+//
+// @return One version line per tool.
+smoke(): Array<String> = do {
+  a = $* aws --version
+  p = $* python --version
+  n = $* node --version
+  [version_of(a), version_of(p), version_of(n)]
+}

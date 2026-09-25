@@ -1,0 +1,96 @@
+// The AWS CLI v2.
+
+import { ToolSetup, vars, mount, layered_env, layered_volumes } from "./common.lask"
+
+// What the AWS CLI and SDKs need from an environment: a profile, a
+// region, an endpoint, credentials, and the directory profiles live in.
+// Give it to another tool's `--with` — the Terraform AWS provider, an
+// Ansible dynamic inventory — to run that tool with the same account.
+//
+// @param profile            AWS_PROFILE: a profile from the config directory.
+// @param region             AWS_REGION and AWS_DEFAULT_REGION; the CLI and the SDKs read different ones.
+// @param endpoint_url       AWS_ENDPOINT_URL, for LocalStack or another AWS-compatible endpoint.
+// @param access_key_id      AWS_ACCESS_KEY_ID.
+// @param secret_access_key  AWS_SECRET_ACCESS_KEY; masked in the command log.
+// @param session_token      AWS_SESSION_TOKEN; masked in the command log.
+// @param config_dir         Host directory mounted read-only as /root/.aws, usually home(".aws").
+// @return The variables and mounts, for a tool's --with.
+aws_setup(
+  --profile: String | Null = null,
+  --region: String | Null = null,
+  --endpoint_url: String | Null = null,
+  --access_key_id: String | Null = null,
+  --secret_access_key!!: String | Null = null,
+  --session_token!!: String | Null = null,
+  --config_dir: String | Null = null
+): ToolSetup = {
+  env: vars({
+    "AWS_PROFILE": profile,
+    "AWS_REGION": region,
+    "AWS_DEFAULT_REGION": region,
+    "AWS_ENDPOINT_URL": endpoint_url,
+    "AWS_ACCESS_KEY_ID": access_key_id,
+    "AWS_SECRET_ACCESS_KEY": secret_access_key,
+    "AWS_SESSION_TOKEN": session_token
+  }),
+  volumes: mount(config_dir, "/root/.aws:ro")
+}
+
+// The AWS CLI v2, configured by its parameters.
+//
+// The image is amazon/aws-cli at --tag, 2.36.41 unless another is
+// given. The reference is built from the argument when the function
+// runs, so Lask treats it as a reference computed at run time (lask
+// spec 10.3): `lask env build` does not pull or pin it. Pull the image
+// once with `docker pull amazon/aws-cli:<tag>`; a run uses it as it is
+// on the daemon, and never pulls.
+//
+// Locally, log in on the host (`aws sso login`) and mount the result
+// with `config_dir = home(".aws")`; the mount is read-only, so an
+// expired token fails rather than being refreshed, and the fix is to
+// log in again on the host. In CI, pass the three credentials instead.
+// A container sees no variable of the host unless it is given here.
+//
+// The pager is off by default (AWS_PAGER=""), so output is never held
+// behind `less`; --extra_env can turn it back on.
+//
+// @param tag                The amazon/aws-cli image tag to run.
+// @param profile            AWS_PROFILE: a profile from the config directory.
+// @param region             AWS_REGION and AWS_DEFAULT_REGION.
+// @param endpoint_url       AWS_ENDPOINT_URL, for LocalStack or another AWS-compatible endpoint.
+// @param access_key_id      AWS_ACCESS_KEY_ID.
+// @param secret_access_key  AWS_SECRET_ACCESS_KEY; masked in the command log.
+// @param session_token      AWS_SESSION_TOKEN; masked in the command log.
+// @param config_dir         Host directory mounted read-only as /root/.aws, usually home(".aws").
+// @param with               Setups of other tools this environment should also carry.
+// @param extra_env          Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "aws" } on ...` or `$[...]`.
+// @example lask eval aws --profile dev --region ap-northeast-1
+// @example lask eval aws --tag 2.36.41 --profile dev
+aws(
+  --tag: String = "2.36.41",
+  --profile: String | Null = null,
+  --region: String | Null = null,
+  --endpoint_url: String | Null = null,
+  --access_key_id: String | Null = null,
+  --secret_access_key!!: String | Null = null,
+  --session_token!!: String | Null = null,
+  --config_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = do {
+  own = aws_setup(
+    profile = profile,
+    region = region,
+    endpoint_url = endpoint_url,
+    access_key_id = access_key_id,
+    secret_access_key = secret_access_key,
+    session_token = session_token,
+    config_dir = config_dir
+  )
+  return #docker(
+    "amazon/aws-cli:#{tag}",
+    env = layered_env({"AWS_PAGER": ""}, extra_env, with, own.env),
+    volumes = layered_volumes(with, own.volumes)
+  )
+}
