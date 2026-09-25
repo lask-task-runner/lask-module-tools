@@ -27,3 +27,16 @@ export { terraform } from "./lib/terraform.lask"
 // Node.js, with npm and npx. Its command words are exported as well.
 export { node } from "./lib/node.lask"
 export command { "node", "npm", "npx", "corepack" } from "./lib/node.lask"
+
+// Playwright, with its browsers. Its tests run through npx, which is
+// node's word, so it exports none: give it with `$[tools.playwright()]`.
+export { playwright } from "./lib/playwright.lask"
+
+// curl, jq and the everyday command-line tools, in one image. Their
+// command words are exported as well.
+export { unix } from "./lib/unix.lask"
+export command {
+  "curl", "wget", "openssl",
+  "jq", "yq", "envsubst",
+  "tar", "gzip", "xz", "bzip2", "zip", "unzip"
+} from "./lib/unix.lask"

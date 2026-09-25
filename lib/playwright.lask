@@ -1,0 +1,60 @@
+// Playwright, with the browsers it drives.
+
+import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Playwright at --tag: Node.js with Chromium, Firefox and WebKit and
+// the libraries they need, configured by its parameters.
+//
+// The image is mcr.microsoft.com/playwright at --tag, v1.63.0-noble
+// (Ubuntu 24.04) unless another is given. Pick the tag of the
+// @playwright/test version the project installs: the image carries the
+// browsers of one Playwright release, and another release does not find
+// them. The browsers are never downloaded here
+// (PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1), so a mismatch fails at once
+// rather than fetching browsers into the container on every run. The
+// reference is built from the argument when the function runs, so
+// `lask env build` does not pull or pin it (lask spec 10.3): pull it
+// once with `docker pull mcr.microsoft.com/playwright:<tag>`, and a run
+// never pulls.
+//
+// The container runs with an init process, which reaps the browser's
+// child processes, and with a larger /dev/shm than Docker's 64MB, which
+// Chromium otherwise runs out of.
+//
+// The project's own Playwright runs through npx, so no command word is
+// exported: `npx` is node's. Give the environment where it is used,
+// `$[tools.playwright()] npx playwright test`.
+//
+// @param tag        The mcr.microsoft.com/playwright image tag to run.
+// @param shm_size   Size of /dev/shm; null leaves Docker's default.
+// @param registry   npm_config_registry: the registry npm installs from.
+// @param npm_token  NPM_TOKEN, for an .npmrc that reads ${NPM_TOKEN}; masked in the command log.
+// @param cache_dir  Host directory mounted at /cache, where npm keeps its cache (npm_config_cache).
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable, e.g. the base URL the tests read; below --with and the named parameters.
+// @return The environment, for `$[...]` or `command { "npx" } on ...`.
+// @example lask eval playwright --tag v1.62.1-noble
+playwright(
+  --tag: String = "v1.63.0-noble",
+  --shm_size: String | Null = "1g",
+  --registry: String | Null = null,
+  --npm_token!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "mcr.microsoft.com/playwright:#{tag}",
+  env = layered_env(
+    {"PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1", "npm_config_update_notifier": "false"},
+    extra_env,
+    with,
+    vars({
+      "npm_config_registry": registry,
+      "NPM_TOKEN": npm_token,
+      "npm_config_cache": in_cache(cache_dir, "npm")
+    })
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  init = true,
+  shm_size = shm_size
+)

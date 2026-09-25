@@ -14,7 +14,7 @@ The tools themselves are not wrapped: `$ aws s3 sync ...` is already the cleares
 
 Requires a Lask whose container options take `null` (lask#49) and accept a typed list or table (lask#50), and whose secrets may be `null` (lask#51).
 
-Pull a tool's image once before the first command that uses it, e.g. `docker pull amazon/aws-cli:2.36.41`. A tool builds its image reference from `--tag` when it runs, so Lask treats the reference as computed at run time (lask spec 10.3): `lask env build` cannot pull or pin it, and a run never pulls.
+Pull a tool's image once before the first command that uses it, e.g. `docker pull amazon/aws-cli:2.36.41`. A tool builds its image reference from `--tag` when it runs, so Lask treats the reference as computed at run time (lask spec 10.3): `lask env build` cannot pull or pin it, and a run never pulls. `unix` is the exception: it is built from a recipe in this module, and `lask deps sync` or `lask env build` builds it.
 
 ## Install
 
@@ -165,9 +165,45 @@ apply(--db_password!!: String = get_env("DB_PASSWORD")): String = do {
 
 The module exports no `terraform` command word, for the reason `aws` exports none: a provider without credentials fails at the first plan.
 
+### `playwright` — Playwright, with its browsers
+
+Image `mcr.microsoft.com/playwright:<tag>`, `v1.63.0-noble` unless `--tag` says otherwise. Pick the tag of the `@playwright/test` version the project installs: the image carries one release's browsers, and they are never downloaded here, so a mismatch fails at once.
+
+```lask
+e2e(--base_url: String = "http://host.docker.internal:3000"): String =
+  $[tools.playwright(extra_env = {"E2E_BASE_URL": base_url})] cd e2e && npm ci && npx playwright test
+```
+
+| Parameter | Sets |
+|---|---|
+| `--tag` | the image: `mcr.microsoft.com/playwright:<tag>`; default `v1.63.0-noble` |
+| `--shm_size` | the container's `/dev/shm`; default `"1g"`, since Chromium runs out of Docker's 64MB; `null` leaves Docker's |
+| `--registry` | `npm_config_registry` |
+| `--npm_token!!` | `NPM_TOKEN`, for an `.npmrc` that reads `${NPM_TOKEN}` |
+| `--cache_dir` | mounts `<dir>` at `/cache`; `npm_config_cache=/cache/npm` |
+| `--with`, `--extra_env` | as above |
+
+Defaults: `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`, `npm_config_update_notifier=false`, and an init process that reaps the browsers' child processes.
+
+The module exports no command word for it: the tests run through `npx`, which is `node`'s. Give the environment with `$[...]` as above.
+
+### `unix` — curl, jq and the everyday command-line tools
+
+One image with bash, curl, wget, openssl, jq, yq, envsubst, GNU coreutils, findutils, grep, sed, awk, diff, file, tar, gzip, xz, bzip2, zip and unzip. A command string runs in one environment, so a pipeline such as `curl … | jq …` needs both in one image: this is that image.
+
+```lask
+import command { "curl", "jq" } from "tools"
+
+latest(): String = $ curl -fsSL https://api.github.com/repos/hashicorp/terraform/releases/latest | jq -r .tag_name
+```
+
+It is built from a recipe in this module, `lib/images/unix/Dockerfile` (Alpine 3.24, pinned by its digest), so it has no `--tag`, and `lask deps sync` or `lask env build` builds it once per machine. Its parameters are `--with` and `--extra_env` — `extra_env = {"HTTPS_PROXY": "..."}` behind a proxy.
+
+Exported words: `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`, `xz`, `bzip2`, `zip`, `unzip`, on `unix()`. The shell's own words (`grep`, `sed`, `awk`, `sort`, …) are in the image but not exported: every image has them, and importing them would make a string such as `npm test | grep ok` conflict. They run here whenever an exported word selects this environment.
+
 ## Layout
 
-Each tool lives in `lib/<tool>.lask`, built from `lib/common.lask`, and `main.lask` re-exports its public functions. Only what `main.lask` lists reaches a project, and the command line of this repository reaches each of them as well: `lask eval aws --profile dev`, `lask run aws --help`.
+Each tool lives in `lib/<tool>.lask`, built from `lib/common.lask`, and `main.lask` re-exports its public functions. A recipe lives in `lib/images/<tool>/`, since a Dockerfile must be inside the tree of the module that names it. Only what `main.lask` lists reaches a project, and the command line of this repository reaches each of them as well: `lask eval aws --profile dev`, `lask run aws --help`.
 
 ## Testing
 
@@ -175,6 +211,6 @@ Each tool lives in `lib/<tool>.lask`, built from `lib/common.lask`, and `main.la
 lask check                                       # the module
 lask check --module example/main.lask            # a project using it
 lask eval --module test/selftest.lask all        # every environment, compared exactly; no Docker
-lask env build --module test/selftest.lask       # pulls and pins the images the selftest names
+lask env build --module test/selftest.lask       # pulls and pins the images the selftest names, builds unix
 lask eval --module test/selftest.lask smoke      # runs each tool; needs Docker
 ```
