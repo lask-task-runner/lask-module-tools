@@ -6,8 +6,10 @@
 //
 //   lask eval --module test/selftest.lask all
 //
-// `smoke` is the exception: it runs the AWS CLI, and so needs Docker.
+// `smoke` is the exception: it runs the AWS CLI, and so needs Docker
+// and the image, which a run never pulls.
 //
+//   docker pull amazon/aws-cli:2.36.41
 //   lask eval --module test/selftest.lask smoke
 
 import { aws, aws_setup, home, ToolSetup } from "../main.lask"
@@ -32,6 +34,10 @@ all(): Array<String> = [
     aws() == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": ""}, volumes = [])
   ),
   expect(
+    "--tag picks the release of the image",
+    aws(tag = "2.37.0") == #docker("amazon/aws-cli:2.37.0", env = {"AWS_PAGER": ""}, volumes = [])
+  ),
+  expect(
     "a parameter left null sets nothing",
     aws(profile = null, region = null, config_dir = null) == aws()
   ),
@@ -45,8 +51,8 @@ all(): Array<String> = [
       )
   ),
   expect(
-    "a secret left \"\" sets nothing, since a secret cannot be null",
-    aws(secret_access_key = "", session_token = "") == aws()
+    "a secret left null sets nothing",
+    aws(secret_access_key = null, session_token = null) == aws()
   ),
   expect(
     "the region sets both variables the CLI and the SDKs read",
@@ -112,7 +118,7 @@ all(): Array<String> = [
 ]
 
 // Runs the CLI in the environment, through the declared command word.
-// Needs Docker.
+// Needs Docker, and amazon/aws-cli:2.36.41 pulled.
 //
 // @return The CLI's version line.
 smoke(): String = do {

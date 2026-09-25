@@ -2,9 +2,10 @@
 
 `lask-module-tools` is a catalog of execution environments for the tools a Lask
 task most often runs: cloud CLIs, infrastructure tools and language toolchains.
-Each entry pins an image and exposes, as keyword arguments, what a caller has to
-supply for that tool to work — its environment variables, its credentials, and
-the host directories it needs to see.
+Each entry chooses an image, whose release a caller can change, and exposes, as
+keyword arguments, what a caller has to supply for that tool to work — its
+environment variables, its credentials, and the host directories it needs to
+see.
 
 It replaces `lask-aws` and `lask-terraform`, which are to be retired. Their typed
 functions are not carried over.
@@ -13,8 +14,9 @@ Section numbers refer to the Lask specification (`lask/doc/spec.md`).
 
 ## 1. Goals
 
-- One place where the image for each tool is chosen and pinned, so a project
-  never has to find a working image or tag on its own.
+- One place where the image for each tool is chosen, so a project never has to
+  find a working image or tag on its own — and can still run another release
+  of it with `--tag`.
 - Every environment is configured by named arguments, not by knowing which
   variables a tool reads: `aws(profile = "dev")`, not
   `env = {"AWS_PROFILE": "dev"}`.
@@ -38,7 +40,8 @@ Section numbers refer to the Lask specification (`lask/doc/spec.md`).
 Every tool is a function returning an `Environment`:
 
 ```lask
-aws(--profile: String = "", ...): Environment = #docker("amazon/aws-cli:2.36.41", ...)
+aws(--tag: String = "2.36.41", --profile: String | Null = null, ...): Environment =
+  #docker("amazon/aws-cli:#{tag}", ...)
 ```
 
 It serves both ways of running a command, because the environment of a command
@@ -79,20 +82,19 @@ called with no arguments and every argument can be given from the CLI (11.2).
 
 | Kind | Type | Default | Meaning of the default |
 | --- | --- | --- | --- |
+| Image release | `--tag: String` | the release this module was tested against | The tool's image at that tag (§4.4). |
 | Variable the tool reads | `String \| Null` | `null` | Not set. The variable is left out; `""` sets it to the empty string. |
-| Secret | `String`, marked `!!` | `""` | Not set. A `!!` binding has to be a `String` (6.10), so a secret cannot be `null`, and `""` is its "not given". The value is masked in the command log, including in the environment metadata, whatever the caller passed (12.3). |
+| Secret | `String \| Null`, marked `!!` | `null` | Not set, and nothing registered for masking (6.10). A value is masked in the command log, including in the environment metadata, whatever the caller passed (12.3). |
 | Host directory to read | `String \| Null` (a host path) | `null` | Not mounted. Mounted read-only when given. |
 | Cache directory | `--cache_dir: String` | `""` | No cache. When given, mounted read-write at `/cache`, and the tool's cache variables point below it. |
 | Tool-specific table | `Map<String>` | `{}` | Nothing. |
 | Setups from other tools | `--with: Array<ToolSetup>` | `[]` | Nothing (§4.3). |
 | Anything else | `--extra_env: Map<String>` | `{}` | Nothing. The escape hatch for a variable this module has no parameter for. |
 
-`null` meaning "not given" is the convention of the whole module: a parameter
-that was not given is `null`, and the internal `vars` helper drops the `null`
-entries of a variable map. `""` is a value a caller may mean — `AWS_PAGER=""`
-is how the pager is turned off — so it is passed as given. Secrets are the one
-exception above; `unset_if_empty` turns their `""` into the `null` the others
-use.
+`null` meaning "not given" is the convention of the whole module, secrets
+included: a parameter that was not given is `null`, and the internal `vars`
+helper drops the `null` entries of a variable map. `""` is a value a caller may
+mean — `AWS_PAGER=""` is how the pager is turned off — so it is passed as given.
 
 A path is always a host path, and is never expanded: Lask starts `docker`
 without a shell, so `~` reaches the daemon as a directory named `~`. The
@@ -134,33 +136,33 @@ tf = tools.terraform(vars = {"app_version": "1.2.3"}, with = [creds])
 The same `creds` value can be handed to `ansible(with = [...])` for an AWS
 dynamic inventory, and a future `gcloud_setup` slots into the same list.
 
-### 4.4 The Image Is Not a Parameter
+### 4.4 The Image Release Is `--tag`
 
-The image tag is a literal inside each function, never built from an argument:
-
-```lask
-go(--version: String = "1.25"): Environment = #docker("golang:#{version}")
-// lask envs reports: <dynamic> (docker: <dynamic image>)
-```
-
-A dynamic image cannot be enumerated, pinned, or materialized ahead of time
-(10.3, 11.4), which would undo the point of the catalog. The version moves with
-the rev of this module, which the consumer's lock file pins.
-
-If selectable versions are added later, they are selected among literals, which
-keeps every one of them enumerable, and an unknown version fails:
+Each tool fixes the repository of its image and takes the release as `--tag`,
+defaulting to the release this module was written and tested against:
 
 ```lask
-go(--version: String = "1.25"): Environment = do {
-  if (version == "1.25") { return #golang:1.25 }
-  if (version == "1.24") { return #golang:1.24 }
-  fail(error(2, "go: unsupported version '#{version}' (1.25, 1.24)"))
-}
+aws(--tag: String = "2.36.41", ...): Environment = #docker("amazon/aws-cli:#{tag}", ...)
 ```
 
-The cost is that enumeration over-approximates (11.4): every task that reaches
-`go()` is reported as needing both images. So at most two versions per tool, and
-not in v1.
+A project that needs another release says so at the call, and nothing else
+changes: `tools.aws(tag = "2.37.0", profile = "dev")`.
+
+The image reference is built from the argument when the function runs, so Lask
+treats it as a reference computed at run time (10.3, 11.4):
+
+- `lask envs` reports it as `<dynamic>`, and `lask env build` / `lask deps sync`
+  neither pull nor pin it.
+- A run uses the image as it is on the daemon, and never pulls it: an image that
+  is not there is `E-IO-IMAGE-MISSING`, whose diagnostic says to pull it. A
+  project pulls each tool's image once, `docker pull amazon/aws-cli:2.36.41`,
+  and again when it changes `--tag`.
+- The lock does not record the image's digest. The tag — an exact one, §5 — is
+  what fixes the image, as far as the registry keeps it where it is.
+
+A tool built from a recipe (§5.3) has no `--tag`. Its version is a build
+argument, and build arguments are literals (10.2), since they decide which image
+is built before anything runs. Its recipe is pinned the way every recipe is.
 
 ### 4.5 Container Options
 
@@ -177,28 +179,30 @@ for §11's root-owned files — adds the parameter and passes it through.
 | `aws` | `amazon/aws-cli:2.36.41` | none (§3) | **implemented** |
 | `terraform` | `hashicorp/terraform:1.16.2` | none — it needs provider credentials | planned |
 | `ansible` | recipe `images/ansible/Dockerfile` | none — it needs an inventory | planned |
-| `go` | `golang:<pin>` | `go`, `gofmt` | planned |
-| `node` | `node:<pin>-alpine<pin>` | `node`, `npm`, `npx`, `corepack` | planned |
+| `go` | `golang:<tag>` | `go`, `gofmt` | planned |
+| `node` | `node:<tag>` | `node`, `npm`, `npx`, `corepack` | planned |
 | `python` | `python:3.12.14-alpine3.24` | `python`, `python3`, `pip`, `pip3` | planned |
-| `java` | `eclipse-temurin:<21 pin>-jdk` | `java`, `javac`, `jar` | planned |
-| `maven` | `maven:<3.9 pin>-eclipse-temurin-21` | `mvn` | planned |
-| `gradle` | `gradle:<8 pin>-jdk21` | `gradle` | planned |
-| `cc` | `gcc:<pin>` | `gcc`, `g++`, `cc`, `c++`, `make` | planned |
+| `java` | `eclipse-temurin:<tag>` (21, JDK) | `java`, `javac`, `jar` | planned |
+| `maven` | `maven:<tag>` (3.9, Temurin 21) | `mvn` | planned |
+| `gradle` | `gradle:<tag>` (8, JDK 21) | `gradle` | planned |
+| `cc` | `gcc:<tag>` | `gcc`, `g++`, `cc`, `c++`, `make` | planned |
 
-`<pin>` is chosen when the entry is implemented, with these rules:
+The default of each tool's `--tag` is chosen when the entry is implemented, with
+these rules:
 
-- An exact tag, down to the patch release and the base-image suffix. The lock
-  pins the digest a tag resolved to (lask#47), so a project does not move when
-  the tag does; the exact tag is what says, to a reader, which release it is.
+- An exact tag, down to the patch release and the base-image suffix, as the
+  default of `--tag`. The reference is computed at run time, so the lock does
+  not pin its digest (§4.4): the exact tag is what fixes the image.
 - A release still in support. In particular, not `node:20.20.2-alpine3.23`,
   which the `lask` examples still use: Node 20 reached end of life on
   2026-04-30.
-- The Ansible recipe builds from the same Python pin as `python`.
+- The Ansible recipe builds from the same Python image as `python`.
 
 ### 5.1 `aws` / `aws_setup` (implemented)
 
 | Parameter | Sets |
 | --- | --- |
+| `--tag` | the image, `amazon/aws-cli:<tag>`; default `2.36.41` |
 | `--profile` | `AWS_PROFILE` |
 | `--region` | `AWS_REGION` and `AWS_DEFAULT_REGION` — the CLI and the SDKs read different ones |
 | `--endpoint_url` | `AWS_ENDPOINT_URL` — LocalStack or another AWS-compatible endpoint |
@@ -235,8 +239,10 @@ bound it with `!!` — masking matches values, wherever they end up.
 
 ### 5.3 `ansible`
 
-A recipe, since there is no official image: the Python pin plus `ansible-core`,
-whose version is a build argument and so part of the recipe hash (10.3).
+A recipe, since there is no official image: the Python image plus
+`ansible-core`, whose version is a build argument and so part of the recipe hash
+(10.3). It therefore takes no `--tag` (§4.4); a new version is a new release of
+this module.
 
 | Parameter | Sets |
 | --- | --- |
@@ -360,22 +366,25 @@ reaches a declared one: `lask eval aws --profile dev`, `lask run aws --help`.
 ## 8. Testing
 
 1. **Static gate.** `lask check` on `main.lask`, `example/main.lask` and
-   `test/selftest.lask`, and `lask envs` on `example/` to confirm every image is
-   enumerated concretely, never as `<dynamic>`.
+   `test/selftest.lask`. (`lask envs` reports each tool's image as `<dynamic>`:
+   its reference is built from `--tag`, §4.4.)
 2. **Exact environments, without Docker.** An environment compares structurally,
    so `test/selftest.lask` states each expected environment in full and compares
-   with `==`: which variables are set, that `""` leaves one out, the precedence
-   of §4.2, and the mounts. `lask eval --module test/selftest.lask all`.
+   with `==`: the image `--tag` picks, which variables are set, that `null` leaves
+   one out while `""` sets it, the precedence of §4.2, and the mounts.
+   `lask eval --module test/selftest.lask all`.
 3. **Declarability.** The selftest declares a command on each function, so a
    function that stops being effect-free fails `lask check` (ch. 5).
 4. **Smoke, with Docker.** Each tool's version command, through its declared
-   command word: `lask eval --module test/selftest.lask smoke`.
+   command word, after pulling its image at the default tag:
+   `lask eval --module test/selftest.lask smoke`.
 
 ## 9. Adding a Tool
 
 1. Pick the image by the rules of §5 and update the catalog table.
 2. Write `<tool>(...)` in `lib/<tool>.lask` from what `lib/common.lask` provides,
-   and `<tool>_setup` only if another tool needs its credentials (§4.3).
+   with `--tag` defaulting to the chosen release (§4.4), and `<tool>_setup` only if
+   another tool needs its credentials (§4.3).
 3. Re-export them from `main.lask`. If its default environment is useful as it
    is (§3), declare its command words in its file and re-export them too, with
    `export command { ... } from`.

@@ -1,9 +1,10 @@
 # lask-module-tools
 
-Pinned execution environments for the tools a [Lask](https://github.com/lask-task-runner/lask)
+Ready-made execution environments for the tools a [Lask](https://github.com/lask-task-runner/lask)
 task runs. Each tool is a function that returns an `Environment`; its keyword
-parameters are what the tool needs from the environment it runs in — the
-variables it reads, its credentials, and the host directories it has to see.
+parameters are the release of its image, and what the tool needs from the
+environment it runs in — the variables it reads, its credentials, and the host
+directories it has to see.
 
 ```lask
 import * as tools from "tools"
@@ -17,8 +18,12 @@ The tools themselves are not wrapped: `$ aws s3 sync ...` is already the cleares
 way to say it. Design and the tools planned next: [doc/design.md](doc/design.md).
 
 Requires a Lask whose container options take `null` (lask#49) and accept a typed
-list or table (lask#50), with images pinned by `lask env build` (lask#47). Run `lask env build` once before the first command that uses a tool:
-it pulls the image and pins its digest in `lask.lock.json`, and runs never pull.
+list or table (lask#50), and whose secrets may be `null` (lask#51).
+
+Pull a tool's image once before the first command that uses it, e.g.
+`docker pull amazon/aws-cli:2.36.41`. A tool builds its image reference from `--tag`
+when it runs, so Lask treats the reference as computed at run time (lask spec 10.3):
+`lask env build` cannot pull or pin it, and a run never pulls.
 
 ## Install
 
@@ -30,13 +35,14 @@ lask deps add tools --git https://github.com/lask-task-runner/lask-module-tools 
 
 Every tool follows the same rules:
 
+- **`--tag` picks the release of the tool's image**, and defaults to the one this
+  module was written and tested against. Pull the image for the tag you run (above).
 - **A parameter left `null` sets nothing.** Every parameter defaults to `null`, and
   a variable given `null` is left out. `""` is a value: it sets its variable to the
   empty string.
 - **Secrets are `!!` parameters**, so they are masked in the command log, including
-  in the environment it records — whatever the caller passed. A `!!` binding has to
-  be a `String` (lask spec 6.10), so a secret cannot be `null`: it defaults to `""`,
-  and a secret left `""` sets nothing.
+  in the environment it records — whatever the caller passed. They default to `null`
+  like the rest, and a `null` secret registers nothing for masking.
 - **A host path is mounted, never expanded.** Lask starts `docker` without a shell, so
   `~` would reach the daemon as a directory named `~`. Use `tools.home(".aws")`.
 - **`--with: Array<ToolSetup>`** carries another tool's variables and mounts, so the
@@ -50,7 +56,8 @@ Every tool follows the same rules:
 
 ### `aws` — AWS CLI v2
 
-Image `amazon/aws-cli:2.36.41`. Declare the command word in your module:
+Image `amazon/aws-cli:<tag>`, `2.36.41` unless `--tag` says otherwise. Declare the
+command word in your module:
 
 ```lask
 command { "aws" } on tools.aws(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
@@ -58,6 +65,7 @@ command { "aws" } on tools.aws(profile = "dev", region = "ap-northeast-1", confi
 
 | Parameter | Sets |
 |---|---|
+| `--tag` | the image: `amazon/aws-cli:<tag>`; default `2.36.41` |
 | `--profile` | `AWS_PROFILE` |
 | `--region` | `AWS_REGION` and `AWS_DEFAULT_REGION` — the CLI and the SDKs read different ones |
 | `--endpoint_url` | `AWS_ENDPOINT_URL` — LocalStack or another AWS-compatible endpoint |
@@ -84,8 +92,8 @@ given one; `find_env` gives `null` for a variable that is not set:
 ```lask
 whoami(
   --access_key_id: String | Null = find_env("AWS_ACCESS_KEY_ID"),
-  --secret_access_key!!: String = get_env_or("AWS_SECRET_ACCESS_KEY", ""),
-  --session_token!!: String = get_env_or("AWS_SESSION_TOKEN", "")
+  --secret_access_key!!: String | Null = find_env("AWS_SECRET_ACCESS_KEY"),
+  --session_token!!: String | Null = find_env("AWS_SESSION_TOKEN")
 ): String = do {
   box = tools.aws(access_key_id = access_key_id, secret_access_key = secret_access_key, session_token = session_token)
   $[box] aws sts get-caller-identity
@@ -112,5 +120,6 @@ project, and the command line of this repository reaches each of them as well:
 lask check                                       # the module
 lask check --module example/main.lask            # a project using it
 lask eval --module test/selftest.lask all        # every environment, compared exactly; no Docker
-lask eval --module test/selftest.lask smoke      # runs the CLI; needs Docker
+lask eval --module test/selftest.lask smoke      # runs the CLI; needs Docker and
+                                                 #   amazon/aws-cli:2.36.41 pulled
 ```

@@ -31,11 +31,6 @@ mount(dir: String | Null, target: String): Array<String> = case (dir) {
   else -> ["#{dir}:#{target}"]
 }
 
-// A secret is a String (lask spec 6.10: a `!!` binding cannot be
-// String | Null), so a secret parameter still says "not given" with "".
-// This turns that into the null the other parameters use.
-unset_if_empty(v: String): String | Null = if (v == "") { null } else { v }
-
 // The variables of an environment, in layers where a later one wins:
 // the tool's own defaults, then --extra_env, then each setup of --with,
 // then the tool's named parameters, which arrive with the ones not
