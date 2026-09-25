@@ -1,0 +1,54 @@
+// Terraform.
+
+import { vars, mount, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// TF_VAR_<name> for each input variable given.
+internal input_variables(m: Map<String>): Map<String> =
+  from_entries(map(entries(m), \(e: Record<key: String, value: String>) -> {key: "TF_VAR_#{e.key}", value: e.value}))
+
+// Terraform at --tag, configured by its parameters.
+//
+// The image is hashicorp/terraform at --tag, 1.16.4 unless another is
+// given. The reference is built from the argument when the function
+// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
+// pull it once with `docker pull hashicorp/terraform:<tag>`, and a run
+// never pulls.
+//
+// Nothing waits on a prompt (TF_INPUT=0), and Terraform leaves out the
+// hints it gives a person at a terminal (TF_IN_AUTOMATION=1). A
+// provider's credentials come in through --with: the AWS provider takes
+// `with = [aws_setup(...)]`. Secrets for input variables go through
+// --variables as TF_VAR_* variables of the container, never on the command
+// line; bind them with `!!` where they come from, and they are masked.
+//
+// @param tag        The hashicorp/terraform image tag to run.
+// @param workspace  TF_WORKSPACE.
+// @param log        TF_LOG, e.g. "DEBUG".
+// @param variables  Input variables, each set as TF_VAR_<name>.
+// @param cache_dir  Host directory mounted at /cache and used as the plugin cache itself (TF_PLUGIN_CACHE_DIR), e.g. home(".terraform.d/plugin-cache"). `terraform init` reports an error for a cache directory that does not exist yet, so the cache is the mount point, which always does.
+// @param with       Setups of other tools this environment should also carry: a provider's credentials.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "terraform" } on ...` or `$[...]`.
+// @example lask eval terraform --workspace staging
+terraform(
+  --tag: String = "1.16.4",
+  --workspace: String | Null = null,
+  --log: String | Null = null,
+  --variables: Map<String> = {},
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "hashicorp/terraform:#{tag}",
+  env = layered_env(
+    {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"},
+    extra_env,
+    with,
+    merge(input_variables(variables), vars({
+      "TF_WORKSPACE": workspace,
+      "TF_LOG": log,
+      "TF_PLUGIN_CACHE_DIR": if (cache_dir == null) { null } else { "/cache" }
+    }))
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)

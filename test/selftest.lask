@@ -7,14 +7,14 @@
 //   lask eval --module test/selftest.lask all
 //
 // `smoke` is the exception: it runs each tool, and so needs Docker and
-// the images, which a run never pulls.
+// the images, which a run never pulls. The cases below write the images
+// as literals, and a reference written as a literal resolves through the
+// lock alone (lask spec 10.4), so pin them first:
 //
-//   docker pull amazon/aws-cli:2.36.41
-//   docker pull python:3.12.14-alpine3.24
-//   docker pull node:24.21.0-alpine3.24
+//   lask env build --module test/selftest.lask
 //   lask eval --module test/selftest.lask smoke
 
-import { aws, aws_setup, home, python, node, ToolSetup } from "../main.lask"
+import { aws, aws_setup, home, python, node, terraform, ToolSetup } from "../main.lask"
 
 // The command words python and node export arrive by name, with the
 // environment they were declared on.
@@ -23,6 +23,7 @@ import command { "python", "node" } from "../main.lask"
 // The declarations must be accepted, not only the calls: a command's
 // environment may reach no effect (lask spec ch. 5).
 command { "aws" } on aws(profile = "selftest", config_dir = home(".aws"))
+command { "terraform" } on terraform(with = [aws_setup(profile = "selftest", config_dir = home(".aws"))])
 
 internal expect(name: String, ok: Bool): String =
   if (ok) { "ok  #{name}" } else { fail(error(1, "FAIL #{name}")) }
@@ -166,6 +167,46 @@ all(): Array<String> = [
   expect(
     "a python or node parameter left null sets nothing",
     python(index_url = null, cache_dir = null) == python() && node(registry = null, node_options = null) == node()
+  ),
+  expect(
+    "terraform never prompts, and knows it runs in automation",
+    terraform() == #docker("hashicorp/terraform:1.16.4", env = {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"}, volumes = [])
+  ),
+  expect(
+    "terraform: a workspace, a log level, input variables and a plugin cache",
+    terraform(tag = "1.15.0", workspace = "staging", log = "DEBUG", variables = {"app_version": "1.2.3"}, cache_dir = "/h/tf")
+      == #docker(
+        "hashicorp/terraform:1.15.0",
+        env = {
+          "TF_IN_AUTOMATION": "1",
+          "TF_INPUT": "0",
+          "TF_WORKSPACE": "staging",
+          "TF_LOG": "DEBUG",
+          "TF_VAR_app_version": "1.2.3",
+          "TF_PLUGIN_CACHE_DIR": "/cache"
+        },
+        volumes = ["/h/tf:/cache"]
+      )
+  ),
+  expect(
+    "terraform takes a provider's credentials from an AWS setup",
+    terraform(workspace = "dev", with = [aws_setup(profile = "dev", region = "ap-northeast-1", config_dir = "/h/.aws")])
+      == #docker(
+        "hashicorp/terraform:1.16.4",
+        env = {
+          "TF_IN_AUTOMATION": "1",
+          "TF_INPUT": "0",
+          "TF_WORKSPACE": "dev",
+          "AWS_PROFILE": "dev",
+          "AWS_REGION": "ap-northeast-1",
+          "AWS_DEFAULT_REGION": "ap-northeast-1"
+        },
+        volumes = ["/h/.aws:/root/.aws:ro"]
+      )
+  ),
+  expect(
+    "a terraform parameter left null sets nothing",
+    terraform(workspace = null, log = null, cache_dir = null) == terraform()
   )
 ]
 
@@ -176,8 +217,8 @@ internal version_of(r: CommandResult): String = do {
   trim(if (r.stdout != "") { r.stdout } else { r.stderr })
 }
 
-// Runs each tool through its command word: aws as declared here, python
-// and node as the module exports them. Needs Docker, and the images at
+// Runs each tool through its command word: aws and terraform as declared
+// here, python and node as the module exports them. Needs Docker, and the images at
 // their default tags pulled.
 //
 // @return One version line per tool.
@@ -185,5 +226,6 @@ smoke(): Array<String> = do {
   a = $* aws --version
   p = $* python --version
   n = $* node --version
-  [version_of(a), version_of(p), version_of(n)]
+  t = $* terraform version
+  [version_of(a), version_of(p), version_of(n), version_of(t)]
 }

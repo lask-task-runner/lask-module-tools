@@ -20,6 +20,10 @@ export { aws, aws_setup } from "./lib/aws.lask"
 export { python } from "./lib/python.lask"
 export command { "python", "python3", "pip", "pip3" } from "./lib/python.lask"
 
+// Terraform. It needs a provider's credentials, so it exports no
+// command word: declare `command { "terraform" } on tools.terraform(...)`.
+export { terraform } from "./lib/terraform.lask"
+
 // Node.js, with npm and npx. Its command words are exported as well.
 export { node } from "./lib/node.lask"
 export command { "node", "npm", "npx", "corepack" } from "./lib/node.lask"
