@@ -1,0 +1,41 @@
+// The everyday command-line tools: curl and wget, jq and yq, and the
+// GNU tools around them.
+
+import { layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// A shell with the everyday command-line tools, in one image.
+//
+// A command string runs in one environment, so `curl -s ... | jq -r .id`
+// needs curl and jq in the same image; this is that image. It holds
+// bash, curl, wget, openssl, jq, yq, envsubst, GNU coreutils, findutils,
+// grep, sed and awk, diff, file, tar, gzip, xz, bzip2, zip and unzip.
+//
+// The image is built from lib/images/unix/Dockerfile, Alpine 3.24 pinned by
+// its digest, so it has no --tag: the recipe is what fixes it, and
+// `lask env build` (or `lask deps sync`) builds it once per machine
+// (lask spec 10.3). A run never builds.
+//
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable, e.g. HTTPS_PROXY; below --with.
+// @return The environment, for `command { "curl" } on ...` or `$[...]`.
+// @example lask eval unix
+unix(
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  dockerfile = "images/unix/Dockerfile",
+  env = layered_env({}, extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+// The tools need nothing from the caller, so their command words are
+// exported, declared on the default environment. A project imports the
+// ones it runs: `import command { "curl", "jq" } from "tools"`. The
+// shell's own words — grep, sed, awk and the rest — are in every image,
+// and are not exported: importing them would pull a command string that
+// also runs npm or python into this environment, and conflict.
+command {
+  "curl", "wget", "openssl",
+  "jq", "yq", "envsubst",
+  "tar", "gzip", "xz", "bzip2", "zip", "unzip"
+} on unix()

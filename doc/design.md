@@ -113,7 +113,7 @@ The image reference is built from the argument when the function runs, so Lask t
 - A run uses the image as it is on the daemon, and never pulls it: an image that is not there is `E-IO-IMAGE-MISSING`, whose diagnostic says to pull it. A project pulls each tool's image once, `docker pull amazon/aws-cli:2.36.41`, and again when it changes `--tag`.
 - The lock does not record the image's digest. The tag — an exact one, §5 — is what fixes the image, as far as the registry keeps it where it is.
 
-A tool built from a recipe (§5.3) has no `--tag`. Its version is a build argument, and build arguments are literals (10.2), since they decide which image is built before anything runs. Its recipe is pinned the way every recipe is.
+A tool built from a recipe (§5.3, §5.10) has no `--tag`. Its version is a build argument, and build arguments are literals (10.2), since they decide which image is built before anything runs. Its recipe is pinned the way every recipe is.
 
 ### 4.5 Container Options
 
@@ -125,7 +125,7 @@ A container option given `null` is left out (10.2), so a tool can take `--user: 
 | --- | --- | --- | --- |
 | `aws` | `amazon/aws-cli:2.36.41` | none (§3) | **implemented** |
 | `terraform` | `hashicorp/terraform:1.16.4` | none — it needs provider credentials | **implemented** |
-| `ansible` | recipe `images/ansible/Dockerfile` | none — it needs an inventory | planned |
+| `ansible` | recipe `lib/images/ansible/Dockerfile` | none — it needs an inventory | planned |
 | `go` | `golang:<tag>` | `go`, `gofmt` | planned |
 | `node` | `node:24.21.0-alpine3.24` | `node`, `npm`, `npx`, `corepack` | **implemented** |
 | `python` | `python:3.12.14-alpine3.24` | `python`, `python3`, `pip`, `pip3` | **implemented** |
@@ -133,6 +133,8 @@ A container option given `null` is left out (10.2), so a tool can take `--user: 
 | `maven` | `maven:<tag>` (3.9, Temurin 21) | `mvn` | planned |
 | `gradle` | `gradle:<tag>` (8, JDK 21) | `gradle` | planned |
 | `cc` | `gcc:<tag>` | `gcc`, `g++`, `cc`, `c++`, `make` | planned |
+| `playwright` | `mcr.microsoft.com/playwright:v1.63.0-noble` | none — its tests run through node's `npx` | **implemented** |
+| `unix` | recipe `lib/images/unix/Dockerfile` (Alpine 3.24) | `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`, `xz`, `bzip2`, `zip`, `unzip` | **implemented** |
 
 The default of each tool's `--tag` is chosen when the entry is implemented, with these rules:
 
@@ -246,6 +248,30 @@ Defaults: `PYTHONUNBUFFERED=1` (as §5.3), `PYTHONDONTWRITEBYTECODE=1` — the p
 
 The official `gcc` image has no CMake. A CMake entry needs a recipe, which this module can ship beside it (lask#48).
 
+### 5.9 `playwright` (implemented)
+
+| Parameter | Sets |
+| --- | --- |
+| `--tag` | the image, `mcr.microsoft.com/playwright:<tag>`; default `v1.63.0-noble` (Ubuntu 24.04) |
+| `--shm_size` | the container's `/dev/shm`; default `"1g"`, `null` for Docker's 64MB |
+| `--registry` | `npm_config_registry` |
+| `--npm_token!!` | `NPM_TOKEN` |
+| `--cache_dir` | mounts at `/cache`; `npm_config_cache=/cache/npm` |
+
+Defaults: `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`, `npm_config_update_notifier=false`, and the container options `init = true` and `shm_size = "1g"`.
+
+The image carries the browsers of one Playwright release, so `--tag` must match the `@playwright/test` version the project installs. The browsers are never downloaded: a mismatch fails at once rather than fetching them into a container that is thrown away. The init process reaps the browsers' child processes. Chromium runs out of Docker's default 64MB of shared memory; Playwright's own advice is `--ipc=host`, which `#docker` has no option for, and a larger `/dev/shm` does the same job without sharing the host's IPC namespace.
+
+The tests run through `npx`, which is `node`'s command word, and a module exports one declaration per word, so `playwright` exports none. A project gives it where it is used, `$[tools.playwright()] npx playwright test`, or declares `npx` on it in a module that does not import `node`'s.
+
+### 5.10 `unix` (implemented)
+
+The everyday command-line tools in one image: bash, curl, wget, openssl, jq, yq, envsubst, GNU coreutils, findutils, grep, sed, awk, diff, file, tar, gzip, xz, bzip2, zip and unzip. A command string runs in one environment (ch. 5), so `curl -s … | jq -r .id` needs both in the same image; one image per tool would make every such pipeline a conflict.
+
+No image on a registry holds this set, so it is a recipe, `lib/images/unix/Dockerfile`: Alpine 3.24 pinned by its digest, and the packages as Alpine's repository has them when the image is built. Like `ansible` it has no `--tag` (§4.4). Unlike the other tools, `lask env build` / `lask deps sync` build it: a recipe is enumerated statically, wherever it is written. Its parameters are `--with` and `--extra_env` only (a proxy, `HTTPS_PROXY`, is the usual one).
+
+Exported words: the programs a project comes here for — `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, and the archivers. The shell's own words (`grep`, `sed`, `awk`, `sort`, …) are in the image but not exported: every image has them, and a project that imported them would pull a string such as `npm test | grep ok` into this environment and conflict with `node`.
+
 ## 6. Consumer Usage
 
 ```text
@@ -278,8 +304,8 @@ lask-module-tools/
   lib/
     common.lask         # ToolSetup, home, and what every tool is built from
     aws.lask            # one file per tool
-  images/
-    ansible/Dockerfile  # the Ansible recipe
+    images/
+      unix/Dockerfile   # a tool's recipe, beside the files that name it
   example/
     main.lask           # a project using the module
   test/
@@ -289,6 +315,8 @@ lask-module-tools/
 ```
 
 Each tool lives in `lib/<tool>.lask` and `main.lask` re-exports its public functions, as chapter 5 says a multi-file API is published. An import of a dependency reaches its `main.lask` and nothing else, so only what `main.lask` lists reaches a project. The helpers in `lib/common.lask` are public within the tree, where each tool's file imports them, and invisible outside it. A tool's exported command words are re-exported the same way, with `export command { ... } from`.
+
+A recipe lives under `lib/`, because a `dockerfile` path must stay inside the tree of the module that writes it (10.2): `lib/unix.lask` cannot name `images/unix/Dockerfile` at the repository root. For the same reason the selftest cannot write a recipe environment as a literal, and compares `unix` with itself.
 
 The command line of this repository reaches a re-exported function as it reaches a declared one: `lask eval aws --profile dev`, `lask run aws --help`.
 
