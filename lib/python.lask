@@ -1,0 +1,51 @@
+// Python, with pip.
+
+import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Python at --tag, configured by its parameters.
+//
+// The image is python at --tag, 3.12.14-alpine3.24 unless another is
+// given. The reference is built from the argument when the function
+// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
+// pull it once with `docker pull python:<tag>`, and a run never pulls.
+//
+// Output reaches the command log as it happens (PYTHONUNBUFFERED), and
+// no __pycache__ is written into the project, which the container
+// would leave owned by root (PYTHONDONTWRITEBYTECODE). pip does not
+// check for a newer version of itself. --extra_env can change any of
+// these.
+//
+// @param tag              The python image tag to run.
+// @param index_url        PIP_INDEX_URL; masked in the command log, since a private index URL often carries a credential.
+// @param extra_index_url  PIP_EXTRA_INDEX_URL; masked in the command log.
+// @param cache_dir        Host directory mounted at /cache, where pip keeps its cache (PIP_CACHE_DIR).
+// @param with             Setups of other tools this environment should also carry.
+// @param extra_env        Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "python" } on ...` or `$[...]`.
+// @example lask eval python --cache_dir /tmp/pip-cache
+python(
+  --tag: String = "3.12.14-alpine3.24",
+  --index_url!!: String | Null = null,
+  --extra_index_url!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "python:#{tag}",
+  env = layered_env(
+    {"PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1", "PIP_DISABLE_PIP_VERSION_CHECK": "1"},
+    extra_env,
+    with,
+    vars({
+      "PIP_INDEX_URL": index_url,
+      "PIP_EXTRA_INDEX_URL": extra_index_url,
+      "PIP_CACHE_DIR": in_cache(cache_dir, "pip")
+    })
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Python works as it is, so its command words are exported, declared on
+// the default environment. A project imports the ones it runs:
+// `import command { "python", "pip" } from "tools"`.
+command { "python", "python3", "pip", "pip3" } on python()

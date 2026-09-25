@@ -6,13 +6,19 @@
 //
 //   lask eval --module test/selftest.lask all
 //
-// `smoke` is the exception: it runs the AWS CLI, and so needs Docker
-// and the image, which a run never pulls.
+// `smoke` is the exception: it runs each tool, and so needs Docker and
+// the images, which a run never pulls.
 //
 //   docker pull amazon/aws-cli:2.36.41
+//   docker pull python:3.12.14-alpine3.24
+//   docker pull node:24.21.0-alpine3.24
 //   lask eval --module test/selftest.lask smoke
 
-import { aws, aws_setup, home, ToolSetup } from "../main.lask"
+import { aws, aws_setup, home, python, node, ToolSetup } from "../main.lask"
+
+// The command words python and node export arrive by name, with the
+// environment they were declared on.
+import command { "python", "node" } from "../main.lask"
 
 // The declarations must be accepted, not only the calls: a command's
 // environment may reach no effect (lask spec ch. 5).
@@ -114,15 +120,70 @@ all(): Array<String> = [
   expect(
     "home() builds a path under the home directory",
     home(".aws") == "#{get_env("HOME")}/.aws"
+  ),
+  expect(
+    "python runs with unbuffered output, no bytecode and no pip version check",
+    python()
+      == #docker(
+        "python:3.12.14-alpine3.24",
+        env = {"PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1", "PIP_DISABLE_PIP_VERSION_CHECK": "1"},
+        volumes = []
+      )
+  ),
+  expect(
+    "python: --tag, an index and a cache directory",
+    python(tag = "3.13.5-alpine3.22", index_url = "https://pypi.example/simple", cache_dir = "/h/cache")
+      == #docker(
+        "python:3.13.5-alpine3.22",
+        env = {
+          "PYTHONUNBUFFERED": "1",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+          "PIP_INDEX_URL": "https://pypi.example/simple",
+          "PIP_CACHE_DIR": "/cache/pip"
+        },
+        volumes = ["/h/cache:/cache"]
+      )
+  ),
+  expect(
+    "node runs without npm's update notice",
+    node() == #docker("node:24.21.0-alpine3.24", env = {"npm_config_update_notifier": "false"}, volumes = [])
+  ),
+  expect(
+    "node: NODE_ENV, a token and a cache directory",
+    node(node_env = "production", npm_token = "t0k3n", cache_dir = "/h/cache")
+      == #docker(
+        "node:24.21.0-alpine3.24",
+        env = {
+          "npm_config_update_notifier": "false",
+          "NODE_ENV": "production",
+          "NPM_TOKEN": "t0k3n",
+          "npm_config_cache": "/cache/npm"
+        },
+        volumes = ["/h/cache:/cache"]
+      )
+  ),
+  expect(
+    "a python or node parameter left null sets nothing",
+    python(index_url = null, cache_dir = null) == python() && node(registry = null, node_options = null) == node()
   )
 ]
 
-// Runs the CLI in the environment, through the declared command word.
-// Needs Docker, and amazon/aws-cli:2.36.41 pulled.
-//
-// @return The CLI's version line.
-smoke(): String = do {
-  r = $* aws --version
+// A program's version line, run through its command word. Some print
+// it on stderr.
+internal version_of(r: CommandResult): String = do {
   if (r.code != 0) { return fail(error(r.code, r.stderr)) }
   trim(if (r.stdout != "") { r.stdout } else { r.stderr })
+}
+
+// Runs each tool through its command word: aws as declared here, python
+// and node as the module exports them. Needs Docker, and the images at
+// their default tags pulled.
+//
+// @return One version line per tool.
+smoke(): Array<String> = do {
+  a = $* aws --version
+  p = $* python --version
+  n = $* node --version
+  [version_of(a), version_of(p), version_of(n)]
 }

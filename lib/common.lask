@@ -48,3 +48,11 @@ layered_env(
 // The mounts of an environment: those of each setup, then its own.
 layered_volumes(with: Array<ToolSetup>, own: Array<String>): Array<String> =
   concat_array(flat_map(with, \(s: ToolSetup) -> s.volumes), own)
+
+// Where a tool keeps a cache, under the /cache a --cache_dir is mounted
+// at; null when there is no cache directory, so the tool's own default
+// stays in place.
+in_cache(cache_dir: String | Null, path: String): String | Null = case (cache_dir) {
+  Null -> null
+  else -> "/cache/#{path}"
+}

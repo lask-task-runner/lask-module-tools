@@ -127,8 +127,8 @@ A container option given `null` is left out (10.2), so a tool can take `--user: 
 | `terraform` | `hashicorp/terraform:1.16.2` | none — it needs provider credentials | planned |
 | `ansible` | recipe `images/ansible/Dockerfile` | none — it needs an inventory | planned |
 | `go` | `golang:<tag>` | `go`, `gofmt` | planned |
-| `node` | `node:<tag>` | `node`, `npm`, `npx`, `corepack` | planned |
-| `python` | `python:3.12.14-alpine3.24` | `python`, `python3`, `pip`, `pip3` | planned |
+| `node` | `node:24.21.0-alpine3.24` | `node`, `npm`, `npx`, `corepack` | **implemented** |
+| `python` | `python:3.12.14-alpine3.24` | `python`, `python3`, `pip`, `pip3` | **implemented** |
 | `java` | `eclipse-temurin:<tag>` (21, JDK) | `java`, `javac`, `jar` | planned |
 | `maven` | `maven:<tag>` (3.9, Temurin 21) | `mvn` | planned |
 | `gradle` | `gradle:<tag>` (8, JDK 21) | `gradle` | planned |
@@ -197,20 +197,25 @@ Defaults: `PYTHONUNBUFFERED=1`, so a playbook's output reaches the command log a
 | `--goos`, `--goarch` | `GOOS`, `GOARCH` |
 | `--cache_dir` | mounts at `/cache`; `GOMODCACHE=/cache/mod`, `GOCACHE=/cache/build` |
 
-### 5.5 `node`
+### 5.5 `node` (implemented)
 
 | Parameter | Sets |
 | --- | --- |
+| `--tag` | the image, `node:<tag>`; default `24.21.0-alpine3.24`, an LTS release |
 | `--node_env` | `NODE_ENV` |
 | `--node_options` | `NODE_OPTIONS` |
 | `--registry` | `npm_config_registry` |
 | `--npm_token!!` | `NPM_TOKEN`, for an `.npmrc` that reads `${NPM_TOKEN}` |
 | `--cache_dir` | mounts at `/cache`; `npm_config_cache=/cache/npm` |
 
-### 5.6 `python`
+Default: `npm_config_update_notifier=false`, so npm prints no update notice into
+the command log.
+
+### 5.6 `python` (implemented)
 
 | Parameter | Sets |
 | --- | --- |
+| `--tag` | the image, `python:<tag>`; default `3.12.14-alpine3.24` |
 | `--index_url!!` | `PIP_INDEX_URL` — secret, since a private index URL often carries a credential |
 | `--extra_index_url!!` | `PIP_EXTRA_INDEX_URL` |
 | `--cache_dir` | mounts at `/cache`; `PIP_CACHE_DIR=/cache/pip` |
