@@ -127,6 +127,44 @@ Exported words: `node`, `npm`, `npx`, `corepack`, on `node()` at its defaults. D
 
 A command string runs in one environment, so `$ python … && node …` is a conflict: split it, or give the environment with `$[...]`.
 
+### `terraform` — Terraform
+
+Image `hashicorp/terraform:<tag>`, `1.16.4` unless `--tag` says otherwise. A provider's credentials come in through `--with`:
+
+```lask
+command { "terraform" } on tools.terraform(
+  workspace = "dev",
+  cache_dir = tools.home(".terraform.d/plugin-cache"),
+  with = [tools.aws_setup(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))]
+)
+
+plan(): String = $ terraform -chdir=infra plan
+```
+
+| Parameter | Sets |
+|---|---|
+| `--tag` | the image: `hashicorp/terraform:<tag>`; default `1.16.4` |
+| `--workspace` | `TF_WORKSPACE` |
+| `--log` | `TF_LOG`, e.g. `DEBUG` |
+| `--variables` | `TF_VAR_<name>` for each entry of the map |
+| `--cache_dir` | mounts `<dir>` at `/cache`; `TF_PLUGIN_CACHE_DIR=/cache` |
+| `--with`, `--extra_env` | as above |
+
+Defaults: `TF_INPUT=0`, so nothing waits on a prompt, and `TF_IN_AUTOMATION=1`, so Terraform leaves out the hints meant for a person at a terminal.
+
+The plugin cache is the mount point itself, not a directory below it: `terraform init` reports an error for a cache directory that does not exist yet, and the mount point always does.
+
+Secret input variables go in `--variables`, never on the command line. Bind the value with `!!` where it comes from, and it is masked in the command log:
+
+```lask
+apply(--db_password!!: String = get_env("DB_PASSWORD")): String = do {
+  tf = tools.terraform(variables = {"db_password": db_password}, with = [tools.aws_setup(profile = "dev")])
+  $[tf] terraform -chdir=infra apply -auto-approve
+}
+```
+
+The module exports no `terraform` command word, for the reason `aws` exports none: a provider without credentials fails at the first plan.
+
 ## Layout
 
 Each tool lives in `lib/<tool>.lask`, built from `lib/common.lask`, and `main.lask` re-exports its public functions. Only what `main.lask` lists reaches a project, and the command line of this repository reaches each of them as well: `lask eval aws --profile dev`, `lask run aws --help`.
@@ -137,6 +175,6 @@ Each tool lives in `lib/<tool>.lask`, built from `lib/common.lask`, and `main.la
 lask check                                       # the module
 lask check --module example/main.lask            # a project using it
 lask eval --module test/selftest.lask all        # every environment, compared exactly; no Docker
-lask eval --module test/selftest.lask smoke      # runs each tool; needs Docker and
-                                                 #   the images at their default tags pulled
+lask env build --module test/selftest.lask       # pulls and pins the images the selftest names
+lask eval --module test/selftest.lask smoke      # runs each tool; needs Docker
 ```

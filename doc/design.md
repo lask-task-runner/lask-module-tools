@@ -92,7 +92,7 @@ A tool whose credentials other tools need publishes a second form, `<tool>_setup
 creds = tools.aws_setup(profile = "dev", config_dir = tools.home(".aws"))
 
 // The Terraform image, with the AWS provider's credentials.
-tf = tools.terraform(vars = {"app_version": "1.2.3"}, with = [creds])
+tf = tools.terraform(variables = {"app_version": "1.2.3"}, with = [creds])
 ```
 
 The same `creds` value can be handed to `ansible(with = [...])` for an AWS dynamic inventory, and a future `gcloud_setup` slots into the same list.
@@ -124,7 +124,7 @@ A container option given `null` is left out (10.2), so a tool can take `--user: 
 | Function | Image | Exported command words | Status |
 | --- | --- | --- | --- |
 | `aws` | `amazon/aws-cli:2.36.41` | none (§3) | **implemented** |
-| `terraform` | `hashicorp/terraform:1.16.2` | none — it needs provider credentials | planned |
+| `terraform` | `hashicorp/terraform:1.16.4` | none — it needs provider credentials | **implemented** |
 | `ansible` | recipe `images/ansible/Dockerfile` | none — it needs an inventory | planned |
 | `go` | `golang:<tag>` | `go`, `gofmt` | planned |
 | `node` | `node:24.21.0-alpine3.24` | `node`, `npm`, `npx`, `corepack` | **implemented** |
@@ -159,18 +159,23 @@ Local use is `config_dir = tools.home(".aws")` after `aws sso login` on the host
 
 The access key id is not a `!!` parameter: it identifies a key and is not a secret, and masking it would hide from the log which key a run used.
 
-### 5.2 `terraform`
+### 5.2 `terraform` (implemented)
 
 | Parameter | Sets |
 | --- | --- |
+| `--tag` | the image, `hashicorp/terraform:<tag>`; default `1.16.4` |
 | `--workspace` | `TF_WORKSPACE` |
 | `--log` | `TF_LOG` |
-| `--vars: Map<String>` | `TF_VAR_<name>` for each entry |
-| `--cache_dir` | mounts at `/cache`; `TF_PLUGIN_CACHE_DIR=/cache/plugins` |
+| `--variables: Map<String>` | `TF_VAR_<name>` for each entry |
+| `--cache_dir` | mounts at `/cache`; `TF_PLUGIN_CACHE_DIR=/cache` |
 
 Defaults: `TF_IN_AUTOMATION=1`, `TF_INPUT=0`, so nothing ever waits on a prompt. Provider credentials come in through `--with`.
 
-`--vars` is how secrets reach Terraform: as `TF_VAR_*` variables of the environment, never on the command line. A secret value is masked if the caller bound it with `!!` — masking matches values, wherever they end up.
+The plugin cache is the mount point itself, not a directory below it as for pip and npm. Pointed at `/cache/plugins` on an empty host directory, `terraform init` reports "The specified plugin cache dir /cache/plugins cannot be opened" (it goes on and installs anyway). The mount point always exists.
+
+The parameter is `--variables`, not `--vars`: a parameter named `vars` would shadow the helper of `lib/common.lask` that drops the `null` entries.
+
+`--variables` is how secrets reach Terraform: as `TF_VAR_*` variables of the environment, never on the command line. A secret value is masked if the caller bound it with `!!` — masking matches values, wherever they end up.
 
 ### 5.3 `ansible`
 
@@ -292,7 +297,7 @@ The command line of this repository reaches a re-exported function as it reaches
 1. **Static gate.** `lask check` on `main.lask`, `example/main.lask` and `test/selftest.lask`. (`lask envs` reports each tool's image as `<dynamic>`: its reference is built from `--tag`, §4.4.)
 2. **Exact environments, without Docker.** An environment compares structurally, so `test/selftest.lask` states each expected environment in full and compares with `==`: the image `--tag` picks, which variables are set, that `null` leaves one out while `""` sets it, the precedence of §4.2, and the mounts. `lask eval --module test/selftest.lask all`.
 3. **Declarability.** The selftest declares a command on each function, so a function that stops being effect-free fails `lask check` (ch. 5).
-4. **Smoke, with Docker.** Each tool's version command, through its declared command word, after pulling its image at the default tag: `lask eval --module test/selftest.lask smoke`.
+4. **Smoke, with Docker.** Each tool's version command, through its declared command word: `lask env build --module test/selftest.lask`, then `lask eval --module test/selftest.lask smoke`. The selftest writes the images it expects as literals, and a reference written as a literal resolves through the lock alone (lask spec 10.4), even where a tool computes the same reference at run time; `lask env build` pulls and pins them.
 
 ## 9. Adding a Tool
 
