@@ -56,3 +56,35 @@ in_cache(cache_dir: String | Null, path: String): String | Null = case (cache_di
   Null -> null
   else -> "/cache/#{path}"
 }
+
+// A value that stands in for an argument when the argument was given:
+// the path a mounted file is seen at, a flag. Null when it was not, so
+// the variable it sets is left out.
+given(x: String | Null, value: String): String | Null = case (x) {
+  Null -> null
+  else -> value
+}
+
+// "true" or "false" for a flag, or null when it was not given.
+flag(b: Bool | Null): String | Null = case (b) {
+  Null -> null
+  else -> if (b == true) { "true" } else { "false" }
+}
+
+// Git configuration a tool's container needs whatever else it does.
+// The project is bind-mounted, owned by the host's user, and the
+// container runs as root; Git refuses such a repository ("dubious
+// ownership"), and so does everything that runs it — `go build` stamping
+// the revision, gitleaks reading history. The configuration is carried
+// in GIT_CONFIG_* variables, which git_setup replaces as a whole and
+// always starts with this entry.
+git_trust(): Map<String> = {
+  "GIT_CONFIG_COUNT": "1",
+  "GIT_CONFIG_KEY_0": "safe.directory",
+  "GIT_CONFIG_VALUE_0": "*"
+}
+
+// Each entry of m under its key with prefix before it: Terraform's
+// TF_VAR_<name>, Packer's PKR_VAR_<name>.
+prefixed(prefix: String, m: Map<String>): Map<String> =
+  from_entries(map(entries(m), \(e: Record<key: String, value: String>) -> {key: "#{prefix}#{e.key}", value: e.value}))

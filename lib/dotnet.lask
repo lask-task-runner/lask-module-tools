@@ -1,0 +1,39 @@
+// .NET.
+
+import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// The .NET SDK at --tag, configured by its parameters.
+//
+// The image is mcr.microsoft.com/dotnet/sdk at --tag,
+// 10.0.401-alpine3.24 (.NET 10, an LTS release) unless another is
+// given. The reference is built from the argument when the function
+// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
+// pull it once, and a run never pulls.
+//
+// The CLI sends no telemetry and prints no banner
+// (DOTNET_CLI_TELEMETRY_OPTOUT=1, DOTNET_NOLOGO=1).
+//
+// @param tag        The dotnet/sdk image tag to run.
+// @param cache_dir  Host directory mounted at /cache; NuGet keeps packages in /cache/nuget (NUGET_PACKAGES).
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "dotnet" } on ...` or `$[...]`.
+// @example lask eval dotnet --cache_dir /tmp/cache
+dotnet(
+  --tag: String = "10.0.401-alpine3.24",
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "mcr.microsoft.com/dotnet/sdk:#{tag}",
+  env = layered_env(
+    {"DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1"},
+    extra_env,
+    with,
+    vars({"NUGET_PACKAGES": in_cache(cache_dir, "nuget")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// .NET works as it is, so its command word is exported.
+command { "dotnet" } on dotnet()

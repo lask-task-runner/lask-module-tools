@@ -1,0 +1,51 @@
+// Pulumi.
+
+import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Pulumi at --tag, with the runtime of one language, configured by its
+// parameters.
+//
+// The image is pulumi/pulumi-<language> at --tag, 3.265.0 unless
+// another is given, and nodejs unless --language says python, go,
+// dotnet or java; pulumi/pulumi holds every runtime and is several
+// times the size. The reference is built from the arguments when the
+// function runs, so `lask env build` does not pull or pin it (lask spec
+// 10.3): pull it once, and a run never pulls.
+//
+// Pulumi checks for no update (PULUMI_SKIP_UPDATE_CHECK=true). A
+// provider's credentials come in through --with, as for terraform.
+//
+// @param tag                The image tag to run.
+// @param language           The runtime: nodejs, python, go, dotnet or java.
+// @param access_token       PULUMI_ACCESS_TOKEN, for Pulumi Cloud; masked in the command log.
+// @param backend_url        PULUMI_BACKEND_URL, e.g. "s3://my-state" or "file:///work/.pulumi".
+// @param config_passphrase  PULUMI_CONFIG_PASSPHRASE, for a passphrase-encrypted stack; masked in the command log.
+// @param cache_dir          Host directory mounted at /cache; Pulumi's home, with its plugins, is /cache/pulumi (PULUMI_HOME).
+// @param with               Setups of other tools this environment should also carry: a provider's credentials.
+// @param extra_env          Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "pulumi" } on ...` or `$[...]`.
+// @example lask eval pulumi --language python --backend_url file:///work/.pulumi
+pulumi(
+  --tag: String = "3.265.0",
+  --language: String = "nodejs",
+  --access_token!!: String | Null = null,
+  --backend_url: String | Null = null,
+  --config_passphrase!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "pulumi/pulumi-#{language}:#{tag}",
+  env = layered_env(
+    merge({"PULUMI_SKIP_UPDATE_CHECK": "true"}, git_trust()),
+    extra_env,
+    with,
+    vars({
+      "PULUMI_ACCESS_TOKEN": access_token,
+      "PULUMI_BACKEND_URL": backend_url,
+      "PULUMI_CONFIG_PASSPHRASE": config_passphrase,
+      "PULUMI_HOME": in_cache(cache_dir, "pulumi")
+    })
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)

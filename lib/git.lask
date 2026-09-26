@@ -1,0 +1,106 @@
+// Git and the code hosts' CLIs: git, gh and glab. All three run in the
+// image of unix(), which carries them.
+
+import { ToolSetup, vars, git_trust, layered_env, layered_volumes } from "./common.lask"
+import { git_setup, ssh_setup } from "./setups.lask"
+
+// Git, configured by its parameters.
+//
+// The image is built from lib/images/unix/Dockerfile, as for unix(), so
+// it has no --tag, and `lask env build` (or `lask deps sync`) builds it.
+// The container sees none of the host's Git configuration: the
+// identity, a token for https and an SSH identity are given here, and
+// the mounted project is trusted (safe.directory).
+//
+// @param name              GIT_AUTHOR_NAME and GIT_COMMITTER_NAME.
+// @param email             GIT_AUTHOR_EMAIL and GIT_COMMITTER_EMAIL.
+// @param token             An access token for https; masked in the command log. See git_setup.
+// @param host              The host the token is for.
+// @param token_user        The user name the host expects beside a token.
+// @param ssh_dir           Host directory mounted read-only at /root/.ssh; see ssh_setup.
+// @param ssh_agent_socket  Host path of an SSH agent socket (SSH_AUTH_SOCK); see ssh_setup.
+// @param with              Setups of other tools this environment should also carry.
+// @param extra_env         Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "git" } on ...` or `$[...]`.
+// @example lask eval git --name "CI" --email ci@example.com
+git(
+  --name: String | Null = null,
+  --email: String | Null = null,
+  --token!!: String | Null = null,
+  --host: String = "github.com",
+  --token_user: String = "x-access-token",
+  --ssh_dir: String | Null = null,
+  --ssh_agent_socket: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = do {
+  config = git_setup(token = token, host = host, token_user = token_user, name = name, email = email)
+  ssh = ssh_setup(dir = ssh_dir, agent_socket = ssh_agent_socket)
+  return #docker(
+    dockerfile = "images/unix/Dockerfile",
+    env = layered_env({}, extra_env, with, merge(config.env, ssh.env)),
+    volumes = layered_volumes(with, ssh.volumes)
+  )
+}
+
+// The GitHub CLI, configured by its parameters.
+//
+// The image is that of unix(), as for git. gh never prompts, checks for
+// no update, and pages nothing (GH_PROMPT_DISABLED=1,
+// GH_NO_UPDATE_NOTIFIER=1, GH_PAGER=""). The token authenticates gh's
+// own API calls; a command that also runs git over https — `gh pr
+// checkout`, `gh repo clone` — takes `with = [git_setup(token = ...)]`
+// as well.
+//
+// @param token      GH_TOKEN; masked in the command log.
+// @param host       GH_HOST, for GitHub Enterprise Server.
+// @param repo       GH_REPO, "owner/name": the repository a command acts on when it is not the project's.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "gh" } on ...` or `$[...]`.
+// @example lask eval gh --repo lask-task-runner/lask
+gh(
+  --token!!: String | Null = null,
+  --host: String | Null = null,
+  --repo: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  dockerfile = "images/unix/Dockerfile",
+  env = layered_env(
+    merge({"GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1", "GH_PAGER": ""}, git_trust()),
+    extra_env,
+    with,
+    vars({"GH_TOKEN": token, "GH_HOST": host, "GH_REPO": repo})
+  ),
+  volumes = layered_volumes(with, [])
+)
+
+// The GitLab CLI, configured by its parameters.
+//
+// The image is that of unix(), as for git. glab checks for no update
+// and never prompts (GLAB_CHECK_UPDATE=false, GLAB_NO_PROMPT=true). As with
+// gh, a command that runs git over https takes git_setup as well, with
+// token_user = "oauth2".
+//
+// @param token      GITLAB_TOKEN; masked in the command log.
+// @param host       GITLAB_HOST, for a self-managed instance.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "glab" } on ...` or `$[...]`.
+// @example lask eval glab --host gitlab.example.com
+glab(
+  --token!!: String | Null = null,
+  --host: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  dockerfile = "images/unix/Dockerfile",
+  env = layered_env(
+    merge({"GLAB_CHECK_UPDATE": "false", "GLAB_NO_PROMPT": "true"}, git_trust()),
+    extra_env,
+    with,
+    vars({"GITLAB_TOKEN": token, "GITLAB_HOST": host})
+  ),
+  volumes = layered_volumes(with, [])
+)

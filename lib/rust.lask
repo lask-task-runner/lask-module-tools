@@ -1,0 +1,38 @@
+// Rust, with Cargo.
+
+import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Rust at --tag, configured by its parameters.
+//
+// The image is rust at --tag, 1.98.1-slim-trixie unless another is
+// given; it carries the C toolchain Cargo links with. The reference is
+// built from the argument when the function runs, so `lask env build`
+// does not pull or pin it (lask spec 10.3): pull it once, and a run
+// never pulls.
+//
+// @param tag        The rust image tag to run.
+// @param rustflags  RUSTFLAGS.
+// @param cache_dir  Host directory mounted at /cache; Cargo's home is /cache/cargo (CARGO_HOME), which holds the registry and the git checkouts. The toolchain stays where the image has it.
+// @param with       Setups of other tools this environment should also carry; git_setup for a private git dependency.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "cargo" } on ...` or `$[...]`.
+// @example lask eval rust --cache_dir /tmp/cache
+rust(
+  --tag: String = "1.98.1-slim-trixie",
+  --rustflags: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "rust:#{tag}",
+  env = layered_env(
+    merge({"CARGO_TERM_COLOR": "never"}, git_trust()),
+    extra_env,
+    with,
+    vars({"RUSTFLAGS": rustflags, "CARGO_HOME": in_cache(cache_dir, "cargo")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Rust works as it is, so its command words are exported.
+command { "cargo", "rustc", "rustup" } on rust()

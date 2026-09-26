@@ -1,0 +1,53 @@
+// C and C++, with GCC and Make.
+
+import { vars, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// GCC at --tag, with Make, configured by its parameters.
+//
+// The image is gcc at --tag, 16.2.0 unless another is given. It has no
+// CMake. The reference is built from the argument when the function
+// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
+// pull it once, and a run never pulls.
+//
+// @param tag        The gcc image tag to run.
+// @param cc         CC.
+// @param cxx        CXX.
+// @param cflags     CFLAGS.
+// @param cxxflags   CXXFLAGS.
+// @param ldflags    LDFLAGS.
+// @param makeflags  MAKEFLAGS, e.g. "-j8".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "make" } on ...` or `$[...]`.
+// @example lask eval cc --cflags "-O2 -Wall"
+cc(
+  --tag: String = "16.2.0",
+  --cc: String | Null = null,
+  --cxx: String | Null = null,
+  --cflags: String | Null = null,
+  --cxxflags: String | Null = null,
+  --ldflags: String | Null = null,
+  --makeflags: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "gcc:#{tag}",
+  env = layered_env(
+    {},
+    extra_env,
+    with,
+    vars({
+      "CC": cc,
+      "CXX": cxx,
+      "CFLAGS": cflags,
+      "CXXFLAGS": cxxflags,
+      "LDFLAGS": ldflags,
+      "MAKEFLAGS": makeflags
+    })
+  ),
+  volumes = layered_volumes(with, [])
+)
+
+// The compilers and Make work as they are, so their command words are
+// exported.
+command { "gcc", "g++", "cc", "c++", "make" } on cc()

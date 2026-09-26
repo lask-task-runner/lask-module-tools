@@ -13,30 +13,102 @@
 
 export { ToolSetup, home } from "./lib/common.lask"
 
-// AWS CLI v2.
-export { aws, aws_setup } from "./lib/aws.lask"
+// ---- Setups for --with, which no one tool owns ----------------------
 
-// Python, with pip. Its command words are exported as well.
+export { ssh_setup, git_setup, docker_setup, registry_setup } from "./lib/setups.lask"
+
+// ---- Cloud CLIs: each needs an account, so none exports a word ------
+
+export { aws, aws_setup } from "./lib/aws.lask"
+export { gcloud, gcloud_setup } from "./lib/gcloud.lask"
+export { az, azure_setup } from "./lib/azure.lask"
+
+// ---- Languages: each works as it is, so each exports its words ------
+
 export { python } from "./lib/python.lask"
 export command { "python", "python3", "pip", "pip3" } from "./lib/python.lask"
 
-// Terraform. It needs a provider's credentials, so it exports no
-// command word: declare `command { "terraform" } on tools.terraform(...)`.
-export { terraform } from "./lib/terraform.lask"
-
-// Node.js, with npm and npx. Its command words are exported as well.
 export { node } from "./lib/node.lask"
 export command { "node", "npm", "npx", "corepack" } from "./lib/node.lask"
 
-// Playwright, with its browsers. Its tests run through npx, which is
-// node's word, so it exports none: give it with `$[tools.playwright()]`.
-export { playwright } from "./lib/playwright.lask"
+export { go } from "./lib/go.lask"
+export command { "go", "gofmt" } from "./lib/go.lask"
 
-// curl, jq and the everyday command-line tools, in one image. Their
-// command words are exported as well.
+export { java, maven, gradle } from "./lib/java.lask"
+export command { "java", "javac", "jar", "mvn", "gradle" } from "./lib/java.lask"
+
+export { rust } from "./lib/rust.lask"
+export command { "cargo", "rustc", "rustup" } from "./lib/rust.lask"
+
+export { cc } from "./lib/cc.lask"
+export command { "gcc", "g++", "cc", "c++", "make" } from "./lib/cc.lask"
+
+export { ruby } from "./lib/ruby.lask"
+export command { "ruby", "gem", "bundle", "rake" } from "./lib/ruby.lask"
+
+export { dotnet } from "./lib/dotnet.lask"
+export command { "dotnet" } from "./lib/dotnet.lask"
+
+export { deno, bun } from "./lib/deno.lask"
+export command { "deno", "bun", "bunx" } from "./lib/deno.lask"
+
+export { haskell } from "./lib/haskell.lask"
+export command { "ghc", "ghci", "runghc", "cabal", "stack" } from "./lib/haskell.lask"
+
+// ---- Container orchestration: a cluster needs a kubeconfig ----------
+
+export { kubectl, helm, kustomize, kube_setup } from "./lib/kube.lask"
+export command { "kustomize" } from "./lib/kube.lask"
+
+// ---- IaC: each needs a provider's credentials -----------------------
+
+export { terraform, tofu } from "./lib/terraform.lask"
+export { ansible } from "./lib/ansible.lask"
+export { packer } from "./lib/packer.lask"
+export { pulumi } from "./lib/pulumi.lask"
+
+// ---- Database clients: each needs a server --------------------------
+
+export { psql, pg_setup, mysql, redis_cli, migrate, flyway } from "./lib/db.lask"
+
+// ---- Git and code hosts: each needs an identity ---------------------
+
+export { git, gh, glab } from "./lib/git.lask"
+
+// ---- Build and code generation --------------------------------------
+
+export { buf, protoc, bazel } from "./lib/build.lask"
+export command { "buf", "protoc", "bazel", "bazelisk" } from "./lib/build.lask"
+
+// ---- Linters and formatters -----------------------------------------
+
+export { shellcheck, hadolint, tflint, golangci_lint, ruff, actionlint } from "./lib/lint.lask"
+export command { "shellcheck", "hadolint", "tflint", "golangci-lint", "ruff", "actionlint" } from "./lib/lint.lask"
+
+// ---- Security scanners ----------------------------------------------
+
+export { trivy, gitleaks, checkov, grype, syft, semgrep } from "./lib/security.lask"
+export command { "trivy", "gitleaks", "checkov", "grype", "syft", "semgrep" } from "./lib/security.lask"
+
+// ---- Secret managers: each needs a credential -----------------------
+
+export { vault, vault_setup, sops, op } from "./lib/secrets.lask"
+
+// ---- Everyday tools: curl, jq and the rest, in one image ------------
+
 export { unix } from "./lib/unix.lask"
 export command {
   "curl", "wget", "openssl",
   "jq", "yq", "envsubst",
-  "tar", "gzip", "xz", "bzip2", "zip", "unzip"
+  "tar", "gzip", "xz", "bzip2", "zip", "unzip",
+  "rsync"
 } from "./lib/unix.lask"
+
+// ---- API, HTTP, E2E and load testing --------------------------------
+
+// Playwright's tests run through npx, which is node's word, so it
+// exports none: give it with `$[tools.playwright()]`.
+export { playwright } from "./lib/playwright.lask"
+
+export { k6, grpcurl, newman, robot, ab } from "./lib/testing.lask"
+export command { "k6", "grpcurl", "newman", "robot", "rebot", "libdoc", "ab" } from "./lib/testing.lask"

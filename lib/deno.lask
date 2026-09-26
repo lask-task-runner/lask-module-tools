@@ -1,0 +1,72 @@
+// Deno and Bun.
+
+import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Deno at --tag, configured by its parameters.
+//
+// The image is denoland/deno at --tag, alpine-2.9.7 unless another is
+// given. The reference is built from the argument when the function
+// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
+// pull it once, and a run never pulls.
+//
+// Deno checks for no update and never prompts for a permission
+// (DENO_NO_UPDATE_CHECK=1, DENO_NO_PROMPT=1): a permission not granted
+// on the command line fails.
+//
+// @param tag          The denoland/deno image tag to run.
+// @param auth_tokens  DENO_AUTH_TOKENS, for private modules; masked in the command log.
+// @param cache_dir    Host directory mounted at /cache; Deno's cache is /cache/deno (DENO_DIR).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "deno" } on ...` or `$[...]`.
+// @example lask eval deno --cache_dir /tmp/cache
+deno(
+  --tag: String = "alpine-2.9.7",
+  --auth_tokens!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "denoland/deno:#{tag}",
+  env = layered_env(
+    {"DENO_NO_UPDATE_CHECK": "1", "DENO_NO_PROMPT": "1"},
+    extra_env,
+    with,
+    vars({"DENO_AUTH_TOKENS": auth_tokens, "DENO_DIR": in_cache(cache_dir, "deno")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Bun at --tag, configured by its parameters.
+//
+// The image is oven/bun at --tag, 1.4.2-alpine unless another is
+// given; pull it once, as for deno. Bun sends no telemetry
+// (DO_NOT_TRACK=1).
+//
+// @param tag        The oven/bun image tag to run.
+// @param npm_token  NPM_TOKEN, for a bunfig.toml or .npmrc that reads it; masked in the command log.
+// @param cache_dir  Host directory mounted at /cache; Bun's install cache is /cache/bun (BUN_INSTALL_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "bun" } on ...` or `$[...]`.
+// @example lask eval bun --cache_dir /tmp/cache
+bun(
+  --tag: String = "1.4.2-alpine",
+  --npm_token!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "oven/bun:#{tag}",
+  env = layered_env(
+    {"DO_NOT_TRACK": "1"},
+    extra_env,
+    with,
+    vars({"NPM_TOKEN": npm_token, "BUN_INSTALL_CACHE_DIR": in_cache(cache_dir, "bun")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Deno and Bun work as they are, so their command words are exported.
+command { "deno" } on deno()
+command { "bun", "bunx" } on bun()

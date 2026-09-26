@@ -1,0 +1,44 @@
+// Packer.
+
+import { vars, mount, in_cache, prefixed, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Packer at --tag, configured by its parameters.
+//
+// The image is hashicorp/packer at --tag, 1.16.1 unless another is
+// given. The reference is built from the argument when the function
+// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
+// pull it once, and a run never pulls.
+//
+// Packer does not call home (CHECKPOINT_DISABLE=1). A builder's
+// credentials come in through --with: aws_setup for amazon-ebs,
+// gcloud_setup for googlecompute, azure_setup for azure-arm.
+//
+// @param tag        The hashicorp/packer image tag to run.
+// @param log        PACKER_LOG, "1" for a verbose log.
+// @param variables  Input variables, each set as PKR_VAR_<name>.
+// @param cache_dir  Host directory mounted at /cache; plugins go in /cache/plugins (PACKER_PLUGIN_PATH) and downloads in /cache/packer_cache (PACKER_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry: a builder's credentials.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "packer" } on ...` or `$[...]`.
+// @example lask eval packer --variables '{"region": "ap-northeast-1"}'
+packer(
+  --tag: String = "1.16.1",
+  --log: String | Null = null,
+  --variables: Map<String> = {},
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "hashicorp/packer:#{tag}",
+  env = layered_env(
+    {"CHECKPOINT_DISABLE": "1"},
+    extra_env,
+    with,
+    merge(prefixed("PKR_VAR_", variables), vars({
+      "PACKER_LOG": log,
+      "PACKER_PLUGIN_PATH": in_cache(cache_dir, "plugins"),
+      "PACKER_CACHE_DIR": in_cache(cache_dir, "packer_cache")
+    }))
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)

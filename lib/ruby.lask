@@ -1,0 +1,40 @@
+// Ruby, with RubyGems and Bundler.
+
+import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Ruby at --tag, configured by its parameters.
+//
+// The image is ruby at --tag, 4.0.7-alpine3.24 unless another is given.
+// Alpine has no C toolchain, so a gem with a native extension and no
+// prebuilt musl gem needs a Debian tag, e.g. 4.0.7-slim-trixie. The
+// reference is built from the argument when the function runs, so
+// `lask env build` does not pull or pin it (lask spec 10.3): pull it
+// once, and a run never pulls.
+//
+// Bundler does not warn that it runs as root
+// (BUNDLE_SILENCE_ROOT_WARNING=1): every container here does.
+//
+// @param tag        The ruby image tag to run.
+// @param cache_dir  Host directory mounted at /cache; Bundler installs gems into /cache/bundle (BUNDLE_PATH), so they outlive the container.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable, e.g. a BUNDLE_<HOST>__<DOMAIN> credential; below --with and the named parameters.
+// @return The environment, for `command { "bundle" } on ...` or `$[...]`.
+// @example lask eval ruby --cache_dir /tmp/cache
+ruby(
+  --tag: String = "4.0.7-alpine3.24",
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "ruby:#{tag}",
+  env = layered_env(
+    {"BUNDLE_SILENCE_ROOT_WARNING": "1"},
+    extra_env,
+    with,
+    vars({"BUNDLE_PATH": in_cache(cache_dir, "bundle")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Ruby works as it is, so its command words are exported.
+command { "ruby", "gem", "bundle", "rake" } on ruby()

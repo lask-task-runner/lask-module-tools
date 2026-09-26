@@ -1,0 +1,116 @@
+// Java: the JDK, Maven and Gradle.
+
+import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// The Eclipse Temurin JDK at --tag, configured by its parameters.
+//
+// The image is eclipse-temurin at --tag, 25.0.4.1_1-jdk-noble (Java 25,
+// an LTS release) unless another is given. The reference is built from
+// the argument when the function runs, so `lask env build` does not
+// pull or pin it (lask spec 10.3): pull it once, and a run never pulls.
+//
+// @param tag                The eclipse-temurin image tag to run.
+// @param java_tool_options  JAVA_TOOL_OPTIONS, which every JVM in the container reads.
+// @param with               Setups of other tools this environment should also carry.
+// @param extra_env          Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "java" } on ...` or `$[...]`.
+// @example lask eval java --java_tool_options -Xmx2g
+java(
+  --tag: String = "25.0.4.1_1-jdk-noble",
+  --java_tool_options: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "eclipse-temurin:#{tag}",
+  env = layered_env({}, extra_env, with, vars({"JAVA_TOOL_OPTIONS": java_tool_options})),
+  volumes = layered_volumes(with, [])
+)
+
+// The system property that points Maven's local repository into the
+// cache, after whatever MAVEN_OPTS the caller gave.
+internal maven_opts_with(opts: String | Null, cache_dir: String | Null): String | Null = case (cache_dir) {
+  Null -> opts
+  else -> case (opts) {
+    Null -> "-Dmaven.repo.local=/cache/m2"
+    else -> "#{opts} -Dmaven.repo.local=/cache/m2"
+  }
+}
+
+// Maven at --tag, on Temurin 25, configured by its parameters.
+//
+// The image is maven at --tag, 3.9.16-eclipse-temurin-25-noble unless
+// another is given; pull it once, as for java. Maven runs in batch mode
+// without transfer progress (MAVEN_ARGS), so the command log holds the
+// build rather than a download meter.
+//
+// @param tag                The maven image tag to run.
+// @param java_tool_options  JAVA_TOOL_OPTIONS.
+// @param maven_opts         MAVEN_OPTS.
+// @param cache_dir          Host directory mounted at /cache; the local repository is /cache/m2 (-Dmaven.repo.local, added to MAVEN_OPTS).
+// @param with               Setups of other tools this environment should also carry.
+// @param extra_env          Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "mvn" } on ...` or `$[...]`.
+// @example lask eval maven --cache_dir /tmp/cache
+maven(
+  --tag: String = "3.9.16-eclipse-temurin-25-noble",
+  --java_tool_options: String | Null = null,
+  --maven_opts: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "maven:#{tag}",
+  env = layered_env(
+    {"MAVEN_ARGS": "--batch-mode --no-transfer-progress"},
+    extra_env,
+    with,
+    vars({
+      "JAVA_TOOL_OPTIONS": java_tool_options,
+      "MAVEN_OPTS": maven_opts_with(maven_opts, cache_dir)
+    })
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Gradle at --tag, on Temurin 25, configured by its parameters.
+//
+// The image is gradle at --tag, 9.8.0-jdk25-noble unless another is
+// given; pull it once, as for java. A project's own wrapper,
+// `./gradlew`, runs here too, though as a path it is no command word:
+// give the environment with `$[...]`.
+//
+// @param tag                The gradle image tag to run.
+// @param java_tool_options  JAVA_TOOL_OPTIONS.
+// @param gradle_opts        GRADLE_OPTS.
+// @param cache_dir          Host directory mounted at /cache; the Gradle user home is /cache/gradle (GRADLE_USER_HOME).
+// @param with               Setups of other tools this environment should also carry.
+// @param extra_env          Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "gradle" } on ...` or `$[...]`.
+// @example lask eval gradle --cache_dir /tmp/cache
+gradle(
+  --tag: String = "9.8.0-jdk25-noble",
+  --java_tool_options: String | Null = null,
+  --gradle_opts: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "gradle:#{tag}",
+  env = layered_env(
+    {},
+    extra_env,
+    with,
+    vars({
+      "JAVA_TOOL_OPTIONS": java_tool_options,
+      "GRADLE_OPTS": gradle_opts,
+      "GRADLE_USER_HOME": in_cache(cache_dir, "gradle")
+    })
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// The JDK, Maven and Gradle work as they are, so their command words
+// are exported, each declared on its tool's default environment.
+command { "java", "javac", "jar" } on java()
+command { "mvn" } on maven()
+command { "gradle" } on gradle()

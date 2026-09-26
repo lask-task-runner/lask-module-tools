@@ -1,0 +1,144 @@
+// Linters and formatters: shellcheck, hadolint, tflint, golangci-lint,
+// ruff and actionlint. Each needs nothing from the caller, so each
+// exports its command word.
+//
+// Every image is taken at --tag, a reference built when the function
+// runs: `lask env build` does not pull or pin it (lask spec 10.3), so
+// pull it once, and a run never pulls. A tool's own image is used where
+// it has a shell, which a lask command runs through.
+
+import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// ShellCheck at --tag, koalaman/shellcheck-alpine:v0.11.0 by default.
+//
+// @param tag        The koalaman/shellcheck-alpine image tag to run.
+// @param opts       SHELLCHECK_OPTS, e.g. "-e SC1091".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "shellcheck" } on ...` or `$[...]`.
+// @example lask eval shellcheck --opts "-e SC1091"
+shellcheck(
+  --tag: String = "v0.11.0",
+  --opts: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "koalaman/shellcheck-alpine:#{tag}",
+  env = layered_env({}, extra_env, with, vars({"SHELLCHECK_OPTS": opts})),
+  volumes = layered_volumes(with, [])
+)
+
+// hadolint, the Dockerfile linter, at --tag, hadolint/hadolint:v2.15.1-alpine
+// by default. A .hadolint.yaml in the project configures it.
+//
+// @param tag        The hadolint/hadolint image tag to run.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable, e.g. HADOLINT_FAILURE_THRESHOLD; below --with.
+// @return The environment, for `command { "hadolint" } on ...` or `$[...]`.
+// @example lask eval hadolint
+hadolint(
+  --tag: String = "v2.15.1-alpine",
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "hadolint/hadolint:#{tag}",
+  env = layered_env({}, extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+// TFLint at --tag, ghcr.io/terraform-linters/tflint:v0.64.0 by default.
+// `tflint --init` downloads the plugins .tflint.hcl names, from GitHub.
+//
+// @param tag           The tflint image tag to run.
+// @param github_token  GITHUB_TOKEN, which lifts GitHub's rate limit on plugin downloads; masked in the command log.
+// @param cache_dir     Host directory mounted at /cache; plugins are kept in /cache/tflint (TFLINT_PLUGIN_DIR).
+// @param with          Setups of other tools this environment should also carry.
+// @param extra_env     Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "tflint" } on ...` or `$[...]`.
+// @example lask eval tflint --cache_dir /tmp/cache
+tflint(
+  --tag: String = "v0.64.0",
+  --github_token!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "ghcr.io/terraform-linters/tflint:#{tag}",
+  env = layered_env({}, extra_env, with, vars({"GITHUB_TOKEN": github_token, "TFLINT_PLUGIN_DIR": in_cache(cache_dir, "tflint")})),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// golangci-lint at --tag, golangci/golangci-lint:v2.14.0 by default,
+// with the Go it was built with. The mounted project is trusted by Git
+// (safe.directory), since the linters that read history need it.
+//
+// @param tag        The golangci/golangci-lint image tag to run.
+// @param cache_dir  Host directory mounted at /cache: golangci-lint's cache (/cache/golangci-lint), and Go's module and build caches (/cache/mod, /cache/build), shared with go().
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "golangci-lint" } on ...` or `$[...]`.
+// @example lask eval golangci_lint --cache_dir /tmp/cache
+golangci_lint(
+  --tag: String = "v2.14.0",
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "golangci/golangci-lint:#{tag}",
+  env = layered_env(
+    git_trust(),
+    extra_env,
+    with,
+    vars({
+      "GOLANGCI_LINT_CACHE": in_cache(cache_dir, "golangci-lint"),
+      "GOMODCACHE": in_cache(cache_dir, "mod"),
+      "GOCACHE": in_cache(cache_dir, "build")
+    })
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Ruff, the Python linter and formatter, at --tag,
+// ghcr.io/astral-sh/ruff:0.16.9-alpine by default.
+//
+// @param tag        The ruff image tag to run.
+// @param cache_dir  Host directory mounted at /cache; Ruff's cache is /cache/ruff (RUFF_CACHE_DIR) instead of .ruff_cache in the project.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "ruff" } on ...` or `$[...]`.
+// @example lask eval ruff
+ruff(
+  --tag: String = "0.16.9-alpine",
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "ghcr.io/astral-sh/ruff:#{tag}",
+  env = layered_env({}, extra_env, with, vars({"RUFF_CACHE_DIR": in_cache(cache_dir, "ruff")})),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// actionlint, the GitHub Actions workflow linter, at --tag,
+// rhysd/actionlint:1.7.12 by default.
+//
+// @param tag        The rhysd/actionlint image tag to run.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "actionlint" } on ...` or `$[...]`.
+// @example lask eval actionlint
+actionlint(
+  --tag: String = "1.7.12",
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "rhysd/actionlint:#{tag}",
+  env = layered_env({}, extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+command { "shellcheck" } on shellcheck()
+command { "hadolint" } on hadolint()
+command { "tflint" } on tflint()
+command { "golangci-lint" } on golangci_lint()
+command { "ruff" } on ruff()
+command { "actionlint" } on actionlint()

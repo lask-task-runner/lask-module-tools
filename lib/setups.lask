@@ -1,0 +1,113 @@
+// Setups no one tool owns: SSH, Git over https, the Docker daemon, and
+// a container registry. Each is a ToolSetup, for a tool's --with.
+
+import { ToolSetup, vars, mount, given, git_trust } from "./common.lask"
+
+// An SSH identity: a key directory, an agent, or both.
+//
+// A key directory is mounted read-only at /root/.ssh. On a Linux host
+// its files belong to the host's user, and ssh refuses a config file
+// that neither root nor the running user owns; an agent socket has no
+// such problem, and keeps the keys out of the container. With Docker
+// Desktop the host's agent is at "/run/host-services/ssh-auth.sock"; on
+// Linux it is the host's $SSH_AUTH_SOCK.
+//
+// @param dir           Host directory mounted read-only at /root/.ssh, usually home(".ssh").
+// @param agent_socket  Host path of an SSH agent socket, mounted at /run/ssh-agent.sock (SSH_AUTH_SOCK).
+// @return The variables and mounts, for a tool's --with.
+ssh_setup(
+  --dir: String | Null = null,
+  --agent_socket: String | Null = null
+): ToolSetup = {
+  env: vars({"SSH_AUTH_SOCK": given(agent_socket, "/run/ssh-agent.sock")}),
+  volumes: concat_array(mount(dir, "/root/.ssh:ro"), mount(agent_socket, "/run/ssh-agent.sock"))
+}
+
+// Git's identity and its access to private repositories over https.
+//
+// The configuration is carried in GIT_CONFIG_* variables, so nothing
+// is written to a file: the mounted project is trusted
+// (safe.directory), and with a token, https://<host>/ and
+// git@<host>: are both rewritten to https with the token in the URL.
+// That reaches every tool that clones through Git — `go get` of a
+// private module, a git dependency of npm, Cargo or Bundler. The token
+// is masked wherever it appears.
+//
+// @param token       The access token; masked in the command log.
+// @param host        The host the token is for.
+// @param token_user  The user name the host expects beside a token: "x-access-token" for GitHub, "oauth2" for GitLab.
+// @param name        GIT_AUTHOR_NAME and GIT_COMMITTER_NAME.
+// @param email       GIT_AUTHOR_EMAIL and GIT_COMMITTER_EMAIL.
+// @return The variables, for a tool's --with.
+git_setup(
+  --token!!: String | Null = null,
+  --host: String = "github.com",
+  --token_user: String = "x-access-token",
+  --name: String | Null = null,
+  --email: String | Null = null
+): ToolSetup = do {
+  config = case (token) {
+    Null -> git_trust()
+    else -> merge(git_trust(), {
+      "GIT_CONFIG_COUNT": "3",
+      "GIT_CONFIG_KEY_1": "url.https://#{token_user}:#{token}@#{host}/.insteadOf",
+      "GIT_CONFIG_VALUE_1": "https://#{host}/",
+      "GIT_CONFIG_KEY_2": "url.https://#{token_user}:#{token}@#{host}/.insteadOf",
+      "GIT_CONFIG_VALUE_2": "git@#{host}:"
+    })
+  }
+  identity = vars({
+    "GIT_AUTHOR_NAME": name,
+    "GIT_COMMITTER_NAME": name,
+    "GIT_AUTHOR_EMAIL": email,
+    "GIT_COMMITTER_EMAIL": email
+  })
+  return {env: merge(config, identity), volumes: []}
+}
+
+// The host's Docker daemon, for a tool that starts or inspects
+// containers itself: an image scan of a local image, Testcontainers.
+//
+// This hands the container the host's daemon, and with it root on the
+// host: ask for it only where it is needed (lask spec 10.7).
+//
+// @param socket  Host path of the daemon's socket.
+// @return The variables and mounts, for a tool's --with.
+docker_setup(--socket: String = "/var/run/docker.sock"): ToolSetup = {
+  env: {"DOCKER_HOST": "unix:///var/run/docker.sock"},
+  volumes: ["#{socket}:/var/run/docker.sock"]
+}
+
+// Credentials for a container registry, for a tool that pulls from it
+// itself: trivy, grype, syft.
+//
+// Either a Docker configuration directory, mounted read-only
+// (DOCKER_CONFIG), or a user name and password, set under the names
+// each scanner reads. A configuration that keeps its credentials in a
+// credential helper — Docker Desktop's "desktop" — holds none the
+// container can use: pass the user name and password instead.
+//
+// @param registry    The registry the user name and password are for, e.g. "ghcr.io".
+// @param username    TRIVY_USERNAME, GRYPE_REGISTRY_AUTH_USERNAME and SYFT_REGISTRY_AUTH_USERNAME.
+// @param password    TRIVY_PASSWORD, GRYPE_REGISTRY_AUTH_PASSWORD and SYFT_REGISTRY_AUTH_PASSWORD; masked in the command log.
+// @param config_dir  Host directory mounted read-only at /run/docker (DOCKER_CONFIG), usually home(".docker").
+// @return The variables and mounts, for a tool's --with.
+registry_setup(
+  --registry: String | Null = null,
+  --username: String | Null = null,
+  --password!!: String | Null = null,
+  --config_dir: String | Null = null
+): ToolSetup = {
+  env: vars({
+    "DOCKER_CONFIG": given(config_dir, "/run/docker"),
+    "TRIVY_USERNAME": username,
+    "TRIVY_PASSWORD": password,
+    "GRYPE_REGISTRY_AUTH_AUTHORITY": registry,
+    "GRYPE_REGISTRY_AUTH_USERNAME": username,
+    "GRYPE_REGISTRY_AUTH_PASSWORD": password,
+    "SYFT_REGISTRY_AUTH_AUTHORITY": registry,
+    "SYFT_REGISTRY_AUTH_USERNAME": username,
+    "SYFT_REGISTRY_AUTH_PASSWORD": password
+  }),
+  volumes: mount(config_dir, "/run/docker:ro")
+}

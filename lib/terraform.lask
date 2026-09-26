@@ -1,10 +1,15 @@
 // Terraform.
 
-import { vars, mount, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { vars, mount, prefixed, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
-// TF_VAR_<name> for each input variable given.
-internal input_variables(m: Map<String>): Map<String> =
-  from_entries(map(entries(m), \(e: Record<key: String, value: String>) -> {key: "TF_VAR_#{e.key}", value: e.value}))
+// The variables Terraform and OpenTofu read, from the parameters they
+// share.
+internal tf_env(workspace: String | Null, log: String | Null, variables: Map<String>, cache_dir: String | Null): Map<String> =
+  merge(prefixed("TF_VAR_", variables), vars({
+    "TF_WORKSPACE": workspace,
+    "TF_LOG": log,
+    "TF_PLUGIN_CACHE_DIR": if (cache_dir == null) { null } else { "/cache" }
+  }))
 
 // Terraform at --tag, configured by its parameters.
 //
@@ -44,11 +49,45 @@ terraform(
     {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"},
     extra_env,
     with,
-    merge(input_variables(variables), vars({
-      "TF_WORKSPACE": workspace,
-      "TF_LOG": log,
-      "TF_PLUGIN_CACHE_DIR": if (cache_dir == null) { null } else { "/cache" }
-    }))
+    tf_env(workspace, log, variables, cache_dir)
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// OpenTofu at --tag, configured by the parameters of terraform.
+//
+// The image is ghcr.io/opentofu/opentofu at --tag, 1.12.6 unless
+// another is given. OpenTofu reads Terraform's variables, so every
+// parameter means what it means for terraform: TF_INPUT=0,
+// TF_IN_AUTOMATION=1, TF_VAR_* from --variables, the plugin cache at
+// the /cache mount point. The reference is built from the argument when
+// the function runs, so `lask env build` does not pull or pin it (lask
+// spec 10.3): pull it once, and a run never pulls.
+//
+// @param tag        The opentofu image tag to run.
+// @param workspace  TF_WORKSPACE.
+// @param log        TF_LOG, e.g. "DEBUG".
+// @param variables  Input variables, each set as TF_VAR_<name>.
+// @param cache_dir  Host directory mounted at /cache and used as the plugin cache itself (TF_PLUGIN_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry: a provider's credentials.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "tofu" } on ...` or `$[...]`.
+// @example lask eval tofu --workspace staging
+tofu(
+  --tag: String = "1.12.6",
+  --workspace: String | Null = null,
+  --log: String | Null = null,
+  --variables: Map<String> = {},
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "ghcr.io/opentofu/opentofu:#{tag}",
+  env = layered_env(
+    {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"},
+    extra_env,
+    with,
+    tf_env(workspace, log, variables, cache_dir)
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )

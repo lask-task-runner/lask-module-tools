@@ -1,0 +1,40 @@
+// Haskell: GHC, Cabal and Stack.
+
+import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// GHC at --tag, with Cabal and Stack, configured by its parameters.
+//
+// The image is haskell at --tag, 9.12.4-slim-bookworm unless another is
+// given. The reference is built from the argument when the function
+// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
+// pull it once, and a run never pulls.
+//
+// Stack in this image is not told to use the GHC beside it: give
+// `stack --system-ghc` for a resolver on this GHC, or let Stack install
+// the one its resolver names, which --cache_dir then keeps.
+//
+// @param tag        The haskell image tag to run.
+// @param cache_dir  Host directory mounted at /cache; Cabal's directory is /cache/cabal (CABAL_DIR) and Stack's root /cache/stack (STACK_ROOT), so the package store and downloaded compilers outlive the container.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "cabal" } on ...` or `$[...]`.
+// @example lask eval haskell --cache_dir /tmp/cache
+haskell(
+  --tag: String = "9.12.4-slim-bookworm",
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "haskell:#{tag}",
+  env = layered_env(
+    git_trust(),
+    extra_env,
+    with,
+    vars({"CABAL_DIR": in_cache(cache_dir, "cabal"), "STACK_ROOT": in_cache(cache_dir, "stack")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// GHC, Cabal and Stack work as they are, so their command words are
+// exported.
+command { "ghc", "ghci", "runghc", "cabal", "stack" } on haskell()

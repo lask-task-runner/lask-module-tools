@@ -1,5 +1,6 @@
 # The image of unix(): the everyday command-line tools, in one image so
 # that a pipeline such as `curl ... | jq ...` runs in one container.
+# git(), gh() and glab() run in it too.
 #
 # The base is pinned by its digest. The packages are Alpine 3.24's, as
 # the repository has them when the image is built; lask tags the image
@@ -10,6 +11,8 @@ RUN apk add --no-cache \
       bash coreutils findutils grep sed gawk diffutils file less tzdata \
       ca-certificates curl wget openssl \
       jq yq-go gettext-envsubst \
-      tar gzip xz bzip2 zip unzip
+      tar gzip xz bzip2 zip unzip \
+      git openssh-client rsync make \
+      github-cli glab
 
 CMD ["bash"]

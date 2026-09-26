@@ -1,0 +1,140 @@
+// Kubernetes: kubectl, Helm and Kustomize.
+
+import { ToolSetup, vars, mount, given, in_cache, layered_env, layered_volumes } from "./common.lask"
+
+// What a Kubernetes client needs from an environment: a kubeconfig, and
+// the context and namespace to use from it. Give it to another tool's
+// --with — the Terraform kubernetes and helm providers, Pulumi — to
+// reach the same cluster.
+//
+// The kubeconfig is mounted read-only, and the variables are set under
+// each name the tools read: KUBECONFIG, KUBE_CONFIG_PATH (Terraform),
+// HELM_KUBECONTEXT and KUBE_CTX, HELM_NAMESPACE. kubectl reads no
+// variable for a context or a namespace: it uses the kubeconfig's
+// current context unless `--context` and `-n` are given on its command
+// line.
+//
+// @param kubeconfig  Host path of the kubeconfig, e.g. home(".kube/config").
+// @param context     The context Helm and Terraform use.
+// @param namespace   The namespace Helm uses.
+// @return The variables and mounts, for a tool's --with.
+kube_setup(
+  --kubeconfig: String | Null = null,
+  --context: String | Null = null,
+  --namespace: String | Null = null
+): ToolSetup = {
+  env: vars({
+    "KUBECONFIG": given(kubeconfig, "/run/kube/config"),
+    "KUBE_CONFIG_PATH": given(kubeconfig, "/run/kube/config"),
+    "HELM_KUBECONTEXT": context,
+    "KUBE_CTX": context,
+    "HELM_NAMESPACE": namespace
+  }),
+  volumes: mount(kubeconfig, "/run/kube/config:ro")
+}
+
+// kubectl at --tag, configured by its parameters.
+//
+// The image is alpine/k8s at --tag, 1.37.0 unless another is given: its
+// tag follows kubectl's release, and it carries Helm, Kustomize, the AWS
+// CLI and eksctl beside it, so a kubeconfig whose user runs `aws eks
+// get-token` works with `with = [aws_setup(...)]`. It has no
+// gke-gcloud-auth-plugin. The kubectl image of registry.k8s.io has no
+// shell, which every command here runs through. The reference is built
+// from the argument when the function runs, so `lask env build` does
+// not pull or pin it (lask spec 10.3): pull it once, and a run never
+// pulls.
+//
+// A cluster the kubeconfig reaches at 127.0.0.1 — kind, minikube — is
+// the host's, not the container's: give network = "host".
+//
+// @param tag         The alpine/k8s image tag to run.
+// @param kubeconfig  Host path of the kubeconfig, mounted read-only (KUBECONFIG).
+// @param context     HELM_KUBECONTEXT and KUBE_CTX; kubectl itself takes `--context`.
+// @param namespace   HELM_NAMESPACE; kubectl itself takes `-n`.
+// @param network     The container's network, e.g. "host".
+// @param with        Setups of other tools this environment should also carry: a cloud's credentials for the kubeconfig's exec plugin.
+// @param extra_env   Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "kubectl" } on ...` or `$[...]`.
+// @example lask eval kubectl --kubeconfig /home/me/.kube/config
+kubectl(
+  --tag: String = "1.37.0",
+  --kubeconfig: String | Null = null,
+  --context: String | Null = null,
+  --namespace: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = do {
+  own = kube_setup(kubeconfig = kubeconfig, context = context, namespace = namespace)
+  return #docker(
+    "alpine/k8s:#{tag}",
+    env = layered_env({}, extra_env, with, own.env),
+    volumes = layered_volumes(with, own.volumes),
+    network = network
+  )
+}
+
+// Helm, in the image of kubectl, configured by its parameters.
+//
+// The image is alpine/k8s at --tag, as for kubectl: one image for the
+// cluster's tools, so a kubeconfig works the same in each. Pull it once.
+//
+// @param tag         The alpine/k8s image tag to run.
+// @param kubeconfig  Host path of the kubeconfig, mounted read-only (KUBECONFIG).
+// @param context     HELM_KUBECONTEXT.
+// @param namespace   HELM_NAMESPACE.
+// @param network     The container's network, e.g. "host".
+// @param cache_dir   Host directory mounted at /cache; Helm's cache, configuration and data live under /cache/helm (HELM_CACHE_HOME, HELM_CONFIG_HOME, HELM_DATA_HOME), so added repositories and plugins outlive the container.
+// @param with        Setups of other tools this environment should also carry.
+// @param extra_env   Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "helm" } on ...` or `$[...]`.
+// @example lask eval helm --namespace web --cache_dir /tmp/cache
+helm(
+  --tag: String = "1.37.0",
+  --kubeconfig: String | Null = null,
+  --context: String | Null = null,
+  --namespace: String | Null = null,
+  --network: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = do {
+  own = kube_setup(kubeconfig = kubeconfig, context = context, namespace = namespace)
+  cache = vars({
+    "HELM_CACHE_HOME": in_cache(cache_dir, "helm/cache"),
+    "HELM_CONFIG_HOME": in_cache(cache_dir, "helm/config"),
+    "HELM_DATA_HOME": in_cache(cache_dir, "helm/data")
+  })
+  return #docker(
+    "alpine/k8s:#{tag}",
+    env = layered_env({}, extra_env, with, merge(own.env, cache)),
+    volumes = layered_volumes(with, concat_array(own.volumes, mount(cache_dir, "/cache"))),
+    network = network
+  )
+}
+
+// Kustomize, in the image of kubectl.
+//
+// The image is alpine/k8s at --tag, as for kubectl; the Kustomize image
+// of registry.k8s.io is published for amd64 only. `kustomize build`
+// renders manifests and reaches no cluster, so its command word is
+// exported.
+//
+// @param tag        The alpine/k8s image tag to run.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "kustomize" } on ...` or `$[...]`.
+// @example lask eval kustomize
+kustomize(
+  --tag: String = "1.37.0",
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "alpine/k8s:#{tag}",
+  env = layered_env({}, extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+// Kustomize needs no cluster, so its command word is exported.
+command { "kustomize" } on kustomize()

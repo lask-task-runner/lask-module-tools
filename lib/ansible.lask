@@ -1,0 +1,60 @@
+// Ansible.
+
+import { ToolSetup, vars, mount, given, flag, in_cache, layered_env, layered_volumes } from "./common.lask"
+import { ssh_setup } from "./setups.lask"
+
+// ansible-core, configured by its parameters.
+//
+// There is no official image, so the image is built from
+// lib/images/ansible/Dockerfile: ansible-core 2.21.4 on the Python image
+// of python(), with the SSH client. Its versions are fixed in the
+// recipe, so it has no --tag, and `lask env build` (or `lask deps
+// sync`) builds it once per machine (lask spec 10.3). A run never
+// builds.
+//
+// Output reaches the command log as it happens (PYTHONUNBUFFERED=1).
+// A collection a playbook needs is installed with `ansible-galaxy
+// collection install -r requirements.yml` in the same command, or kept
+// under --cache_dir.
+//
+// @param config               ANSIBLE_CONFIG: an ansible.cfg in the project.
+// @param inventory            ANSIBLE_INVENTORY.
+// @param host_key_checking    ANSIBLE_HOST_KEY_CHECKING.
+// @param vault_password_file  Host path of the vault password file, mounted read-only at /run/secrets/vault-password (ANSIBLE_VAULT_PASSWORD_FILE).
+// @param ssh_dir              Host directory mounted read-only at /root/.ssh; see ssh_setup.
+// @param ssh_agent_socket     Host path of an SSH agent socket (SSH_AUTH_SOCK); see ssh_setup.
+// @param cache_dir            Host directory mounted at /cache; collections and roles are installed under /cache/ansible (ANSIBLE_COLLECTIONS_PATH, ANSIBLE_ROLES_PATH).
+// @param with                 Setups of other tools this environment should also carry: a cloud's credentials for a dynamic inventory.
+// @param extra_env            Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "ansible-playbook" } on ...` or `$[...]`.
+// @example lask eval ansible --inventory inventory.ini --host_key_checking false
+ansible(
+  --config: String | Null = null,
+  --inventory: String | Null = null,
+  --host_key_checking: Bool | Null = null,
+  --vault_password_file: String | Null = null,
+  --ssh_dir: String | Null = null,
+  --ssh_agent_socket: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = do {
+  ssh = ssh_setup(dir = ssh_dir, agent_socket = ssh_agent_socket)
+  own = vars({
+    "ANSIBLE_CONFIG": config,
+    "ANSIBLE_INVENTORY": inventory,
+    "ANSIBLE_HOST_KEY_CHECKING": flag(host_key_checking),
+    "ANSIBLE_VAULT_PASSWORD_FILE": given(vault_password_file, "/run/secrets/vault-password"),
+    "ANSIBLE_COLLECTIONS_PATH": in_cache(cache_dir, "ansible/collections"),
+    "ANSIBLE_ROLES_PATH": in_cache(cache_dir, "ansible/roles")
+  })
+  return #docker(
+    dockerfile = "images/ansible/Dockerfile",
+    env = layered_env({"PYTHONUNBUFFERED": "1"}, extra_env, with, merge(ssh.env, own)),
+    volumes = layered_volumes(with, concat_array(concat_array(
+      ssh.volumes,
+      mount(vault_password_file, "/run/secrets/vault-password:ro")),
+      mount(cache_dir, "/cache")
+    ))
+  )
+}
