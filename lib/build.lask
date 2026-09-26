@@ -1,0 +1,86 @@
+// Build and code generation: buf, protoc and Bazel.
+
+import { vars, mount, in_cache, given, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// buf, the Protocol Buffers toolchain, at --tag.
+//
+// The image is bufbuild/buf at --tag, 1.73.0 unless another is given.
+// The reference is built from the argument when the function runs, so
+// `lask env build` does not pull or pin it (lask spec 10.3): pull it
+// once, and a run never pulls.
+//
+// @param tag        The bufbuild/buf image tag to run.
+// @param token      BUF_TOKEN, for the Buf Schema Registry; masked in the command log.
+// @param cache_dir  Host directory mounted at /cache; buf's cache is /cache/buf (BUF_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "buf" } on ...` or `$[...]`.
+// @example lask eval buf --cache_dir /tmp/cache
+buf(
+  --tag: String = "1.73.0",
+  --token!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "bufbuild/buf:#{tag}",
+  env = layered_env(git_trust(), extra_env, with, vars({"BUF_TOKEN": token, "BUF_CACHE_DIR": in_cache(cache_dir, "buf")})),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// protoc, the Protocol Buffers compiler, with the well-known types and
+// the gRPC plugins.
+//
+// The image is built from lib/images/protoc/Dockerfile (Alpine 3.24), so
+// it has no --tag, and `lask env build` (or `lask deps sync`) builds it.
+// A language's own plugin — protoc-gen-go, ts-proto — lives with that
+// language's toolchain; buf, which fetches plugins itself, is often the
+// simpler way.
+//
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "protoc" } on ...` or `$[...]`.
+// @example lask eval protoc
+protoc(
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  dockerfile = "images/protoc/Dockerfile",
+  env = layered_env({}, extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+// Bazel, through Bazelisk.
+//
+// The image is built from lib/images/bazel/Dockerfile: Bazelisk 1.29.0
+// on Debian, with a C++ compiler, Python and Git. Bazel's own image is
+// published for amd64 only. Bazelisk runs the Bazel release the
+// project's .bazelversion names, downloading it on first use; without
+// --cache_dir that is every run. The image has no --tag, and `lask env
+// build` (or `lask deps sync`) builds it.
+//
+// @param cache_dir  Host directory mounted at /cache: Bazelisk's downloads (BAZELISK_HOME=/cache/bazelisk) and Bazel's output root (XDG_CACHE_HOME=/cache), so a build is incremental across runs.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "bazel" } on ...` or `$[...]`.
+// @example lask eval bazel --cache_dir /tmp/cache
+bazel(
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  dockerfile = "images/bazel/Dockerfile",
+  env = layered_env(
+    git_trust(),
+    extra_env,
+    with,
+    vars({"BAZELISK_HOME": in_cache(cache_dir, "bazelisk"), "XDG_CACHE_HOME": given(cache_dir, "/cache")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// These tools need nothing from the caller, so their command words are
+// exported.
+command { "buf" } on buf()
+command { "protoc" } on protoc()
+command { "bazel", "bazelisk" } on bazel()

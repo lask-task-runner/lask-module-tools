@@ -1,0 +1,83 @@
+// The Azure CLI.
+
+import { ToolSetup, vars, mount, layered_env, layered_volumes } from "./common.lask"
+
+// What the Azure CLI and the Azure SDKs need from an environment: a
+// subscription, a tenant, and a service principal. The variables are
+// set under both names the tools read, ARM_* for the Terraform azurerm
+// provider and AZURE_* for the SDKs, so the same setup serves either
+// through --with.
+//
+// @param subscription_id  ARM_SUBSCRIPTION_ID and AZURE_SUBSCRIPTION_ID.
+// @param tenant_id        ARM_TENANT_ID and AZURE_TENANT_ID.
+// @param client_id        ARM_CLIENT_ID and AZURE_CLIENT_ID: the service principal or managed identity.
+// @param client_secret    ARM_CLIENT_SECRET and AZURE_CLIENT_SECRET; masked in the command log.
+// @param config_dir       Host directory mounted as /root/.azure, usually home(".azure"); read-write, since az keeps its token cache there.
+// @return The variables and mounts, for a tool's --with.
+azure_setup(
+  --subscription_id: String | Null = null,
+  --tenant_id: String | Null = null,
+  --client_id: String | Null = null,
+  --client_secret!!: String | Null = null,
+  --config_dir: String | Null = null
+): ToolSetup = {
+  env: vars({
+    "ARM_SUBSCRIPTION_ID": subscription_id,
+    "AZURE_SUBSCRIPTION_ID": subscription_id,
+    "ARM_TENANT_ID": tenant_id,
+    "AZURE_TENANT_ID": tenant_id,
+    "ARM_CLIENT_ID": client_id,
+    "AZURE_CLIENT_ID": client_id,
+    "ARM_CLIENT_SECRET": client_secret,
+    "AZURE_CLIENT_SECRET": client_secret
+  }),
+  volumes: mount(config_dir, "/root/.azure")
+}
+
+// The Azure CLI, configured by its parameters.
+//
+// The image is mcr.microsoft.com/azure-cli at --tag, 2.90.0 unless
+// another is given. The reference is built from the argument when the
+// function runs, so `lask env build` does not pull or pin it (lask spec
+// 10.3): pull it once, and a run never pulls.
+//
+// Telemetry is off (AZURE_CORE_COLLECT_TELEMETRY=false). Locally, log
+// in on the host (`az login`) and pass config_dir = home(".azure"). az
+// does not log in from variables by itself: in CI, pass the service
+// principal and start the command with `az login --service-principal
+// -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" --tenant
+// "$AZURE_TENANT_ID"`.
+//
+// @param tag              The azure-cli image tag to run.
+// @param subscription_id  ARM_SUBSCRIPTION_ID and AZURE_SUBSCRIPTION_ID.
+// @param tenant_id        ARM_TENANT_ID and AZURE_TENANT_ID.
+// @param client_id        ARM_CLIENT_ID and AZURE_CLIENT_ID.
+// @param client_secret    ARM_CLIENT_SECRET and AZURE_CLIENT_SECRET; masked in the command log.
+// @param config_dir       Host directory mounted as /root/.azure.
+// @param with             Setups of other tools this environment should also carry.
+// @param extra_env        Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "az" } on ...` or `$[...]`.
+// @example lask eval az --subscription_id 00000000-0000-0000-0000-000000000000
+az(
+  --tag: String = "2.90.0",
+  --subscription_id: String | Null = null,
+  --tenant_id: String | Null = null,
+  --client_id: String | Null = null,
+  --client_secret!!: String | Null = null,
+  --config_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = do {
+  own = azure_setup(
+    subscription_id = subscription_id,
+    tenant_id = tenant_id,
+    client_id = client_id,
+    client_secret = client_secret,
+    config_dir = config_dir
+  )
+  return #docker(
+    "mcr.microsoft.com/azure-cli:#{tag}",
+    env = layered_env({"AZURE_CORE_COLLECT_TELEMETRY": "false"}, extra_env, with, own.env),
+    volumes = layered_volumes(with, own.volumes)
+  )
+}

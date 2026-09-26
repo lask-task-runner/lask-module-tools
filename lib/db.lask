@@ -1,0 +1,226 @@
+// Database clients and migration tools: psql, mysql, redis-cli,
+// golang-migrate and Flyway. Clients only: a database server is a
+// service that outlives a command, which is Docker Compose's to run.
+//
+// A server on the host is at host.docker.internal from a container; a
+// server in a Compose project is on that project's network, which
+// --network joins.
+
+import { ToolSetup, vars, layered_env, layered_volumes } from "./common.lask"
+
+// What libpq and the clients built on it read to reach a PostgreSQL
+// server: psql and pg_dump, psycopg, node-postgres, and most others.
+// Give it to an application's environment through --with.
+//
+// @param host      PGHOST.
+// @param port      PGPORT.
+// @param user      PGUSER.
+// @param password  PGPASSWORD; masked in the command log.
+// @param database  PGDATABASE.
+// @param sslmode   PGSSLMODE, e.g. "require".
+// @return The variables, for a tool's --with.
+pg_setup(
+  --host: String | Null = null,
+  --port: String | Null = null,
+  --user: String | Null = null,
+  --password!!: String | Null = null,
+  --database: String | Null = null,
+  --sslmode: String | Null = null
+): ToolSetup = {
+  env: vars({
+    "PGHOST": host,
+    "PGPORT": port,
+    "PGUSER": user,
+    "PGPASSWORD": password,
+    "PGDATABASE": database,
+    "PGSSLMODE": sslmode
+  }),
+  volumes: []
+}
+
+// psql, pg_dump and the other PostgreSQL clients, at --tag.
+//
+// The image is postgres at --tag, 18.6-alpine3.24 unless another is
+// given; use the major release of the server. The reference is built
+// from the argument when the function runs, so `lask env build` does
+// not pull or pin it (lask spec 10.3): pull it once, and a run never
+// pulls.
+//
+// @param tag        The postgres image tag to run.
+// @param host       PGHOST.
+// @param port       PGPORT.
+// @param user       PGUSER.
+// @param password   PGPASSWORD; masked in the command log.
+// @param database   PGDATABASE.
+// @param sslmode    PGSSLMODE.
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "psql" } on ...` or `$[...]`.
+// @example lask eval psql --host host.docker.internal --user app --database app
+psql(
+  --tag: String = "18.6-alpine3.24",
+  --host: String | Null = null,
+  --port: String | Null = null,
+  --user: String | Null = null,
+  --password!!: String | Null = null,
+  --database: String | Null = null,
+  --sslmode: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = do {
+  own = pg_setup(host = host, port = port, user = user, password = password, database = database, sslmode = sslmode)
+  return #docker(
+    "postgres:#{tag}",
+    env = layered_env({}, extra_env, with, own.env),
+    volumes = layered_volumes(with, []),
+    network = network
+  )
+}
+
+// The MySQL client, at --tag.
+//
+// The image is mysql at --tag, 8.4.11 (an LTS release) unless another
+// is given; pull it once, as for psql. The client reads the host, the
+// port and the password from its environment (MYSQL_HOST,
+// MYSQL_TCP_PORT, MYSQL_PWD), but no user and no database: those go on
+// its command line. They are set as MYSQL_USER and MYSQL_DATABASE for
+// that, `mysql -u "$MYSQL_USER" "$MYSQL_DATABASE"`.
+//
+// @param tag        The mysql image tag to run.
+// @param host       MYSQL_HOST.
+// @param port       MYSQL_TCP_PORT.
+// @param user       MYSQL_USER, for the command line.
+// @param password   MYSQL_PWD; masked in the command log.
+// @param database   MYSQL_DATABASE, for the command line.
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "mysql" } on ...` or `$[...]`.
+// @example lask eval mysql --host host.docker.internal --user app
+mysql(
+  --tag: String = "8.4.11",
+  --host: String | Null = null,
+  --port: String | Null = null,
+  --user: String | Null = null,
+  --password!!: String | Null = null,
+  --database: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "mysql:#{tag}",
+  env = layered_env(
+    {},
+    extra_env,
+    with,
+    vars({
+      "MYSQL_HOST": host,
+      "MYSQL_TCP_PORT": port,
+      "MYSQL_USER": user,
+      "MYSQL_PWD": password,
+      "MYSQL_DATABASE": database
+    })
+  ),
+  volumes = layered_volumes(with, []),
+  network = network
+)
+
+// redis-cli, at --tag.
+//
+// The image is redis at --tag, 8.10.2-alpine unless another is given;
+// pull it once, as for psql. redis-cli reads its password from the
+// environment (REDISCLI_AUTH) and nothing else: the host goes on its
+// command line, `redis-cli -h host.docker.internal`.
+//
+// @param tag        The redis image tag to run.
+// @param password   REDISCLI_AUTH; masked in the command log.
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "redis-cli" } on ...` or `$[...]`.
+// @example lask eval redis_cli
+redis_cli(
+  --tag: String = "8.10.2-alpine",
+  --password!!: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "redis:#{tag}",
+  env = layered_env({}, extra_env, with, vars({"REDISCLI_AUTH": password})),
+  volumes = layered_volumes(with, []),
+  network = network
+)
+
+// golang-migrate, at --tag.
+//
+// The image is migrate/migrate at --tag, v4.20.1 unless another is
+// given; pull it once, as for psql. migrate takes its database on the
+// command line only, so the URL is set as DATABASE_URL for it:
+// `migrate -database "$DATABASE_URL" -path db/migrations up`. The URL
+// carries the password, and is masked whole.
+//
+// @param tag           The migrate/migrate image tag to run.
+// @param database_url  DATABASE_URL; masked in the command log.
+// @param network       The container's network: a Compose network, or "host".
+// @param with          Setups of other tools this environment should also carry.
+// @param extra_env     Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "migrate" } on ...` or `$[...]`.
+// @example lask eval migrate --database_url postgres://app:pw@host.docker.internal:5432/app
+migrate(
+  --tag: String = "v4.20.1",
+  --database_url!!: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "migrate/migrate:#{tag}",
+  env = layered_env({}, extra_env, with, vars({"DATABASE_URL": database_url})),
+  volumes = layered_volumes(with, []),
+  network = network
+)
+
+// Flyway, at --tag.
+//
+// The image is flyway/flyway at --tag, 13.8.0-alpine unless another is
+// given; pull it once, as for psql. Flyway reads its connection from
+// the environment, and sends no telemetry
+// (REDGATE_DISABLE_TELEMETRY=true).
+//
+// @param tag        The flyway/flyway image tag to run.
+// @param url        FLYWAY_URL, a JDBC URL.
+// @param user       FLYWAY_USER.
+// @param password   FLYWAY_PASSWORD; masked in the command log.
+// @param locations  FLYWAY_LOCATIONS, e.g. "filesystem:db/migration".
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "flyway" } on ...` or `$[...]`.
+// @example lask eval flyway --url jdbc:postgresql://host.docker.internal:5432/app --user app
+flyway(
+  --tag: String = "13.8.0-alpine",
+  --url: String | Null = null,
+  --user: String | Null = null,
+  --password!!: String | Null = null,
+  --locations: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "flyway/flyway:#{tag}",
+  env = layered_env(
+    {"REDGATE_DISABLE_TELEMETRY": "true"},
+    extra_env,
+    with,
+    vars({
+      "FLYWAY_URL": url,
+      "FLYWAY_USER": user,
+      "FLYWAY_PASSWORD": password,
+      "FLYWAY_LOCATIONS": locations
+    })
+  ),
+  volumes = layered_volumes(with, []),
+  network = network
+)

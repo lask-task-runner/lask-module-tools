@@ -1,0 +1,163 @@
+// Security scanners: trivy, gitleaks, checkov, grype, syft and
+// semgrep. Each needs nothing from the caller to scan the project, so
+// each exports its command word.
+//
+// An image taken at --tag is a reference built when the function runs:
+// `lask env build` does not pull or pin it (lask spec 10.3), so pull it
+// once, and a run never pulls. Scanning a container image needs that
+// image's registry (registry_setup) or the host's daemon (docker_setup)
+// through --with.
+
+import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Trivy at --tag, aquasec/trivy:0.74.0 by default: vulnerabilities,
+// misconfigurations and secrets in a filesystem, a repository or an
+// image. It prints no progress bar (TRIVY_NO_PROGRESS=true).
+//
+// Without --cache_dir, every run downloads the vulnerability database.
+//
+// @param tag        The aquasec/trivy image tag to run.
+// @param severity   TRIVY_SEVERITY, e.g. "HIGH,CRITICAL".
+// @param exit_code  TRIVY_EXIT_CODE: the exit code when something is found, e.g. "1" to fail a build.
+// @param cache_dir  Host directory mounted at /cache; the databases are kept in /cache/trivy (TRIVY_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry: registry_setup, docker_setup.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "trivy" } on ...` or `$[...]`.
+// @example lask eval trivy --severity HIGH,CRITICAL --exit_code 1
+trivy(
+  --tag: String = "0.74.0",
+  --severity: String | Null = null,
+  --exit_code: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "aquasec/trivy:#{tag}",
+  env = layered_env(
+    merge({"TRIVY_NO_PROGRESS": "true"}, git_trust()),
+    extra_env,
+    with,
+    vars({"TRIVY_SEVERITY": severity, "TRIVY_EXIT_CODE": exit_code, "TRIVY_CACHE_DIR": in_cache(cache_dir, "trivy")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Gitleaks at --tag, zricethezav/gitleaks:v8.30.1 by default: secrets in
+// the project's files and Git history. The mounted project is trusted by
+// Git (safe.directory), so its history can be read.
+//
+// @param tag        The zricethezav/gitleaks image tag to run.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "gitleaks" } on ...` or `$[...]`.
+// @example lask eval gitleaks
+gitleaks(
+  --tag: String = "v8.30.1",
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "zricethezav/gitleaks:#{tag}",
+  env = layered_env(git_trust(), extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+// Checkov at --tag, bridgecrew/checkov:3.3.19 by default:
+// misconfigurations in Terraform, CloudFormation, Kubernetes manifests,
+// Dockerfiles and workflows.
+//
+// @param tag        The bridgecrew/checkov image tag to run.
+// @param api_key    BC_API_KEY, for the Prisma Cloud platform; masked in the command log.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "checkov" } on ...` or `$[...]`.
+// @example lask eval checkov
+checkov(
+  --tag: String = "3.3.19",
+  --api_key!!: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "bridgecrew/checkov:#{tag}",
+  env = layered_env(git_trust(), extra_env, with, vars({"BC_API_KEY": api_key})),
+  volumes = layered_volumes(with, [])
+)
+
+// Grype, Anchore's vulnerability scanner.
+//
+// Anchore's images have no shell, so the image is built from
+// lib/images/anchore/Dockerfile, which copies grype v0.119.0 and syft
+// v1.52.0 onto Alpine: it has no --tag, and `lask env build` (or `lask
+// deps sync`) builds it. Grype checks for no update
+// (GRYPE_CHECK_FOR_APP_UPDATE=false).
+//
+// Without --cache_dir, every run downloads the vulnerability database.
+//
+// @param cache_dir  Host directory mounted at /cache; the database is kept in /cache/grype (GRYPE_DB_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry: registry_setup, docker_setup.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "grype" } on ...` or `$[...]`.
+// @example lask eval grype --cache_dir /tmp/cache
+grype(
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  dockerfile = "images/anchore/Dockerfile",
+  env = layered_env(
+    {"GRYPE_CHECK_FOR_APP_UPDATE": "false"},
+    extra_env,
+    with,
+    vars({"GRYPE_DB_CACHE_DIR": in_cache(cache_dir, "grype")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Syft, Anchore's SBOM generator, in the image of grype.
+// It checks for no update (SYFT_CHECK_FOR_APP_UPDATE=false).
+//
+// @param with       Setups of other tools this environment should also carry: registry_setup, docker_setup.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "syft" } on ...` or `$[...]`.
+// @example lask eval syft
+syft(
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  dockerfile = "images/anchore/Dockerfile",
+  env = layered_env({"SYFT_CHECK_FOR_APP_UPDATE": "false"}, extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+// Semgrep at --tag, semgrep/semgrep:1.178.0 by default. It sends no
+// metrics and checks for no update (SEMGREP_SEND_METRICS=off,
+// SEMGREP_ENABLE_VERSION_CHECK=0). The mounted project is trusted by Git
+// (safe.directory), since Semgrep lists the files to scan through it.
+//
+// @param tag        The semgrep/semgrep image tag to run.
+// @param app_token  SEMGREP_APP_TOKEN, for Semgrep AppSec Platform; masked in the command log.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "semgrep" } on ...` or `$[...]`.
+// @example lask eval semgrep
+semgrep(
+  --tag: String = "1.178.0",
+  --app_token!!: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "semgrep/semgrep:#{tag}",
+  env = layered_env(
+    merge({"SEMGREP_SEND_METRICS": "off", "SEMGREP_ENABLE_VERSION_CHECK": "0"}, git_trust()),
+    extra_env,
+    with,
+    vars({"SEMGREP_APP_TOKEN": app_token})
+  ),
+  volumes = layered_volumes(with, [])
+)
+
+command { "trivy" } on trivy()
+command { "gitleaks" } on gitleaks()
+command { "checkov" } on checkov()
+command { "grype" } on grype()
+command { "syft" } on syft()
+command { "semgrep" } on semgrep()

@@ -1,0 +1,87 @@
+// The Google Cloud CLI.
+
+import { ToolSetup, vars, mount, given, layered_env, layered_volumes } from "./common.lask"
+
+// What gcloud and the Google Cloud SDKs need from an environment: a
+// project, a region, and credentials. Give it to another tool's --with
+// — the Terraform Google provider, sops with Cloud KMS — to run that
+// tool with the same account.
+//
+// @param project           CLOUDSDK_CORE_PROJECT and GOOGLE_CLOUD_PROJECT; gcloud and the SDKs read different ones.
+// @param region            CLOUDSDK_COMPUTE_REGION and GOOGLE_REGION.
+// @param credentials_file  Host path of a service account key or an external account file, mounted read-only; GOOGLE_APPLICATION_CREDENTIALS for the SDKs and CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE for gcloud point at it.
+// @param access_token      CLOUDSDK_AUTH_ACCESS_TOKEN and GOOGLE_OAUTH_ACCESS_TOKEN; masked in the command log.
+// @param config_dir        Host directory mounted as /root/.config/gcloud, usually home(".config/gcloud"); read-write, since gcloud refreshes its tokens there.
+// @return The variables and mounts, for a tool's --with.
+gcloud_setup(
+  --project: String | Null = null,
+  --region: String | Null = null,
+  --credentials_file: String | Null = null,
+  --access_token!!: String | Null = null,
+  --config_dir: String | Null = null
+): ToolSetup = {
+  env: vars({
+    "CLOUDSDK_CORE_PROJECT": project,
+    "GOOGLE_CLOUD_PROJECT": project,
+    "CLOUDSDK_COMPUTE_REGION": region,
+    "GOOGLE_REGION": region,
+    "GOOGLE_APPLICATION_CREDENTIALS": given(credentials_file, "/run/gcloud/credentials.json"),
+    "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE": given(credentials_file, "/run/gcloud/credentials.json"),
+    "CLOUDSDK_AUTH_ACCESS_TOKEN": access_token,
+    "GOOGLE_OAUTH_ACCESS_TOKEN": access_token
+  }),
+  volumes: concat_array(
+    mount(credentials_file, "/run/gcloud/credentials.json:ro"),
+    mount(config_dir, "/root/.config/gcloud")
+  )
+}
+
+// The Google Cloud CLI (gcloud, gsutil, bq), configured by its
+// parameters.
+//
+// The image is gcr.io/google.com/cloudsdktool/google-cloud-cli at
+// --tag, 586.0.0-slim unless another is given; the Docker Hub copy,
+// google/cloud-sdk, is published for amd64 only. The reference is built
+// from the argument when the function runs, so `lask env build` does
+// not pull or pin it (lask spec 10.3): pull it once, and a run never
+// pulls.
+//
+// gcloud never prompts (CLOUDSDK_CORE_DISABLE_PROMPTS=1). Locally, log
+// in on the host (`gcloud auth login`, `gcloud auth
+// application-default login`) and pass config_dir =
+// home(".config/gcloud"). In CI, pass a credentials file or an access
+// token.
+//
+// @param tag               The google-cloud-cli image tag to run.
+// @param project           CLOUDSDK_CORE_PROJECT and GOOGLE_CLOUD_PROJECT.
+// @param region            CLOUDSDK_COMPUTE_REGION and GOOGLE_REGION.
+// @param credentials_file  Host path of a credentials file, mounted read-only.
+// @param access_token      CLOUDSDK_AUTH_ACCESS_TOKEN and GOOGLE_OAUTH_ACCESS_TOKEN; masked in the command log.
+// @param config_dir        Host directory mounted as /root/.config/gcloud.
+// @param with              Setups of other tools this environment should also carry.
+// @param extra_env         Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "gcloud" } on ...` or `$[...]`.
+// @example lask eval gcloud --project my-project --region asia-northeast1
+gcloud(
+  --tag: String = "586.0.0-slim",
+  --project: String | Null = null,
+  --region: String | Null = null,
+  --credentials_file: String | Null = null,
+  --access_token!!: String | Null = null,
+  --config_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = do {
+  own = gcloud_setup(
+    project = project,
+    region = region,
+    credentials_file = credentials_file,
+    access_token = access_token,
+    config_dir = config_dir
+  )
+  return #docker(
+    "gcr.io/google.com/cloudsdktool/google-cloud-cli:#{tag}",
+    env = layered_env({"CLOUDSDK_CORE_DISABLE_PROMPTS": "1"}, extra_env, with, own.env),
+    volumes = layered_volumes(with, own.volumes)
+  )
+}

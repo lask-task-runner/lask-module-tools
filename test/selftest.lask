@@ -14,11 +14,31 @@
 //   lask env build --module test/selftest.lask
 //   lask eval --module test/selftest.lask smoke
 
-import { aws, aws_setup, home, python, node, terraform, playwright, unix, ToolSetup } from "../main.lask"
+import {
+  ToolSetup, home,
+  ssh_setup, git_setup, docker_setup, registry_setup,
+  aws, aws_setup, gcloud, gcloud_setup, az, azure_setup,
+  python, node, go, java, maven, gradle, rust, cc, ruby, dotnet, deno, bun, haskell,
+  kubectl, helm, kustomize, kube_setup,
+  terraform, tofu, ansible, packer, pulumi,
+  psql, pg_setup, mysql, redis_cli, migrate, flyway,
+  git, gh, glab,
+  buf, protoc, bazel,
+  shellcheck, hadolint, tflint, golangci_lint, ruff, actionlint,
+  trivy, gitleaks, checkov, grype, syft, semgrep,
+  vault, vault_setup, sops, op,
+  unix, playwright, k6, grpcurl, newman, robot, ab
+} from "../main.lask"
 
 // The command words python, node and unix export arrive by name, with
 // the environment they were declared on.
-import command { "python", "node", "curl", "jq" } from "../main.lask"
+import command {
+  "python", "node", "go", "java", "mvn", "gradle", "cargo", "gcc", "ruby", "dotnet", "deno", "bun", "ghc",
+  "kustomize", "buf", "protoc", "bazel",
+  "shellcheck", "hadolint", "tflint", "golangci-lint", "ruff", "actionlint",
+  "trivy", "gitleaks", "checkov", "grype", "syft", "semgrep",
+  "curl", "jq", "rsync", "k6", "grpcurl", "newman", "robot", "ab"
+} from "../main.lask"
 
 // The declarations must be accepted, not only the calls: a command's
 // environment may reach no effect (lask spec ch. 5).
@@ -31,6 +51,14 @@ internal expect(name: String, ok: Bool): String =
 // An expected setup. A record literal alone would be inferred as a
 // record of its own fields; the parameters give it the setup's type.
 internal setup(env: Map<String>, volumes: Array<String>): ToolSetup = {env: env, volumes: volumes}
+
+// What a tool that runs Git in the mounted project sets: it trusts the
+// project (safe.directory).
+internal trusted(): Map<String> = {
+  "GIT_CONFIG_COUNT": "1",
+  "GIT_CONFIG_KEY_0": "safe.directory",
+  "GIT_CONFIG_VALUE_0": "*"
+}
 
 // Every case, in order; fails at the first mismatch.
 //
@@ -237,6 +265,253 @@ all(): Array<String> = [
         shm_size = null
       )
   ),
+  // ---- Every tool at its defaults: the image --tag picks, and the
+  // variables it sets of its own. An option passed null is written out:
+  // lask keeps it in the value (see playwright above).
+  expect(
+    "each cloud CLI at its defaults",
+    gcloud() == #docker("gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim", env = {"CLOUDSDK_CORE_DISABLE_PROMPTS": "1"}, volumes = [])
+      && az() == #docker("mcr.microsoft.com/azure-cli:2.90.0", env = {"AZURE_CORE_COLLECT_TELEMETRY": "false"}, volumes = [])
+  ),
+  expect(
+    "each language at its defaults",
+    go() == #docker("golang:1.27.1-trixie", env = merge({"GOTOOLCHAIN": "local"}, trusted()), volumes = [])
+      && java() == #docker("eclipse-temurin:25.0.4.1_1-jdk-noble", env = {}, volumes = [])
+      && maven() == #docker("maven:3.9.16-eclipse-temurin-25-noble", env = {"MAVEN_ARGS": "--batch-mode --no-transfer-progress"}, volumes = [])
+      && gradle() == #docker("gradle:9.8.0-jdk25-noble", env = {}, volumes = [])
+      && rust() == #docker("rust:1.98.1-slim-trixie", env = merge({"CARGO_TERM_COLOR": "never"}, trusted()), volumes = [])
+      && cc() == #docker("gcc:16.2.0", env = {}, volumes = [])
+      && ruby() == #docker("ruby:4.0.7-alpine3.24", env = {"BUNDLE_SILENCE_ROOT_WARNING": "1"}, volumes = [])
+      && dotnet() == #docker("mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24", env = {"DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1"}, volumes = [])
+      && deno() == #docker("denoland/deno:alpine-2.9.7", env = {"DENO_NO_UPDATE_CHECK": "1", "DENO_NO_PROMPT": "1"}, volumes = [])
+      && bun() == #docker("oven/bun:1.4.2-alpine", env = {"DO_NOT_TRACK": "1"}, volumes = [])
+      && haskell() == #docker("haskell:9.12.4-slim-bookworm", env = trusted(), volumes = [])
+  ),
+  expect(
+    "kubectl, helm and kustomize share the alpine/k8s image",
+    kubectl() == #docker("alpine/k8s:1.37.0", env = {}, volumes = [], network = null)
+      && helm() == #docker("alpine/k8s:1.37.0", env = {}, volumes = [], network = null)
+      && kustomize() == #docker("alpine/k8s:1.37.0", env = {}, volumes = [])
+  ),
+  expect(
+    "each IaC tool at its defaults",
+    tofu() == #docker("ghcr.io/opentofu/opentofu:1.12.6", env = {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"}, volumes = [])
+      && packer() == #docker("hashicorp/packer:1.16.1", env = {"CHECKPOINT_DISABLE": "1"}, volumes = [])
+      && pulumi() == #docker("pulumi/pulumi-nodejs:3.265.0", env = merge({"PULUMI_SKIP_UPDATE_CHECK": "true"}, trusted()), volumes = [])
+  ),
+  expect(
+    "each database client at its defaults",
+    psql() == #docker("postgres:18.6-alpine3.24", env = {}, volumes = [], network = null)
+      && mysql() == #docker("mysql:8.4.11", env = {}, volumes = [], network = null)
+      && redis_cli() == #docker("redis:8.10.2-alpine", env = {}, volumes = [], network = null)
+      && migrate() == #docker("migrate/migrate:v4.20.1", env = {}, volumes = [], network = null)
+      && flyway() == #docker("flyway/flyway:13.8.0-alpine", env = {"REDGATE_DISABLE_TELEMETRY": "true"}, volumes = [], network = null)
+  ),
+  expect(
+    "each linter and build tool at its defaults",
+    buf() == #docker("bufbuild/buf:1.73.0", env = trusted(), volumes = [])
+      && shellcheck() == #docker("koalaman/shellcheck-alpine:v0.11.0", env = {}, volumes = [])
+      && hadolint() == #docker("hadolint/hadolint:v2.15.1-alpine", env = {}, volumes = [])
+      && tflint() == #docker("ghcr.io/terraform-linters/tflint:v0.64.0", env = {}, volumes = [])
+      && golangci_lint() == #docker("golangci/golangci-lint:v2.14.0", env = trusted(), volumes = [])
+      && ruff() == #docker("ghcr.io/astral-sh/ruff:0.16.9-alpine", env = {}, volumes = [])
+      && actionlint() == #docker("rhysd/actionlint:1.7.12", env = {}, volumes = [])
+  ),
+  expect(
+    "each scanner at its defaults",
+    trivy() == #docker("aquasec/trivy:0.74.0", env = merge({"TRIVY_NO_PROGRESS": "true"}, trusted()), volumes = [])
+      && gitleaks() == #docker("zricethezav/gitleaks:v8.30.1", env = trusted(), volumes = [])
+      && checkov() == #docker("bridgecrew/checkov:3.3.19", env = trusted(), volumes = [])
+      && semgrep() == #docker("semgrep/semgrep:1.178.0", env = merge({"SEMGREP_SEND_METRICS": "off", "SEMGREP_ENABLE_VERSION_CHECK": "0"}, trusted()), volumes = [])
+  ),
+  expect(
+    "each secret manager at its defaults",
+    vault() == #docker("hashicorp/vault:1.21.4", env = {}, volumes = [])
+      && sops() == #docker("ghcr.io/getsops/sops:v3.13.3-alpine", env = {}, volumes = [])
+      && op() == #docker("1password/op:2.39.0", env = {}, volumes = [])
+  ),
+  expect(
+    "each testing tool at its defaults",
+    k6() == #docker("grafana/k6:1.8.1", env = {"K6_NO_USAGE_REPORT": "true"}, volumes = [], network = null)
+      && grpcurl() == #docker("fullstorydev/grpcurl:v1.9.3-alpine", env = {}, volumes = [], network = null)
+      && newman() == #docker("postman/newman:6.1.3-alpine", env = {}, volumes = [], network = null)
+      && ab() == #docker("httpd:2.4.68-alpine3.24", env = {}, volumes = [], network = null)
+  ),
+  // ---- The setups.
+  expect(
+    "gcloud_setup: both names of each variable, and the credentials file mounted where both point",
+    gcloud_setup(project = "p", region = "r", credentials_file = "/h/key.json", access_token = "tok", config_dir = "/h/gcloud")
+      == setup(
+        {
+          "CLOUDSDK_CORE_PROJECT": "p",
+          "GOOGLE_CLOUD_PROJECT": "p",
+          "CLOUDSDK_COMPUTE_REGION": "r",
+          "GOOGLE_REGION": "r",
+          "GOOGLE_APPLICATION_CREDENTIALS": "/run/gcloud/credentials.json",
+          "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE": "/run/gcloud/credentials.json",
+          "CLOUDSDK_AUTH_ACCESS_TOKEN": "tok",
+          "GOOGLE_OAUTH_ACCESS_TOKEN": "tok"
+        },
+        ["/h/key.json:/run/gcloud/credentials.json:ro", "/h/gcloud:/root/.config/gcloud"]
+      )
+  ),
+  expect(
+    "azure_setup: ARM_* for Terraform and AZURE_* for the SDKs",
+    azure_setup(subscription_id = "s", tenant_id = "t", client_id = "c", client_secret = "x", config_dir = "/h/.azure")
+      == setup(
+        {
+          "ARM_SUBSCRIPTION_ID": "s", "AZURE_SUBSCRIPTION_ID": "s",
+          "ARM_TENANT_ID": "t", "AZURE_TENANT_ID": "t",
+          "ARM_CLIENT_ID": "c", "AZURE_CLIENT_ID": "c",
+          "ARM_CLIENT_SECRET": "x", "AZURE_CLIENT_SECRET": "x"
+        },
+        ["/h/.azure:/root/.azure"]
+      )
+  ),
+  expect(
+    "kube_setup: the kubeconfig mounted read-only, under each name the tools read",
+    kube_setup(kubeconfig = "/h/.kube/config", context = "dev", namespace = "web")
+      == setup(
+        {
+          "KUBECONFIG": "/run/kube/config",
+          "KUBE_CONFIG_PATH": "/run/kube/config",
+          "HELM_KUBECONTEXT": "dev",
+          "KUBE_CTX": "dev",
+          "HELM_NAMESPACE": "web"
+        },
+        ["/h/.kube/config:/run/kube/config:ro"]
+      )
+  ),
+  expect(
+    "ssh_setup: the key directory read-only, and the agent socket",
+    ssh_setup(dir = "/h/.ssh", agent_socket = "/run/host-services/ssh-auth.sock")
+      == setup(
+        {"SSH_AUTH_SOCK": "/run/ssh-agent.sock"},
+        ["/h/.ssh:/root/.ssh:ro", "/run/host-services/ssh-auth.sock:/run/ssh-agent.sock"]
+      )
+  ),
+  expect(
+    "git_setup without a token only trusts the project",
+    git_setup() == setup(trusted(), [])
+  ),
+  expect(
+    "git_setup: a token rewrites https and ssh URLs of its host, and an identity",
+    git_setup(token = "t0k", host = "gitlab.com", token_user = "oauth2", name = "CI", email = "ci@example.com")
+      == setup(
+        {
+          "GIT_CONFIG_COUNT": "3",
+          "GIT_CONFIG_KEY_0": "safe.directory",
+          "GIT_CONFIG_VALUE_0": "*",
+          "GIT_CONFIG_KEY_1": "url.https://oauth2:t0k@gitlab.com/.insteadOf",
+          "GIT_CONFIG_VALUE_1": "https://gitlab.com/",
+          "GIT_CONFIG_KEY_2": "url.https://oauth2:t0k@gitlab.com/.insteadOf",
+          "GIT_CONFIG_VALUE_2": "git@gitlab.com:",
+          "GIT_AUTHOR_NAME": "CI",
+          "GIT_COMMITTER_NAME": "CI",
+          "GIT_AUTHOR_EMAIL": "ci@example.com",
+          "GIT_COMMITTER_EMAIL": "ci@example.com"
+        },
+        []
+      )
+  ),
+  expect(
+    "docker_setup mounts the daemon's socket",
+    docker_setup() == setup({"DOCKER_HOST": "unix:///var/run/docker.sock"}, ["/var/run/docker.sock:/var/run/docker.sock"])
+  ),
+  expect(
+    "registry_setup: a Docker configuration read-only, and each scanner's credentials",
+    registry_setup(registry = "ghcr.io", username = "u", password = "p", config_dir = "/h/.docker")
+      == setup(
+        {
+          "DOCKER_CONFIG": "/run/docker",
+          "TRIVY_USERNAME": "u", "TRIVY_PASSWORD": "p",
+          "GRYPE_REGISTRY_AUTH_AUTHORITY": "ghcr.io", "GRYPE_REGISTRY_AUTH_USERNAME": "u", "GRYPE_REGISTRY_AUTH_PASSWORD": "p",
+          "SYFT_REGISTRY_AUTH_AUTHORITY": "ghcr.io", "SYFT_REGISTRY_AUTH_USERNAME": "u", "SYFT_REGISTRY_AUTH_PASSWORD": "p"
+        },
+        ["/h/.docker:/run/docker:ro"]
+      )
+  ),
+  expect(
+    "pg_setup and vault_setup set what their clients read",
+    pg_setup(host = "db", port = "5432", user = "app", password = "pw", database = "app", sslmode = "require")
+      == setup({"PGHOST": "db", "PGPORT": "5432", "PGUSER": "app", "PGPASSWORD": "pw", "PGDATABASE": "app", "PGSSLMODE": "require"}, [])
+      && vault_setup(addr = "https://vault:8200", token = "s.x") == setup({"VAULT_ADDR": "https://vault:8200", "VAULT_TOKEN": "s.x"}, [])
+  ),
+  // ---- Parameters that do more than set one variable.
+  expect(
+    "go: the caches, and a cross-compile",
+    go(goos = "linux", goarch = "amd64", cgo_enabled = "0", cache_dir = "/h/cache")
+      == #docker(
+        "golang:1.27.1-trixie",
+        env = merge(merge({"GOTOOLCHAIN": "local"}, trusted()), {
+          "GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0",
+          "GOMODCACHE": "/cache/mod", "GOCACHE": "/cache/build"
+        }),
+        volumes = ["/h/cache:/cache"]
+      )
+  ),
+  expect(
+    "maven: the local repository is added after the caller's MAVEN_OPTS",
+    maven(maven_opts = "-Xmx1g", cache_dir = "/h/cache")
+      == #docker(
+        "maven:3.9.16-eclipse-temurin-25-noble",
+        env = {"MAVEN_ARGS": "--batch-mode --no-transfer-progress", "MAVEN_OPTS": "-Xmx1g -Dmaven.repo.local=/cache/m2"},
+        volumes = ["/h/cache:/cache"]
+      )
+      && maven(cache_dir = "/h/cache")
+        == #docker(
+          "maven:3.9.16-eclipse-temurin-25-noble",
+          env = {"MAVEN_ARGS": "--batch-mode --no-transfer-progress", "MAVEN_OPTS": "-Dmaven.repo.local=/cache/m2"},
+          volumes = ["/h/cache:/cache"]
+        )
+  ),
+  expect(
+    "helm: a kubeconfig, a namespace, a cache and the host network",
+    helm(kubeconfig = "/h/.kube/config", namespace = "web", network = "host", cache_dir = "/h/cache")
+      == #docker(
+        "alpine/k8s:1.37.0",
+        env = {
+          "KUBECONFIG": "/run/kube/config",
+          "KUBE_CONFIG_PATH": "/run/kube/config",
+          "HELM_NAMESPACE": "web",
+          "HELM_CACHE_HOME": "/cache/helm/cache",
+          "HELM_CONFIG_HOME": "/cache/helm/config",
+          "HELM_DATA_HOME": "/cache/helm/data"
+        },
+        volumes = ["/h/.kube/config:/run/kube/config:ro", "/h/cache:/cache"],
+        network = "host"
+      )
+  ),
+  expect(
+    "tofu takes terraform's variables; packer's are PKR_VAR_*",
+    tofu(variables = {"region": "r"}, cache_dir = "/h/tf")
+      == #docker(
+        "ghcr.io/opentofu/opentofu:1.12.6",
+        env = {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0", "TF_VAR_region": "r", "TF_PLUGIN_CACHE_DIR": "/cache"},
+        volumes = ["/h/tf:/cache"]
+      )
+      && packer(variables = {"region": "r"})
+        == #docker("hashicorp/packer:1.16.1", env = {"CHECKPOINT_DISABLE": "1", "PKR_VAR_region": "r"}, volumes = [])
+  ),
+  expect(
+    "pulumi: --language picks the image of that runtime",
+    pulumi(language = "python")
+      == #docker("pulumi/pulumi-python:3.265.0", env = merge({"PULUMI_SKIP_UPDATE_CHECK": "true"}, trusted()), volumes = [])
+  ),
+  expect(
+    "psql takes a pg_setup's variables and joins a network",
+    psql(host = "db", user = "app", password = "pw", network = "compose_default")
+      == #docker("postgres:18.6-alpine3.24", env = {"PGHOST": "db", "PGUSER": "app", "PGPASSWORD": "pw"}, volumes = [], network = "compose_default")
+  ),
+  // Tools built from a recipe compare with themselves (see unix below).
+  expect(
+    "a recipe tool's parameters reach its environment",
+    ansible(host_key_checking = false) != ansible()
+      && ansible(host_key_checking = null, vault_password_file = null) == ansible()
+      && git(token = "t") != git() && gh(token = "t") != gh() && glab(token = "t") != glab()
+      && bazel(cache_dir = "/h/cache") != bazel() && grype(cache_dir = "/h/cache") != grype()
+      && robot(options = "--outputdir results") != robot() && protoc() == protoc() && syft() == syft()
+  ),
   // The recipe is named relative to lib/, and no module outside that
   // tree may name it (lask spec 10.2), so unix is compared with itself;
   // smoke checks what reaches the container.
@@ -257,22 +532,80 @@ internal version_of(r: CommandResult): String = do {
   trim(if (r.stdout != "") { r.stdout } else { r.stderr })
 }
 
-// Runs each tool through its command word: aws and terraform as declared
-// here, python, node, curl and jq as the module exports them, and
-// playwright as given. Needs Docker, and the images `lask env build`
-// pins and builds.
+// Runs each tool: through its command word where the module exports
+// one, or aws and terraform as declared here, and through `$[...]`
+// where it needs a credential to be useful. Needs Docker, and the images
+// `lask env build` pins and builds.
 //
 // @return One version line per tool.
 smoke(): Array<String> = do {
-  a = $* aws --version
-  p = $* python --version
-  n = $* node --version
-  t = $* terraform version
-  c = $* curl --version | head -n 1
+  r01 = $* aws --version
+  r02 = $* python --version
+  r03 = $* node --version
+  r04 = $* terraform version | head -n 1
+  r05 = $* curl --version | head -n 1
   // jq selects unix for the whole string, echo included.
-  j = $* echo '{"tool": "jq"}' | jq -r .tool
+  r06 = $* echo '{"tool": "jq"}' | jq -r .tool
   box = unix(extra_env = {"SELFTEST": "extra"}, with = [aws_setup(profile = "selftest")])
-  e = $*[box] env | grep -E '^(SELFTEST|AWS_PROFILE)=' | sort | paste -sd ' '
-  b = $*[playwright()] ls /ms-playwright | paste -sd ' '
-  [version_of(a), version_of(p), version_of(n), version_of(t), version_of(c), version_of(j), version_of(e), version_of(b)]
+  r07 = $*[box] env | grep -E '^(SELFTEST|AWS_PROFILE)=' | sort | paste -sd ' '
+  r08 = $*[playwright()] ls /ms-playwright | paste -sd ' '
+  r09 = $*[gcloud()] gcloud --version | head -n 1
+  r10 = $*[az()] az version -o tsv
+  r11 = $* go version
+  r12 = $* java -version 2>&1 | head -n 1
+  r13 = $* mvn -v | head -n 1
+  r14 = $* gradle --version | grep '^Gradle'
+  r15 = $* cargo --version
+  r16 = $* gcc --version | head -n 1
+  r17 = $* ruby -v
+  r18 = $* dotnet --version
+  r19 = $* deno --version | head -n 1
+  r20 = $* bun --version
+  r21 = $* ghc --version
+  r22 = $*[kubectl()] kubectl version --client | head -n 1
+  r23 = $*[helm()] helm version --short
+  r24 = $* kustomize version
+  r25 = $*[tofu()] tofu version | head -n 1
+  r26 = $*[ansible()] ansible --version | head -n 1
+  r27 = $*[packer()] packer version
+  r28 = $*[pulumi()] pulumi version
+  r29 = $*[psql()] psql --version
+  r30 = $*[mysql()] mysql --version
+  r31 = $*[redis_cli()] redis-cli --version
+  r32 = $*[migrate()] migrate -version 2>&1
+  r33 = $*[flyway()] flyway --version 2>&1 | grep -m 1 Flyway
+  r34 = $*[git()] git --version
+  r35 = $*[gh()] gh --version | head -n 1
+  r36 = $*[glab()] glab --version
+  r37 = $* buf --version
+  r38 = $* protoc --version
+  r39 = $* bazel --version
+  r40 = $* shellcheck --version | sed -n 2p
+  r41 = $* hadolint --version
+  r42 = $* tflint --version | head -n 1
+  r43 = $* golangci-lint --version
+  r44 = $* ruff --version
+  r45 = $* actionlint --version | head -n 1
+  r46 = $* trivy --version | head -n 1
+  r47 = $* gitleaks version
+  r48 = $* checkov --version
+  r49 = $* grype version | grep -m 1 '^Version'
+  r50 = $* syft version | grep -m 1 '^Version'
+  r51 = $* semgrep --version
+  r52 = $*[vault()] vault version
+  r53 = $*[sops()] sops --version 2>&1 | head -n 1
+  r54 = $*[op()] op --version
+  r55 = $* k6 version | head -n 1
+  r56 = $* grpcurl -version 2>&1
+  r57 = $* newman --version
+  // robot --version exits 251 by design.
+  r58 = $* robot --version; true
+  r59 = $* ab -V | head -n 1
+  r60 = $* rsync --version | head -n 1
+  map(
+    [r01, r02, r03, r04, r05, r06, r07, r08, r09, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19, r20,
+     r21, r22, r23, r24, r25, r26, r27, r28, r29, r30, r31, r32, r33, r34, r35, r36, r37, r38, r39, r40,
+     r41, r42, r43, r44, r45, r46, r47, r48, r49, r50, r51, r52, r53, r54, r55, r56, r57, r58, r59, r60],
+    version_of
+  )
 }

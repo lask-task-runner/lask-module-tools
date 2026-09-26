@@ -8,7 +8,9 @@ import { layered_env, layered_volumes, ToolSetup } from "./common.lask"
 // A command string runs in one environment, so `curl -s ... | jq -r .id`
 // needs curl and jq in the same image; this is that image. It holds
 // bash, curl, wget, openssl, jq, yq, envsubst, GNU coreutils, findutils,
-// grep, sed and awk, diff, file, tar, gzip, xz, bzip2, zip and unzip.
+// grep, sed and awk, diff, file, tar, gzip, xz, bzip2, zip and unzip,
+// rsync, make, and the SSH client; and git, gh and glab, which git(),
+// gh() and glab() configure.
 //
 // The image is built from lib/images/unix/Dockerfile, Alpine 3.24 pinned by
 // its digest, so it has no --tag: the recipe is what fixes it, and
@@ -33,9 +35,12 @@ unix(
 // ones it runs: `import command { "curl", "jq" } from "tools"`. The
 // shell's own words — grep, sed, awk and the rest — are in every image,
 // and are not exported: importing them would pull a command string that
-// also runs npm or python into this environment, and conflict.
+// also runs npm or python into this environment, and conflict. Nor are
+// git, gh, glab and ssh, which need an identity: git() and the others
+// configure them. make is cc's.
 command {
   "curl", "wget", "openssl",
   "jq", "yq", "envsubst",
-  "tar", "gzip", "xz", "bzip2", "zip", "unzip"
+  "tar", "gzip", "xz", "bzip2", "zip", "unzip",
+  "rsync"
 } on unix()

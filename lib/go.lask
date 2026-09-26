@@ -1,0 +1,64 @@
+// Go.
+
+import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+
+// Go at --tag, configured by its parameters.
+//
+// The image is golang at --tag, 1.27.1-trixie unless another is given:
+// Debian rather than Alpine, so cgo and `go test -race` find a C
+// toolchain. The reference is built from the argument when the function
+// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
+// pull it once, and a run never pulls.
+//
+// GOTOOLCHAIN=local keeps Go to the release --tag names: a go.mod that
+// asks for a newer one fails instead of downloading it into a container
+// that is thrown away. Git trusts the mounted project (safe.directory),
+// so `go build` can stamp its revision. A private module over https
+// takes `with = [git_setup(token = ...)]`.
+//
+// @param tag          The golang image tag to run.
+// @param goproxy      GOPROXY.
+// @param goprivate    GOPRIVATE.
+// @param goflags      GOFLAGS.
+// @param cgo_enabled  CGO_ENABLED, "0" or "1".
+// @param goos         GOOS, to cross-compile.
+// @param goarch       GOARCH, to cross-compile.
+// @param cache_dir    Host directory mounted at /cache: the module cache (GOMODCACHE) and the build cache (GOCACHE).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "go" } on ...` or `$[...]`.
+// @example lask eval go --goos linux --goarch amd64
+go(
+  --tag: String = "1.27.1-trixie",
+  --goproxy: String | Null = null,
+  --goprivate: String | Null = null,
+  --goflags: String | Null = null,
+  --cgo_enabled: String | Null = null,
+  --goos: String | Null = null,
+  --goarch: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Environment = #docker(
+  "golang:#{tag}",
+  env = layered_env(
+    merge({"GOTOOLCHAIN": "local"}, git_trust()),
+    extra_env,
+    with,
+    vars({
+      "GOPROXY": goproxy,
+      "GOPRIVATE": goprivate,
+      "GOFLAGS": goflags,
+      "CGO_ENABLED": cgo_enabled,
+      "GOOS": goos,
+      "GOARCH": goarch,
+      "GOMODCACHE": in_cache(cache_dir, "mod"),
+      "GOCACHE": in_cache(cache_dir, "build")
+    })
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// Go works as it is, so its command words are exported, declared on the
+// default environment.
+command { "go", "gofmt" } on go()
