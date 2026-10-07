@@ -2,14 +2,13 @@
 
 import { vars, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
-// GCC at --tag, with Make, configured by its parameters.
+// GCC, with Make, configured by its parameters.
 //
-// The image is gcc at --tag, 16.2.0 unless another is given. It has no
-// CMake. The reference is built from the argument when the function
-// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
-// pull it once, and a run never pulls.
+// The image is #gcc:16.2.0 unless --image names another. It has no
+// CMake. `lask env build` pulls and pins whichever image is used (lask
+// spec 10.3); a run never pulls.
 //
-// @param tag        The gcc image tag to run.
+// @param image      The image to run; another release is passed as image = #gcc:<tag>.
 // @param cc         CC.
 // @param cxx        CXX.
 // @param cflags     CFLAGS.
@@ -21,7 +20,7 @@ import { vars, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 // @return The environment, for `command { "make" } on ...` or `$[...]`.
 // @example lask eval cc --cflags "-O2 -Wall"
 cc(
-  --tag: String = "16.2.0",
+  --image: Environment = #gcc:16.2.0,
   --cc: String | Null = null,
   --cxx: String | Null = null,
   --cflags: String | Null = null,
@@ -30,8 +29,7 @@ cc(
   --makeflags: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "gcc:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     {},
     extra_env,

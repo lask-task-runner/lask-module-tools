@@ -1,6 +1,6 @@
 # lask-module-tools
 
-Ready-made execution environments for the tools a [Lask](https://github.com/lask-task-runner/lask) task runs. Each tool is a function that returns an `Environment`; its keyword parameters are the release of its image, and what the tool needs from the environment it runs in — the variables it reads, its credentials, and the host directories it has to see.
+Ready-made execution environments for the tools a [Lask](https://github.com/lask-task-runner/lask) task runs. Each tool is a function that returns a `Runnable` — the image and how to run it; its keyword parameters are the release of its image, and what the tool needs from the environment it runs in — the variables it reads, its credentials, and the host directories it has to see.
 
 ```lask
 import * as tools from "tools"
@@ -12,9 +12,9 @@ deploy(): String = $ aws s3 sync web/dist s3://my-bucket --delete
 
 The tools themselves are not wrapped: `$ aws s3 sync ...` is already the clearest way to say it. Design and the tools planned next: [doc/design.md](doc/design.md).
 
-Requires a Lask whose container options take `null` (lask#49) and accept a typed list or table (lask#50), and whose secrets may be `null` (lask#51).
+Requires a Lask that names an image only by the head of an environment expression and gives run options through `runnable` (`#python:3.12`, `runnable(image, ...)`), in place of the removed `#docker(...)`.
 
-Pull a tool's image once before the first command that uses it, e.g. `docker pull amazon/aws-cli:2.36.41`. A tool builds its image reference from `--tag` when it runs, so Lask treats the reference as computed at run time (lask spec 10.3): `lask env build` cannot pull or pin it, and a run never pulls. A tool built from a recipe in this module — marked *recipe* below — is the exception: it has no `--tag`, and `lask deps sync` or `lask env build` builds it.
+Run `lask env build` (or `lask deps sync`) before the first command: it pulls and pins the image of every tool your program reaches, and builds the ones made from a recipe in this module — marked *recipe* below. A run never pulls (lask spec 10.3). A tool your program does not reach is not pulled.
 
 ## Install
 
@@ -26,7 +26,7 @@ lask deps add tools --git https://github.com/lask-task-runner/lask-module-tools 
 
 Every tool follows the same rules:
 
-- **`--tag` picks the release of the tool's image**, and defaults to the one this module was written and tested against. Pull the image for the tag you run (above).
+- **`--image` picks the release of the tool's image**, and defaults to the one this module was written and tested against. Pass another as an image head, `tools.python(image = #python:3.13.5-alpine3.22)`: the image is written in your module, so `lask env build` pins it. A recipe tool takes no `--image`.
 - **A parameter left `null` sets nothing.** Every parameter defaults to `null`, and a variable given `null` is left out. `""` is a value: it sets its variable to the empty string.
 - **Secrets are `!!` parameters**, so they are masked in the command log, including in the environment it records — whatever the caller passed. They default to `null` like the rest, and a `null` secret registers nothing for masking.
 - **A host path is mounted, never expanded.** Lask starts `docker` without a shell, so `~` would reach the daemon as a directory named `~`. Use `tools.home(".aws")`.
@@ -36,7 +36,7 @@ Every tool follows the same rules:
 
 ## Catalog
 
-Every function returns an `Environment`. A tool that works as it is exports its command words, which a project imports by name (`import command { "go" } from "tools"`); a tool that needs a credential, a cluster or a server exports none, and the project declares its own (`command { "kubectl" } on tools.kubectl(...)`). Every image has `/bin/sh`, which a Lask command runs through.
+Every function returns a `Runnable`, which `$[...]` and `command ... on` take as they take an `Environment`. A tool that works as it is exports its command words, which a project imports by name (`import command { "go" } from "tools"`); a tool that needs a credential, a cluster or a server exports none, and the project declares its own (`command { "kubectl" } on tools.kubectl(...)`). Every image has `/bin/sh`, which a Lask command runs through.
 
 ### Cloud CLIs
 
@@ -80,7 +80,7 @@ Every function returns an `Environment`. A tool that works as it is exports its 
 | `tofu` | `ghcr.io/opentofu/opentofu:1.12.6` | — |
 | `ansible` | *recipe*: ansible-core 2.21.4 on Python 3.12 | — |
 | `packer` | `hashicorp/packer:1.16.1` | — |
-| `pulumi` | `pulumi/pulumi-<language>:3.265.0` | — |
+| `pulumi` | `pulumi/pulumi-nodejs:3.265.0` | — |
 
 ### Database clients
 
@@ -184,12 +184,12 @@ A setup carries none of its tool's defaults. Two setups that set the same variab
 
 ## Parameters
 
-Every function also takes `--with` and `--extra_env`; a function on a registry image takes `--tag`. The other parameters, by genre (the sections after this one cover the tools that need more words):
+Every function also takes `--with` and `--extra_env`; a function on a registry image takes `--image`. The other parameters, by genre (the sections after this one cover the tools that need more words):
 
 - **Cloud CLIs.** `gcloud` and `az` take the parameters of their setup. `gcloud` never prompts (`CLOUDSDK_CORE_DISABLE_PROMPTS=1`); `az` sends no telemetry, and logs in from a service principal only when told to: `az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID"`.
-- **Languages.** Each takes `--cache_dir`, mounted at `/cache`, where its package cache lives: `GOMODCACHE`/`GOCACHE`, `-Dmaven.repo.local`, `GRADLE_USER_HOME`, `CARGO_HOME`, `BUNDLE_PATH`, `NUGET_PACKAGES`, `DENO_DIR`, `BUN_INSTALL_CACHE_DIR`, `CABAL_DIR`/`STACK_ROOT`. Beyond it: `go` — `goproxy`, `goprivate`, `goflags`, `cgo_enabled`, `goos`, `goarch`, and `GOTOOLCHAIN=local` so Go stays at the release `--tag` names; `java`, `maven`, `gradle` — `java_tool_options`, `maven_opts`, `gradle_opts`, and Maven in batch mode; `rust` — `rustflags`; `cc` — `cc`, `cxx`, `cflags`, `cxxflags`, `ldflags`, `makeflags`; `deno` — `auth_tokens!!`; `bun` — `npm_token!!`. Stack in the `haskell` image does not use the GHC beside it unless given `--system-ghc`.
+- **Languages.** Each takes `--cache_dir`, mounted at `/cache`, where its package cache lives: `GOMODCACHE`/`GOCACHE`, `-Dmaven.repo.local`, `GRADLE_USER_HOME`, `CARGO_HOME`, `BUNDLE_PATH`, `NUGET_PACKAGES`, `DENO_DIR`, `BUN_INSTALL_CACHE_DIR`, `CABAL_DIR`/`STACK_ROOT`. Beyond it: `go` — `goproxy`, `goprivate`, `goflags`, `cgo_enabled`, `goos`, `goarch`, and `GOTOOLCHAIN=local` so Go stays at the release its image holds; `java`, `maven`, `gradle` — `java_tool_options`, `maven_opts`, `gradle_opts`, and Maven in batch mode; `rust` — `rustflags`; `cc` — `cc`, `cxx`, `cflags`, `cxxflags`, `ldflags`, `makeflags`; `deno` — `auth_tokens!!`; `bun` — `npm_token!!`. Stack in the `haskell` image does not use the GHC beside it unless given `--system-ghc`.
 - **Container orchestration.** `kubectl` and `helm` take the parameters of `kube_setup` and `network`; `helm` also `cache_dir`. kubectl reads no variable for a context or a namespace: give `--context` and `-n` on its command line. A cluster at 127.0.0.1 (kind, minikube) takes `network = "host"`. The image carries the AWS CLI for an EKS kubeconfig, not the GKE auth plugin.
-- **IaC.** `tofu` takes the parameters of `terraform`. `packer` — `log`, `variables` (as `PKR_VAR_*`), `cache_dir`. `pulumi` — `language` (`nodejs`, `python`, `go`, `dotnet`, `java`), `access_token!!`, `backend_url`, `config_passphrase!!`, `cache_dir`. `ansible` — `config`, `inventory`, `host_key_checking`, `vault_password_file`, `ssh_dir`, `ssh_agent_socket`, `cache_dir`.
+- **IaC.** `tofu` takes the parameters of `terraform`. `packer` — `log`, `variables` (as `PKR_VAR_*`), `cache_dir`. `pulumi` — another runtime as another image (`image = #pulumi/pulumi-python:3.265.0`; `go`, `dotnet` and `java` likewise), `access_token!!`, `backend_url`, `config_passphrase!!`, `cache_dir`. `ansible` — `config`, `inventory`, `host_key_checking`, `vault_password_file`, `ssh_dir`, `ssh_agent_socket`, `cache_dir`.
 - **Database clients.** Each takes `network`, to join a Compose network. `psql` takes the parameters of `pg_setup`. `mysql` — `host`, `port`, `user`, `password!!`, `database`; the client reads no user and no database from its environment, so they are set as `MYSQL_USER` and `MYSQL_DATABASE` for the command line: `mysql -u "$MYSQL_USER" "$MYSQL_DATABASE"`. `redis_cli` — `password!!`; the host goes on the command line. `migrate` — `database_url!!`, as `DATABASE_URL` for `-database "$DATABASE_URL"`. `flyway` — `url`, `user`, `password!!`, `locations`.
 - **Git and code hosts.** `git` takes the parameters of `git_setup` and of `ssh_setup` (`ssh_dir`, `ssh_agent_socket`). `gh` — `token!!`, `host`, `repo`; `glab` — `token!!`, `host`. A `gh` or `glab` command that runs git over https takes `with = [tools.git_setup(token = ...)]` too.
 - **Build.** `buf` — `token!!`, `cache_dir`. `bazel` — `cache_dir`, which keeps both the Bazel releases Bazelisk downloads and Bazel's output root, so a build is incremental across runs.
@@ -204,7 +204,7 @@ Tools that run Git in the mounted project — `go`, `rust`, `haskell`, `pulumi`,
 
 ### `aws` — AWS CLI v2
 
-Image `amazon/aws-cli:<tag>`, `2.36.41` unless `--tag` says otherwise. Declare the command word in your module:
+Image `#amazon/aws-cli:2.36.41` unless `--image` names another. Declare the command word in your module:
 
 ```lask
 command { "aws" } on tools.aws(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
@@ -212,7 +212,7 @@ command { "aws" } on tools.aws(profile = "dev", region = "ap-northeast-1", confi
 
 | Parameter | Sets |
 |---|---|
-| `--tag` | the image: `amazon/aws-cli:<tag>`; default `2.36.41` |
+| `--image` | the image, as a head: `#amazon/aws-cli:<tag>`; default `#amazon/aws-cli:2.36.41` |
 | `--profile` | `AWS_PROFILE` |
 | `--region` | `AWS_REGION` and `AWS_DEFAULT_REGION` — the CLI and the SDKs read different ones |
 | `--endpoint_url` | `AWS_ENDPOINT_URL` — LocalStack or another AWS-compatible endpoint |
@@ -247,7 +247,7 @@ More in [example/main.lask](example/main.lask).
 
 ### `python` — Python, with pip
 
-Image `python:<tag>`, `3.12.14-alpine3.24` unless `--tag` says otherwise. Python works as it is, so its command words are exported — import the ones you run:
+Image `#python:3.12.14-alpine3.24` unless `--image` names another. Python works as it is, so its command words are exported — import the ones you run:
 
 ```lask
 import command { "python", "pip" } from "tools"
@@ -257,7 +257,7 @@ test(): String = $ pip install -q -r requirements.txt && python -m unittest
 
 | Parameter | Sets |
 |---|---|
-| `--tag` | the image: `python:<tag>`; default `3.12.14-alpine3.24` |
+| `--image` | the image, as a head: `#python:<tag>`; default `#python:3.12.14-alpine3.24` |
 | `--index_url!!` | `PIP_INDEX_URL` — masked, since a private index URL often carries a credential |
 | `--extra_index_url!!` | `PIP_EXTRA_INDEX_URL` |
 | `--cache_dir` | mounts `<dir>` at `/cache`; `PIP_CACHE_DIR=/cache/pip` |
@@ -265,11 +265,11 @@ test(): String = $ pip install -q -r requirements.txt && python -m unittest
 
 Defaults: `PYTHONUNBUFFERED=1`, so output reaches the command log as it happens; `PYTHONDONTWRITEBYTECODE=1`, so no root-owned `__pycache__` is left in the project; `PIP_DISABLE_PIP_VERSION_CHECK=1`.
 
-Exported words: `python`, `python3`, `pip`, `pip3`, on `python()` at its defaults. For another release or a cache, declare the words yourself: `command { "python", "pip" } on tools.python(tag = "3.13.5-alpine3.22")`.
+Exported words: `python`, `python3`, `pip`, `pip3`, on `python()` at its defaults. For another release or a cache, declare the words yourself: `command { "python", "pip" } on tools.python(image = #python:3.13.5-alpine3.22)`.
 
 ### `node` — Node.js, with npm and npx
 
-Image `node:<tag>`, `24.21.0-alpine3.24` (an LTS release) unless `--tag` says otherwise. Its command words are exported too:
+Image `#node:24.21.0-alpine3.24` (an LTS release) unless `--image` names another. Its command words are exported too:
 
 ```lask
 import command { "node", "npm", "npx" } from "tools"
@@ -279,7 +279,7 @@ build(): String = $ cd web && npm ci && npm run build
 
 | Parameter | Sets |
 |---|---|
-| `--tag` | the image: `node:<tag>`; default `24.21.0-alpine3.24` |
+| `--image` | the image, as a head: `#node:<tag>`; default `#node:24.21.0-alpine3.24` |
 | `--node_env` | `NODE_ENV` |
 | `--node_options` | `NODE_OPTIONS` |
 | `--registry` | `npm_config_registry` |
@@ -289,13 +289,13 @@ build(): String = $ cd web && npm ci && npm run build
 
 Default: `npm_config_update_notifier=false`, so npm prints no update notice into the command log.
 
-Exported words: `node`, `npm`, `npx`, `corepack`, on `node()` at its defaults. Declare them yourself for another release: `command { "node", "npm", "npx" } on tools.node(tag = "22.23.3-alpine3.24")`.
+Exported words: `node`, `npm`, `npx`, `corepack`, on `node()` at its defaults. Declare them yourself for another release: `command { "node", "npm", "npx" } on tools.node(image = #node:22.23.3-alpine3.24)`.
 
 A command string runs in one environment, so `$ python … && node …` is a conflict: split it, or give the environment with `$[...]`.
 
 ### `terraform` — Terraform
 
-Image `hashicorp/terraform:<tag>`, `1.16.4` unless `--tag` says otherwise. A provider's credentials come in through `--with`:
+Image `#hashicorp/terraform:1.16.4` unless `--image` names another. A provider's credentials come in through `--with`:
 
 ```lask
 command { "terraform" } on tools.terraform(
@@ -309,7 +309,7 @@ plan(): String = $ terraform -chdir=infra plan
 
 | Parameter | Sets |
 |---|---|
-| `--tag` | the image: `hashicorp/terraform:<tag>`; default `1.16.4` |
+| `--image` | the image, as a head: `#hashicorp/terraform:<tag>`; default `#hashicorp/terraform:1.16.4` |
 | `--workspace` | `TF_WORKSPACE` |
 | `--log` | `TF_LOG`, e.g. `DEBUG` |
 | `--variables` | `TF_VAR_<name>` for each entry of the map |
@@ -333,7 +333,7 @@ The module exports no `terraform` command word, for the reason `aws` exports non
 
 ### `playwright` — Playwright, with its browsers
 
-Image `mcr.microsoft.com/playwright:<tag>`, `v1.63.0-noble` unless `--tag` says otherwise. Pick the tag of the `@playwright/test` version the project installs: the image carries one release's browsers, and they are never downloaded here, so a mismatch fails at once.
+Image `#mcr.microsoft.com/playwright:v1.63.0-noble` unless `--image` names another. Pick the tag of the `@playwright/test` version the project installs: the image carries one release's browsers, and they are never downloaded here, so a mismatch fails at once.
 
 ```lask
 e2e(--base_url: String = "http://host.docker.internal:3000"): String =
@@ -342,7 +342,7 @@ e2e(--base_url: String = "http://host.docker.internal:3000"): String =
 
 | Parameter | Sets |
 |---|---|
-| `--tag` | the image: `mcr.microsoft.com/playwright:<tag>`; default `v1.63.0-noble` |
+| `--image` | the image, as a head: `#mcr.microsoft.com/playwright:<tag>`; default `#mcr.microsoft.com/playwright:v1.63.0-noble` |
 | `--shm_size` | the container's `/dev/shm`; default `"1g"`, since Chromium runs out of Docker's 64MB; `null` leaves Docker's |
 | `--registry` | `npm_config_registry` |
 | `--npm_token!!` | `NPM_TOKEN`, for an `.npmrc` that reads `${NPM_TOKEN}` |
@@ -363,7 +363,7 @@ import command { "curl", "jq" } from "tools"
 latest(): String = $ curl -fsSL https://api.github.com/repos/hashicorp/terraform/releases/latest | jq -r .tag_name
 ```
 
-It is built from a recipe in this module, `lib/images/unix/Dockerfile` (Alpine 3.24, pinned by its digest), so it has no `--tag`, and `lask deps sync` or `lask env build` builds it once per machine. Its parameters are `--with` and `--extra_env` — `extra_env = {"HTTPS_PROXY": "..."}` behind a proxy.
+It is built from a recipe in this module, `lib/images/unix/Dockerfile` (Alpine 3.24, pinned by its digest), so it takes no `--image`, and `lask deps sync` or `lask env build` builds it once per machine. Its parameters are `--with` and `--extra_env` — `extra_env = {"HTTPS_PROXY": "..."}` behind a proxy.
 
 Exported words: `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`, `xz`, `bzip2`, `zip`, `unzip`, `rsync`, on `unix()`. The shell's own words (`grep`, `sed`, `awk`, `sort`, …) are in the image but not exported: every image has them, and importing them would make a string such as `npm test | grep ok` conflict. They run here whenever an exported word selects this environment. Nor are `git`, `gh`, `glab` and `ssh`, which need an identity, or `make`, which is `cc`'s.
 

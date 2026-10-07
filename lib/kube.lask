@@ -33,22 +33,20 @@ kube_setup(
   volumes: mount(kubeconfig, "/run/kube/config:ro")
 }
 
-// kubectl at --tag, configured by its parameters.
+// kubectl, configured by its parameters.
 //
-// The image is alpine/k8s at --tag, 1.37.0 unless another is given: its
-// tag follows kubectl's release, and it carries Helm, Kustomize, the AWS
+// The image is #alpine/k8s:1.37.0 unless --image names another: its tag
+// follows kubectl's release, and it carries Helm, Kustomize, the AWS
 // CLI and eksctl beside it, so a kubeconfig whose user runs `aws eks
 // get-token` works with `with = [aws_setup(...)]`. It has no
 // gke-gcloud-auth-plugin. The kubectl image of registry.k8s.io has no
-// shell, which every command here runs through. The reference is built
-// from the argument when the function runs, so `lask env build` does
-// not pull or pin it (lask spec 10.3): pull it once, and a run never
-// pulls.
+// shell, which every command here runs through. `lask env build` pulls
+// and pins whichever image is used (lask spec 10.3); a run never pulls.
 //
 // A cluster the kubeconfig reaches at 127.0.0.1 — kind, minikube — is
 // the host's, not the container's: give network = "host".
 //
-// @param tag         The alpine/k8s image tag to run.
+// @param image       The image to run; another release is passed as image = #alpine/k8s:<tag>.
 // @param kubeconfig  Host path of the kubeconfig, mounted read-only (KUBECONFIG).
 // @param context     HELM_KUBECONTEXT and KUBE_CTX; kubectl itself takes `--context`.
 // @param namespace   HELM_NAMESPACE; kubectl itself takes `-n`.
@@ -58,17 +56,16 @@ kube_setup(
 // @return The environment, for `command { "kubectl" } on ...` or `$[...]`.
 // @example lask eval kubectl --kubeconfig /home/me/.kube/config
 kubectl(
-  --tag: String = "1.37.0",
+  --image: Environment = #alpine/k8s:1.37.0,
   --kubeconfig: String | Null = null,
   --context: String | Null = null,
   --namespace: String | Null = null,
   --network: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = do {
+): Runnable = do {
   own = kube_setup(kubeconfig = kubeconfig, context = context, namespace = namespace)
-  return #docker(
-    "alpine/k8s:#{tag}",
+  return runnable(image,
     env = layered_env({}, extra_env, with, own.env),
     volumes = layered_volumes(with, own.volumes),
     network = network
@@ -77,10 +74,10 @@ kubectl(
 
 // Helm, in the image of kubectl, configured by its parameters.
 //
-// The image is alpine/k8s at --tag, as for kubectl: one image for the
-// cluster's tools, so a kubeconfig works the same in each. Pull it once.
+// The image is alpine/k8s, as for kubectl: one image for the cluster's
+// tools, so a kubeconfig works the same in each.
 //
-// @param tag         The alpine/k8s image tag to run.
+// @param image       The image to run; another release is passed as image = #alpine/k8s:<tag>.
 // @param kubeconfig  Host path of the kubeconfig, mounted read-only (KUBECONFIG).
 // @param context     HELM_KUBECONTEXT.
 // @param namespace   HELM_NAMESPACE.
@@ -91,7 +88,7 @@ kubectl(
 // @return The environment, for `command { "helm" } on ...` or `$[...]`.
 // @example lask eval helm --namespace web --cache_dir /tmp/cache
 helm(
-  --tag: String = "1.37.0",
+  --image: Environment = #alpine/k8s:1.37.0,
   --kubeconfig: String | Null = null,
   --context: String | Null = null,
   --namespace: String | Null = null,
@@ -99,15 +96,14 @@ helm(
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = do {
+): Runnable = do {
   own = kube_setup(kubeconfig = kubeconfig, context = context, namespace = namespace)
   cache = vars({
     "HELM_CACHE_HOME": in_cache(cache_dir, "helm/cache"),
     "HELM_CONFIG_HOME": in_cache(cache_dir, "helm/config"),
     "HELM_DATA_HOME": in_cache(cache_dir, "helm/data")
   })
-  return #docker(
-    "alpine/k8s:#{tag}",
+  return runnable(image,
     env = layered_env({}, extra_env, with, merge(own.env, cache)),
     volumes = layered_volumes(with, concat_array(own.volumes, mount(cache_dir, "/cache"))),
     network = network
@@ -116,22 +112,21 @@ helm(
 
 // Kustomize, in the image of kubectl.
 //
-// The image is alpine/k8s at --tag, as for kubectl; the Kustomize image
-// of registry.k8s.io is published for amd64 only. `kustomize build`
+// The image is alpine/k8s, as for kubectl; the Kustomize image of
+// registry.k8s.io is published for amd64 only. `kustomize build`
 // renders manifests and reaches no cluster, so its command word is
 // exported.
 //
-// @param tag        The alpine/k8s image tag to run.
+// @param image      The image to run; another release is passed as image = #alpine/k8s:<tag>.
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with.
 // @return The environment, for `command { "kustomize" } on ...` or `$[...]`.
 // @example lask eval kustomize
 kustomize(
-  --tag: String = "1.37.0",
+  --image: Environment = #alpine/k8s:1.37.0,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "alpine/k8s:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, {}),
   volumes = layered_volumes(with, [])
 )

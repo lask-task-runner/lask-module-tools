@@ -2,19 +2,19 @@
 // ApacheBench. Each needs nothing from the caller, so each exports its
 // command word.
 //
-// An image taken at --tag is a reference built when the function runs:
-// `lask env build` does not pull or pin it (lask spec 10.3), so pull it
-// once, and a run never pulls. A server on the host is at
+// Each image is taken as --image, a head written here as its default or
+// by the caller: `lask env build` pulls and pins whichever is used
+// (lask spec 10.3), and a run never pulls. A server on the host is at
 // host.docker.internal from a container with Docker Desktop, and at
 // localhost with network = "host"; a server in a Compose project is on
 // that project's network, which --network joins.
 
 import { vars, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
-// k6 at --tag, grafana/k6:1.8.1 by default. It sends no usage report
+// k6, grafana/k6:1.8.1 by default. It sends no usage report
 // (K6_NO_USAGE_REPORT=true). The image runs as the user k6, not root.
 //
-// @param tag          The grafana/k6 image tag to run.
+// @param image        The image to run; another release is passed as image = #grafana/k6:<tag>.
 // @param cloud_token  K6_CLOUD_TOKEN, for Grafana Cloud k6; masked in the command log.
 // @param network      The container's network: a Compose network, or "host".
 // @param with         Setups of other tools this environment should also carry.
@@ -22,54 +22,51 @@ import { vars, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 // @return The environment, for `command { "k6" } on ...` or `$[...]`.
 // @example lask eval k6 --network host
 k6(
-  --tag: String = "1.8.1",
+  --image: Environment = #grafana/k6:1.8.1,
   --cloud_token!!: String | Null = null,
   --network: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "grafana/k6:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({"K6_NO_USAGE_REPORT": "true"}, extra_env, with, vars({"K6_CLOUD_TOKEN": cloud_token})),
   volumes = layered_volumes(with, []),
   network = network
 )
 
-// grpcurl at --tag, fullstorydev/grpcurl:v1.9.3-alpine by default.
+// grpcurl, fullstorydev/grpcurl:v1.9.3-alpine by default.
 //
-// @param tag        The fullstorydev/grpcurl image tag to run.
+// @param image      The image to run; another release is passed as image = #fullstorydev/grpcurl:<tag>.
 // @param network    The container's network: a Compose network, or "host".
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with.
 // @return The environment, for `command { "grpcurl" } on ...` or `$[...]`.
 // @example lask eval grpcurl --network host
 grpcurl(
-  --tag: String = "v1.9.3-alpine",
+  --image: Environment = #fullstorydev/grpcurl:v1.9.3-alpine,
   --network: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "fullstorydev/grpcurl:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, {}),
   volumes = layered_volumes(with, []),
   network = network
 )
 
-// Newman, Postman's collection runner, at --tag,
-// postman/newman:6.1.3-alpine by default.
+// Newman, Postman's collection runner, postman/newman:6.1.3-alpine by
+// default.
 //
-// @param tag        The postman/newman image tag to run.
+// @param image      The image to run; another release is passed as image = #postman/newman:<tag>.
 // @param network    The container's network: a Compose network, or "host".
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with.
 // @return The environment, for `command { "newman" } on ...` or `$[...]`.
 // @example lask eval newman
 newman(
-  --tag: String = "6.1.3-alpine",
+  --image: Environment = #postman/newman:6.1.3-alpine,
   --network: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "postman/newman:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, {}),
   volumes = layered_volumes(with, []),
   network = network
@@ -79,10 +76,10 @@ newman(
 //
 // There is no official image, so the image is built from
 // lib/images/robot/Dockerfile: Robot Framework 7.5 and RequestsLibrary
-// 0.9.7 on the Python image of python(). It has no --tag, and `lask env
-// build` (or `lask deps sync`) builds it. Another library is installed
-// in the same command, `pip install -r requirements.txt && robot
-// tests`; a browser library is better served by playwright().
+// 0.9.7 on the Python image of python(). It takes no --image, and `lask
+// env build` (or `lask deps sync`) builds it. Another library is
+// installed in the same command, `pip install -r requirements.txt &&
+// robot tests`; a browser library is better served by playwright().
 //
 // @param options    ROBOT_OPTIONS, which robot reads before its command line, e.g. "--outputdir results".
 // @param network    The container's network: a Compose network, or "host".
@@ -95,29 +92,27 @@ robot(
   --network: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  dockerfile = "images/robot/Dockerfile",
-  env = layered_env({"PYTHONUNBUFFERED": "1"}, extra_env, with, vars({"ROBOT_OPTIONS": options})),
-  volumes = layered_volumes(with, []),
-  network = network
-)
+): Runnable = #./images/robot/Dockerfile{
+  env: layered_env({"PYTHONUNBUFFERED": "1"}, extra_env, with, vars({"ROBOT_OPTIONS": options})),
+  volumes: layered_volumes(with, []),
+  network: network
+}
 
-// ApacheBench at --tag, from the Apache HTTP Server image,
+// ApacheBench, from the Apache HTTP Server image,
 // httpd:2.4.68-alpine3.24 by default.
 //
-// @param tag        The httpd image tag to run.
+// @param image      The image to run; another release is passed as image = #httpd:<tag>.
 // @param network    The container's network: a Compose network, or "host".
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with.
 // @return The environment, for `command { "ab" } on ...` or `$[...]`.
 // @example lask eval ab --network host
 ab(
-  --tag: String = "2.4.68-alpine3.24",
+  --image: Environment = #httpd:2.4.68-alpine3.24,
   --network: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "httpd:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, {}),
   volumes = layered_volumes(with, []),
   network = network

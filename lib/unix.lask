@@ -12,10 +12,10 @@ import { layered_env, layered_volumes, ToolSetup } from "./common.lask"
 // rsync, make, and the SSH client; and git, gh and glab, which git(),
 // gh() and glab() configure.
 //
-// The image is built from lib/images/unix/Dockerfile, Alpine 3.24 pinned by
-// its digest, so it has no --tag: the recipe is what fixes it, and
-// `lask env build` (or `lask deps sync`) builds it once per machine
-// (lask spec 10.3). A run never builds.
+// The image is built from lib/images/unix/Dockerfile, Alpine 3.24
+// pinned by its digest, so it takes no --image: the recipe is what
+// fixes it, and `lask env build` (or `lask deps sync`) builds it once
+// per machine (lask spec 10.3). A run never builds.
 //
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable, e.g. HTTPS_PROXY; below --with.
@@ -24,11 +24,10 @@ import { layered_env, layered_volumes, ToolSetup } from "./common.lask"
 unix(
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  dockerfile = "images/unix/Dockerfile",
-  env = layered_env({}, extra_env, with, {}),
-  volumes = layered_volumes(with, [])
-)
+): Runnable = #./images/unix/Dockerfile{
+  env: layered_env({}, extra_env, with, {}),
+  volumes: layered_volumes(with, [])
+}
 
 // The tools need nothing from the caller, so their command words are
 // exported, declared on the default environment. A project imports the

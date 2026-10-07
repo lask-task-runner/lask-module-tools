@@ -2,21 +2,20 @@
 
 import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
-// Go at --tag, configured by its parameters.
+// Go, configured by its parameters.
 //
-// The image is golang at --tag, 1.27.1-trixie unless another is given:
+// The image is #golang:1.27.1-trixie unless --image names another:
 // Debian rather than Alpine, so cgo and `go test -race` find a C
-// toolchain. The reference is built from the argument when the function
-// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
-// pull it once, and a run never pulls.
+// toolchain. `lask env build` pulls and pins whichever image is used
+// (lask spec 10.3); a run never pulls.
 //
-// GOTOOLCHAIN=local keeps Go to the release --tag names: a go.mod that
-// asks for a newer one fails instead of downloading it into a container
-// that is thrown away. Git trusts the mounted project (safe.directory),
-// so `go build` can stamp its revision. A private module over https
-// takes `with = [git_setup(token = ...)]`.
+// GOTOOLCHAIN=local keeps Go to the release its image holds: a go.mod
+// that asks for a newer one fails instead of downloading it into a
+// container that is thrown away. Git trusts the mounted project
+// (safe.directory), so `go build` can stamp its revision. A private
+// module over https takes `with = [git_setup(token = ...)]`.
 //
-// @param tag          The golang image tag to run.
+// @param image        The image to run; another release is passed as image = #golang:<tag>.
 // @param goproxy      GOPROXY.
 // @param goprivate    GOPRIVATE.
 // @param goflags      GOFLAGS.
@@ -29,7 +28,7 @@ import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSet
 // @return The environment, for `command { "go" } on ...` or `$[...]`.
 // @example lask eval go --goos linux --goarch amd64
 go(
-  --tag: String = "1.27.1-trixie",
+  --image: Environment = #golang:1.27.1-trixie,
   --goproxy: String | Null = null,
   --goprivate: String | Null = null,
   --goflags: String | Null = null,
@@ -39,8 +38,7 @@ go(
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "golang:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     merge({"GOTOOLCHAIN": "local"}, git_trust()),
     extra_env,

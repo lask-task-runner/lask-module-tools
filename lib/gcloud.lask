@@ -39,12 +39,11 @@ gcloud_setup(
 // The Google Cloud CLI (gcloud, gsutil, bq), configured by its
 // parameters.
 //
-// The image is gcr.io/google.com/cloudsdktool/google-cloud-cli at
-// --tag, 586.0.0-slim unless another is given; the Docker Hub copy,
-// google/cloud-sdk, is published for amd64 only. The reference is built
-// from the argument when the function runs, so `lask env build` does
-// not pull or pin it (lask spec 10.3): pull it once, and a run never
-// pulls.
+// The image is
+// #gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim unless
+// --image names another; the Docker Hub copy, google/cloud-sdk, is
+// published for amd64 only. `lask env build` pulls and pins whichever
+// image is used (lask spec 10.3); a run never pulls.
 //
 // gcloud never prompts (CLOUDSDK_CORE_DISABLE_PROMPTS=1). Locally, log
 // in on the host (`gcloud auth login`, `gcloud auth
@@ -52,7 +51,7 @@ gcloud_setup(
 // home(".config/gcloud"). In CI, pass a credentials file or an access
 // token.
 //
-// @param tag               The google-cloud-cli image tag to run.
+// @param image             The image to run; another release is passed as image = #gcr.io/google.com/cloudsdktool/google-cloud-cli:<tag>.
 // @param project           CLOUDSDK_CORE_PROJECT and GOOGLE_CLOUD_PROJECT.
 // @param region            CLOUDSDK_COMPUTE_REGION and GOOGLE_REGION.
 // @param credentials_file  Host path of a credentials file, mounted read-only.
@@ -63,7 +62,7 @@ gcloud_setup(
 // @return The environment, for `command { "gcloud" } on ...` or `$[...]`.
 // @example lask eval gcloud --project my-project --region asia-northeast1
 gcloud(
-  --tag: String = "586.0.0-slim",
+  --image: Environment = #gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim,
   --project: String | Null = null,
   --region: String | Null = null,
   --credentials_file: String | Null = null,
@@ -71,7 +70,7 @@ gcloud(
   --config_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = do {
+): Runnable = do {
   own = gcloud_setup(
     project = project,
     region = region,
@@ -79,8 +78,7 @@ gcloud(
     access_token = access_token,
     config_dir = config_dir
   )
-  return #docker(
-    "gcr.io/google.com/cloudsdktool/google-cloud-cli:#{tag}",
+  return runnable(image,
     env = layered_env({"CLOUDSDK_CORE_DISABLE_PROMPTS": "1"}, extra_env, with, own.env),
     volumes = layered_volumes(with, own.volumes)
   )

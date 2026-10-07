@@ -2,54 +2,52 @@
 // ruff and actionlint. Each needs nothing from the caller, so each
 // exports its command word.
 //
-// Every image is taken at --tag, a reference built when the function
-// runs: `lask env build` does not pull or pin it (lask spec 10.3), so
-// pull it once, and a run never pulls. A tool's own image is used where
-// it has a shell, which a lask command runs through.
+// Each image is taken as --image, a head written here as its default or
+// by the caller: `lask env build` pulls and pins whichever is used
+// (lask spec 10.3), and a run never pulls. A tool's own image is used
+// where it has a shell, which a lask command runs through.
 
 import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
-// ShellCheck at --tag, koalaman/shellcheck-alpine:v0.11.0 by default.
+// ShellCheck, koalaman/shellcheck-alpine:v0.11.0 by default.
 //
-// @param tag        The koalaman/shellcheck-alpine image tag to run.
+// @param image      The image to run; another release is passed as image = #koalaman/shellcheck-alpine:<tag>.
 // @param opts       SHELLCHECK_OPTS, e.g. "-e SC1091".
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "shellcheck" } on ...` or `$[...]`.
 // @example lask eval shellcheck --opts "-e SC1091"
 shellcheck(
-  --tag: String = "v0.11.0",
+  --image: Environment = #koalaman/shellcheck-alpine:v0.11.0,
   --opts: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "koalaman/shellcheck-alpine:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, vars({"SHELLCHECK_OPTS": opts})),
   volumes = layered_volumes(with, [])
 )
 
-// hadolint, the Dockerfile linter, at --tag, hadolint/hadolint:v2.15.1-alpine
-// by default. A .hadolint.yaml in the project configures it.
+// hadolint, the Dockerfile linter, hadolint/hadolint:v2.15.1-alpine by
+// default. A .hadolint.yaml in the project configures it.
 //
-// @param tag        The hadolint/hadolint image tag to run.
+// @param image      The image to run; another release is passed as image = #hadolint/hadolint:<tag>.
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable, e.g. HADOLINT_FAILURE_THRESHOLD; below --with.
 // @return The environment, for `command { "hadolint" } on ...` or `$[...]`.
 // @example lask eval hadolint
 hadolint(
-  --tag: String = "v2.15.1-alpine",
+  --image: Environment = #hadolint/hadolint:v2.15.1-alpine,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "hadolint/hadolint:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, {}),
   volumes = layered_volumes(with, [])
 )
 
-// TFLint at --tag, ghcr.io/terraform-linters/tflint:v0.64.0 by default.
-// `tflint --init` downloads the plugins .tflint.hcl names, from GitHub.
+// TFLint, ghcr.io/terraform-linters/tflint:v0.64.0 by default. `tflint
+// --init` downloads the plugins .tflint.hcl names, from GitHub.
 //
-// @param tag           The tflint image tag to run.
+// @param image         The image to run; another release is passed as image = #ghcr.io/terraform-linters/tflint:<tag>.
 // @param github_token  GITHUB_TOKEN, which lifts GitHub's rate limit on plugin downloads; masked in the command log.
 // @param cache_dir     Host directory mounted at /cache; plugins are kept in /cache/tflint (TFLINT_PLUGIN_DIR).
 // @param with          Setups of other tools this environment should also carry.
@@ -57,34 +55,32 @@ hadolint(
 // @return The environment, for `command { "tflint" } on ...` or `$[...]`.
 // @example lask eval tflint --cache_dir /tmp/cache
 tflint(
-  --tag: String = "v0.64.0",
+  --image: Environment = #ghcr.io/terraform-linters/tflint:v0.64.0,
   --github_token!!: String | Null = null,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "ghcr.io/terraform-linters/tflint:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, vars({"GITHUB_TOKEN": github_token, "TFLINT_PLUGIN_DIR": in_cache(cache_dir, "tflint")})),
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )
 
-// golangci-lint at --tag, golangci/golangci-lint:v2.14.0 by default,
-// with the Go it was built with. The mounted project is trusted by Git
+// golangci-lint, golangci/golangci-lint:v2.14.0 by default, with the Go
+// it was built with. The mounted project is trusted by Git
 // (safe.directory), since the linters that read history need it.
 //
-// @param tag        The golangci/golangci-lint image tag to run.
+// @param image      The image to run; another release is passed as image = #golangci/golangci-lint:<tag>.
 // @param cache_dir  Host directory mounted at /cache: golangci-lint's cache (/cache/golangci-lint), and Go's module and build caches (/cache/mod, /cache/build), shared with go().
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "golangci-lint" } on ...` or `$[...]`.
 // @example lask eval golangci_lint --cache_dir /tmp/cache
 golangci_lint(
-  --tag: String = "v2.14.0",
+  --image: Environment = #golangci/golangci-lint:v2.14.0,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "golangci/golangci-lint:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     git_trust(),
     extra_env,
@@ -98,40 +94,38 @@ golangci_lint(
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )
 
-// Ruff, the Python linter and formatter, at --tag,
+// Ruff, the Python linter and formatter,
 // ghcr.io/astral-sh/ruff:0.16.9-alpine by default.
 //
-// @param tag        The ruff image tag to run.
+// @param image      The image to run; another release is passed as image = #ghcr.io/astral-sh/ruff:<tag>.
 // @param cache_dir  Host directory mounted at /cache; Ruff's cache is /cache/ruff (RUFF_CACHE_DIR) instead of .ruff_cache in the project.
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "ruff" } on ...` or `$[...]`.
 // @example lask eval ruff
 ruff(
-  --tag: String = "0.16.9-alpine",
+  --image: Environment = #ghcr.io/astral-sh/ruff:0.16.9-alpine,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "ghcr.io/astral-sh/ruff:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, vars({"RUFF_CACHE_DIR": in_cache(cache_dir, "ruff")})),
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )
 
-// actionlint, the GitHub Actions workflow linter, at --tag,
+// actionlint, the GitHub Actions workflow linter,
 // rhysd/actionlint:1.7.12 by default.
 //
-// @param tag        The rhysd/actionlint image tag to run.
+// @param image      The image to run; another release is passed as image = #rhysd/actionlint:<tag>.
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with.
 // @return The environment, for `command { "actionlint" } on ...` or `$[...]`.
 // @example lask eval actionlint
 actionlint(
-  --tag: String = "1.7.12",
+  --image: Environment = #rhysd/actionlint:1.7.12,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "rhysd/actionlint:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, {}),
   volumes = layered_volumes(with, [])
 )

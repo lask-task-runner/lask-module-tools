@@ -7,9 +7,9 @@
 //   lask eval --module test/selftest.lask all
 //
 // `smoke` is the exception: it runs each tool, and so needs Docker and
-// the images, which a run never pulls. The cases below write the images
-// as literals, and a reference written as a literal resolves through the
-// lock alone (lask spec 10.4), so pin them first:
+// the images, which a run never pulls. Every image is a head written in
+// this module or in main.lask, so `lask env build` pins each one it
+// reaches (lask spec 10.3); run it first:
 //
 //   lask env build --module test/selftest.lask
 //   lask eval --module test/selftest.lask smoke
@@ -66,11 +66,11 @@ internal trusted(): Map<String> = {
 all(): Array<String> = [
   expect(
     "a bare call sets only the pager",
-    aws() == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": ""}, volumes = [])
+    aws() == #amazon/aws-cli:2.36.41{env: {"AWS_PAGER": ""}, volumes: []}
   ),
   expect(
-    "--tag picks the release of the image",
-    aws(tag = "2.37.0") == #docker("amazon/aws-cli:2.37.0", env = {"AWS_PAGER": ""}, volumes = [])
+    "--image picks the release of the image",
+    aws(image = #amazon/aws-cli:2.37.0) == #amazon/aws-cli:2.37.0{env: {"AWS_PAGER": ""}, volumes: []}
   ),
   expect(
     "a parameter left null sets nothing",
@@ -79,11 +79,10 @@ all(): Array<String> = [
   expect(
     "an empty string is a value, and sets its variable",
     aws(region = "")
-      == #docker(
-        "amazon/aws-cli:2.36.41",
-        env = {"AWS_PAGER": "", "AWS_REGION": "", "AWS_DEFAULT_REGION": ""},
-        volumes = []
-      )
+      == #amazon/aws-cli:2.36.41{
+        env: {"AWS_PAGER": "", "AWS_REGION": "", "AWS_DEFAULT_REGION": ""},
+        volumes: []
+      }
   ),
   expect(
     "a secret left null sets nothing",
@@ -92,55 +91,52 @@ all(): Array<String> = [
   expect(
     "the region sets both variables the CLI and the SDKs read",
     aws(profile = "dev", region = "ap-northeast-1")
-      == #docker(
-        "amazon/aws-cli:2.36.41",
-        env = {
+      == #amazon/aws-cli:2.36.41{
+        env: {
           "AWS_PAGER": "",
           "AWS_PROFILE": "dev",
           "AWS_REGION": "ap-northeast-1",
           "AWS_DEFAULT_REGION": "ap-northeast-1"
         },
-        volumes = []
-      )
+        volumes: []
+      }
   ),
   expect(
     "credentials and an endpoint become variables",
     aws(access_key_id = "AKIA", secret_access_key = "s3cr3t", session_token = "tok", endpoint_url = "http://localstack:4566")
-      == #docker(
-        "amazon/aws-cli:2.36.41",
-        env = {
+      == #amazon/aws-cli:2.36.41{
+        env: {
           "AWS_PAGER": "",
           "AWS_ACCESS_KEY_ID": "AKIA",
           "AWS_SECRET_ACCESS_KEY": "s3cr3t",
           "AWS_SESSION_TOKEN": "tok",
           "AWS_ENDPOINT_URL": "http://localstack:4566"
         },
-        volumes = []
-      )
+        volumes: []
+      }
   ),
   expect(
     "the config directory is mounted read-only",
     aws(config_dir = "/h/.aws")
-      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": ""}, volumes = ["/h/.aws:/root/.aws:ro"])
+      == #amazon/aws-cli:2.36.41{env: {"AWS_PAGER": ""}, volumes: ["/h/.aws:/root/.aws:ro"]}
   ),
   expect(
     "--extra_env overrides a default",
     aws(extra_env = {"AWS_PAGER": "less", "AWS_MAX_ATTEMPTS": "5"})
-      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": "less", "AWS_MAX_ATTEMPTS": "5"}, volumes = [])
+      == #amazon/aws-cli:2.36.41{env: {"AWS_PAGER": "less", "AWS_MAX_ATTEMPTS": "5"}, volumes: []}
   ),
   expect(
     "a setup in --with wins over --extra_env, and brings its mounts",
     aws(extra_env = {"AWS_PROFILE": "extra"}, with = [aws_setup(profile = "with", config_dir = "/h/.aws")])
-      == #docker(
-        "amazon/aws-cli:2.36.41",
-        env = {"AWS_PAGER": "", "AWS_PROFILE": "with"},
-        volumes = ["/h/.aws:/root/.aws:ro"]
-      )
+      == #amazon/aws-cli:2.36.41{
+        env: {"AWS_PAGER": "", "AWS_PROFILE": "with"},
+        volumes: ["/h/.aws:/root/.aws:ro"]
+      }
   ),
   expect(
     "a named parameter wins over --with",
     aws(profile = "own", with = [aws_setup(profile = "with")])
-      == #docker("amazon/aws-cli:2.36.41", env = {"AWS_PAGER": "", "AWS_PROFILE": "own"}, volumes = [])
+      == #amazon/aws-cli:2.36.41{env: {"AWS_PAGER": "", "AWS_PROFILE": "own"}, volumes: []}
   ),
   expect(
     "a setup carries no default of the tool",
@@ -153,44 +149,41 @@ all(): Array<String> = [
   expect(
     "python runs with unbuffered output, no bytecode and no pip version check",
     python()
-      == #docker(
-        "python:3.12.14-alpine3.24",
-        env = {"PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1", "PIP_DISABLE_PIP_VERSION_CHECK": "1"},
-        volumes = []
-      )
+      == #python:3.12.14-alpine3.24{
+        env: {"PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1", "PIP_DISABLE_PIP_VERSION_CHECK": "1"},
+        volumes: []
+      }
   ),
   expect(
-    "python: --tag, an index and a cache directory",
-    python(tag = "3.13.5-alpine3.22", index_url = "https://pypi.example/simple", cache_dir = "/h/cache")
-      == #docker(
-        "python:3.13.5-alpine3.22",
-        env = {
+    "python: --image, an index and a cache directory",
+    python(image = #python:3.13.5-alpine3.22, index_url = "https://pypi.example/simple", cache_dir = "/h/cache")
+      == #python:3.13.5-alpine3.22{
+        env: {
           "PYTHONUNBUFFERED": "1",
           "PYTHONDONTWRITEBYTECODE": "1",
           "PIP_DISABLE_PIP_VERSION_CHECK": "1",
           "PIP_INDEX_URL": "https://pypi.example/simple",
           "PIP_CACHE_DIR": "/cache/pip"
         },
-        volumes = ["/h/cache:/cache"]
-      )
+        volumes: ["/h/cache:/cache"]
+      }
   ),
   expect(
     "node runs without npm's update notice",
-    node() == #docker("node:24.21.0-alpine3.24", env = {"npm_config_update_notifier": "false"}, volumes = [])
+    node() == #node:24.21.0-alpine3.24{env: {"npm_config_update_notifier": "false"}, volumes: []}
   ),
   expect(
     "node: NODE_ENV, a token and a cache directory",
     node(node_env = "production", npm_token = "t0k3n", cache_dir = "/h/cache")
-      == #docker(
-        "node:24.21.0-alpine3.24",
-        env = {
+      == #node:24.21.0-alpine3.24{
+        env: {
           "npm_config_update_notifier": "false",
           "NODE_ENV": "production",
           "NPM_TOKEN": "t0k3n",
           "npm_config_cache": "/cache/npm"
         },
-        volumes = ["/h/cache:/cache"]
-      )
+        volumes: ["/h/cache:/cache"]
+      }
   ),
   expect(
     "a python or node parameter left null sets nothing",
@@ -198,14 +191,13 @@ all(): Array<String> = [
   ),
   expect(
     "terraform never prompts, and knows it runs in automation",
-    terraform() == #docker("hashicorp/terraform:1.16.4", env = {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"}, volumes = [])
+    terraform() == #hashicorp/terraform:1.16.4{env: {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"}, volumes: []}
   ),
   expect(
     "terraform: a workspace, a log level, input variables and a plugin cache",
-    terraform(tag = "1.15.0", workspace = "staging", log = "DEBUG", variables = {"app_version": "1.2.3"}, cache_dir = "/h/tf")
-      == #docker(
-        "hashicorp/terraform:1.15.0",
-        env = {
+    terraform(image = #hashicorp/terraform:1.15.0, workspace = "staging", log = "DEBUG", variables = {"app_version": "1.2.3"}, cache_dir = "/h/tf")
+      == #hashicorp/terraform:1.15.0{
+        env: {
           "TF_IN_AUTOMATION": "1",
           "TF_INPUT": "0",
           "TF_WORKSPACE": "staging",
@@ -213,15 +205,14 @@ all(): Array<String> = [
           "TF_VAR_app_version": "1.2.3",
           "TF_PLUGIN_CACHE_DIR": "/cache"
         },
-        volumes = ["/h/tf:/cache"]
-      )
+        volumes: ["/h/tf:/cache"]
+      }
   ),
   expect(
     "terraform takes a provider's credentials from an AWS setup",
     terraform(workspace = "dev", with = [aws_setup(profile = "dev", region = "ap-northeast-1", config_dir = "/h/.aws")])
-      == #docker(
-        "hashicorp/terraform:1.16.4",
-        env = {
+      == #hashicorp/terraform:1.16.4{
+        env: {
           "TF_IN_AUTOMATION": "1",
           "TF_INPUT": "0",
           "TF_WORKSPACE": "dev",
@@ -229,8 +220,8 @@ all(): Array<String> = [
           "AWS_REGION": "ap-northeast-1",
           "AWS_DEFAULT_REGION": "ap-northeast-1"
         },
-        volumes = ["/h/.aws:/root/.aws:ro"]
-      )
+        volumes: ["/h/.aws:/root/.aws:ro"]
+      }
   ),
   expect(
     "a terraform parameter left null sets nothing",
@@ -239,103 +230,98 @@ all(): Array<String> = [
   expect(
     "playwright runs with an init process, a 1g /dev/shm, and never downloads browsers",
     playwright()
-      == #docker(
-        "mcr.microsoft.com/playwright:v1.63.0-noble",
-        env = {"PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1", "npm_config_update_notifier": "false"},
-        volumes = [],
-        init = true,
-        shm_size = "1g"
-      )
+      == #mcr.microsoft.com/playwright:v1.63.0-noble{
+        env: {"PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1", "npm_config_update_notifier": "false"},
+        volumes: [],
+        init: true,
+        shm_size: "1g"
+      }
   ),
   expect(
-    "playwright: --tag, a token and a cache directory; a null /dev/shm is Docker's default",
-    playwright(tag = "v1.62.1-jammy", shm_size = null, npm_token = "t0k3n", cache_dir = "/h/cache")
-      == #docker(
-        "mcr.microsoft.com/playwright:v1.62.1-jammy",
-        env = {
+    "playwright: --image, a token and a cache directory; a null /dev/shm is Docker's default",
+    playwright(image = #mcr.microsoft.com/playwright:v1.62.1-jammy, shm_size = null, npm_token = "t0k3n", cache_dir = "/h/cache")
+      == #mcr.microsoft.com/playwright:v1.62.1-jammy{
+        env: {
           "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1",
           "npm_config_update_notifier": "false",
           "NPM_TOKEN": "t0k3n",
           "npm_config_cache": "/cache/npm"
         },
-        volumes = ["/h/cache:/cache"],
-        init = true,
-        // Written out: lask keeps an option given null in the value, so
-        // it compares unequal to one left unwritten.
-        shm_size = null
-      )
+        volumes: ["/h/cache:/cache"],
+        init: true
+      }
   ),
-  // ---- Every tool at its defaults: the image --tag picks, and the
-  // variables it sets of its own. An option passed null is written out:
-  // lask keeps it in the value (see playwright above).
+  // ---- Every tool at its defaults: its default image, and the
+  // variables it sets of its own. An option passed null is not set, so
+  // an expectation may write it or leave it out (see playwright above).
   expect(
     "each cloud CLI at its defaults",
-    gcloud() == #docker("gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim", env = {"CLOUDSDK_CORE_DISABLE_PROMPTS": "1"}, volumes = [])
-      && az() == #docker("mcr.microsoft.com/azure-cli:2.90.0", env = {"AZURE_CORE_COLLECT_TELEMETRY": "false"}, volumes = [])
+    gcloud() == #gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim{env: {"CLOUDSDK_CORE_DISABLE_PROMPTS": "1"}, volumes: []}
+      && az() == #mcr.microsoft.com/azure-cli:2.90.0{env: {"AZURE_CORE_COLLECT_TELEMETRY": "false"}, volumes: []}
   ),
   expect(
     "each language at its defaults",
-    go() == #docker("golang:1.27.1-trixie", env = merge({"GOTOOLCHAIN": "local"}, trusted()), volumes = [])
-      && java() == #docker("eclipse-temurin:25.0.4.1_1-jdk-noble", env = {}, volumes = [])
-      && maven() == #docker("maven:3.9.16-eclipse-temurin-25-noble", env = {"MAVEN_ARGS": "--batch-mode --no-transfer-progress"}, volumes = [])
-      && gradle() == #docker("gradle:9.8.0-jdk25-noble", env = {}, volumes = [])
-      && rust() == #docker("rust:1.98.1-slim-trixie", env = merge({"CARGO_TERM_COLOR": "never"}, trusted()), volumes = [])
-      && cc() == #docker("gcc:16.2.0", env = {}, volumes = [])
-      && ruby() == #docker("ruby:4.0.7-alpine3.24", env = {"BUNDLE_SILENCE_ROOT_WARNING": "1"}, volumes = [])
-      && dotnet() == #docker("mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24", env = {"DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1"}, volumes = [])
-      && deno() == #docker("denoland/deno:alpine-2.9.7", env = {"DENO_NO_UPDATE_CHECK": "1", "DENO_NO_PROMPT": "1"}, volumes = [])
-      && bun() == #docker("oven/bun:1.4.2-alpine", env = {"DO_NOT_TRACK": "1"}, volumes = [])
-      && haskell() == #docker("haskell:9.12.4-slim-bookworm", env = trusted(), volumes = [])
+    go() == #golang:1.27.1-trixie{env: merge({"GOTOOLCHAIN": "local"}, trusted()), volumes: []}
+      && java() == #eclipse-temurin:25.0.4.1_1-jdk-noble{env: {}, volumes: []}
+      && maven() == #maven:3.9.16-eclipse-temurin-25-noble{env: {"MAVEN_ARGS": "--batch-mode --no-transfer-progress"}, volumes: []}
+      && gradle() == #gradle:9.8.0-jdk25-noble{env: {}, volumes: []}
+      && rust() == #rust:1.98.1-slim-trixie{env: merge({"CARGO_TERM_COLOR": "never"}, trusted()), volumes: []}
+      && cc() == #gcc:16.2.0{env: {}, volumes: []}
+      && ruby() == #ruby:4.0.7-alpine3.24{env: {"BUNDLE_SILENCE_ROOT_WARNING": "1"}, volumes: []}
+      && dotnet() == #mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24{env: {"DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1"}, volumes: []}
+      && deno() == #denoland/deno:alpine-2.9.7{env: {"DENO_NO_UPDATE_CHECK": "1", "DENO_NO_PROMPT": "1"}, volumes: []}
+      && bun() == #oven/bun:1.4.2-alpine{env: {"DO_NOT_TRACK": "1"}, volumes: []}
+      && haskell() == #haskell:9.12.4-slim-bookworm{env: trusted(), volumes: []}
   ),
   expect(
     "kubectl, helm and kustomize share the alpine/k8s image",
-    kubectl() == #docker("alpine/k8s:1.37.0", env = {}, volumes = [], network = null)
-      && helm() == #docker("alpine/k8s:1.37.0", env = {}, volumes = [], network = null)
-      && kustomize() == #docker("alpine/k8s:1.37.0", env = {}, volumes = [])
+    kubectl() == #alpine/k8s:1.37.0{env: {}, volumes: [], network: null}
+      && helm() == #alpine/k8s:1.37.0{env: {}, volumes: [], network: null}
+      && kustomize() == #alpine/k8s:1.37.0{env: {}, volumes: []}
   ),
   expect(
     "each IaC tool at its defaults",
-    tofu() == #docker("ghcr.io/opentofu/opentofu:1.12.6", env = {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"}, volumes = [])
-      && packer() == #docker("hashicorp/packer:1.16.1", env = {"CHECKPOINT_DISABLE": "1"}, volumes = [])
-      && pulumi() == #docker("pulumi/pulumi-nodejs:3.265.0", env = merge({"PULUMI_SKIP_UPDATE_CHECK": "true"}, trusted()), volumes = [])
+    tofu() == #ghcr.io/opentofu/opentofu:1.12.6{env: {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"}, volumes: []}
+      && packer() == #hashicorp/packer:1.16.1{env: {"CHECKPOINT_DISABLE": "1"}, volumes: []}
+      && pulumi() == #pulumi/pulumi-nodejs:3.265.0{env: merge({"PULUMI_SKIP_UPDATE_CHECK": "true"}, trusted()), volumes: []}
   ),
   expect(
     "each database client at its defaults",
-    psql() == #docker("postgres:18.6-alpine3.24", env = {}, volumes = [], network = null)
-      && mysql() == #docker("mysql:8.4.11", env = {}, volumes = [], network = null)
-      && redis_cli() == #docker("redis:8.10.2-alpine", env = {}, volumes = [], network = null)
-      && migrate() == #docker("migrate/migrate:v4.20.1", env = {}, volumes = [], network = null)
-      && flyway() == #docker("flyway/flyway:13.8.0-alpine", env = {"REDGATE_DISABLE_TELEMETRY": "true"}, volumes = [], network = null)
+    psql() == #postgres:18.6-alpine3.24{env: {}, volumes: [], network: null}
+      && mysql() == #mysql:8.4.11{env: {}, volumes: [], network: null}
+      && redis_cli() == #redis:8.10.2-alpine{env: {}, volumes: [], network: null}
+      && migrate() == #migrate/migrate:v4.20.1{env: {}, volumes: [], network: null}
+      && flyway() == #flyway/flyway:13.8.0-alpine{env: {"REDGATE_DISABLE_TELEMETRY": "true"}, volumes: [], network: null}
   ),
   expect(
     "each linter and build tool at its defaults",
-    buf() == #docker("bufbuild/buf:1.73.0", env = trusted(), volumes = [])
-      && shellcheck() == #docker("koalaman/shellcheck-alpine:v0.11.0", env = {}, volumes = [])
-      && hadolint() == #docker("hadolint/hadolint:v2.15.1-alpine", env = {}, volumes = [])
-      && tflint() == #docker("ghcr.io/terraform-linters/tflint:v0.64.0", env = {}, volumes = [])
-      && golangci_lint() == #docker("golangci/golangci-lint:v2.14.0", env = trusted(), volumes = [])
-      && ruff() == #docker("ghcr.io/astral-sh/ruff:0.16.9-alpine", env = {}, volumes = [])
-      && actionlint() == #docker("rhysd/actionlint:1.7.12", env = {}, volumes = [])
+    buf() == #bufbuild/buf:1.73.0{env: trusted(), volumes: []}
+      && shellcheck() == #koalaman/shellcheck-alpine:v0.11.0{env: {}, volumes: []}
+      && hadolint() == #hadolint/hadolint:v2.15.1-alpine{env: {}, volumes: []}
+      && tflint() == #ghcr.io/terraform-linters/tflint:v0.64.0{env: {}, volumes: []}
+      && golangci_lint() == #golangci/golangci-lint:v2.14.0{env: trusted(), volumes: []}
+      && ruff() == #ghcr.io/astral-sh/ruff:0.16.9-alpine{env: {}, volumes: []}
+      && actionlint() == #rhysd/actionlint:1.7.12{env: {}, volumes: []}
   ),
   expect(
     "each scanner at its defaults",
-    trivy() == #docker("aquasec/trivy:0.74.0", env = merge({"TRIVY_NO_PROGRESS": "true"}, trusted()), volumes = [])
-      && gitleaks() == #docker("zricethezav/gitleaks:v8.30.1", env = trusted(), volumes = [])
-      && checkov() == #docker("bridgecrew/checkov:3.3.19", env = trusted(), volumes = [])
-      && semgrep() == #docker("semgrep/semgrep:1.178.0", env = merge({"SEMGREP_SEND_METRICS": "off", "SEMGREP_ENABLE_VERSION_CHECK": "0"}, trusted()), volumes = [])
+    trivy() == #aquasec/trivy:0.74.0{env: merge({"TRIVY_NO_PROGRESS": "true"}, trusted()), volumes: []}
+      && gitleaks() == #zricethezav/gitleaks:v8.30.1{env: trusted(), volumes: []}
+      && checkov() == #bridgecrew/checkov:3.3.19{env: trusted(), volumes: []}
+      && semgrep() == #semgrep/semgrep:1.178.0{env: merge({"SEMGREP_SEND_METRICS": "off", "SEMGREP_ENABLE_VERSION_CHECK": "0"}, trusted()), volumes: []}
   ),
   expect(
     "each secret manager at its defaults",
-    vault() == #docker("hashicorp/vault:1.21.4", env = {}, volumes = [])
-      && sops() == #docker("ghcr.io/getsops/sops:v3.13.3-alpine", env = {}, volumes = [])
-      && op() == #docker("1password/op:2.39.0", env = {}, volumes = [])
+    vault() == #hashicorp/vault:1.21.4{env: {}, volumes: []}
+      && sops() == #ghcr.io/getsops/sops:v3.13.3-alpine{env: {}, volumes: []}
+      && op() == #1password/op:2.39.0{env: {}, volumes: []}
   ),
   expect(
     "each testing tool at its defaults",
-    k6() == #docker("grafana/k6:1.8.1", env = {"K6_NO_USAGE_REPORT": "true"}, volumes = [], network = null)
-      && grpcurl() == #docker("fullstorydev/grpcurl:v1.9.3-alpine", env = {}, volumes = [], network = null)
-      && newman() == #docker("postman/newman:6.1.3-alpine", env = {}, volumes = [], network = null)
-      && ab() == #docker("httpd:2.4.68-alpine3.24", env = {}, volumes = [], network = null)
+    k6() == #grafana/k6:1.8.1{env: {"K6_NO_USAGE_REPORT": "true"}, volumes: [], network: null}
+      && grpcurl() == #fullstorydev/grpcurl:v1.9.3-alpine{env: {}, volumes: [], network: null}
+      && newman() == #postman/newman:6.1.3-alpine{env: {}, volumes: [], network: null}
+      && ab() == #httpd:2.4.68-alpine3.24{env: {}, volumes: [], network: null}
   ),
   // ---- The setups.
   expect(
@@ -441,36 +427,32 @@ all(): Array<String> = [
   expect(
     "go: the caches, and a cross-compile",
     go(goos = "linux", goarch = "amd64", cgo_enabled = "0", cache_dir = "/h/cache")
-      == #docker(
-        "golang:1.27.1-trixie",
-        env = merge(merge({"GOTOOLCHAIN": "local"}, trusted()), {
+      == #golang:1.27.1-trixie{
+        env: merge(merge({"GOTOOLCHAIN": "local"}, trusted()), {
           "GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0",
           "GOMODCACHE": "/cache/mod", "GOCACHE": "/cache/build"
         }),
-        volumes = ["/h/cache:/cache"]
-      )
+        volumes: ["/h/cache:/cache"]
+      }
   ),
   expect(
     "maven: the local repository is added after the caller's MAVEN_OPTS",
     maven(maven_opts = "-Xmx1g", cache_dir = "/h/cache")
-      == #docker(
-        "maven:3.9.16-eclipse-temurin-25-noble",
-        env = {"MAVEN_ARGS": "--batch-mode --no-transfer-progress", "MAVEN_OPTS": "-Xmx1g -Dmaven.repo.local=/cache/m2"},
-        volumes = ["/h/cache:/cache"]
-      )
+      == #maven:3.9.16-eclipse-temurin-25-noble{
+        env: {"MAVEN_ARGS": "--batch-mode --no-transfer-progress", "MAVEN_OPTS": "-Xmx1g -Dmaven.repo.local=/cache/m2"},
+        volumes: ["/h/cache:/cache"]
+      }
       && maven(cache_dir = "/h/cache")
-        == #docker(
-          "maven:3.9.16-eclipse-temurin-25-noble",
-          env = {"MAVEN_ARGS": "--batch-mode --no-transfer-progress", "MAVEN_OPTS": "-Dmaven.repo.local=/cache/m2"},
-          volumes = ["/h/cache:/cache"]
-        )
+        == #maven:3.9.16-eclipse-temurin-25-noble{
+          env: {"MAVEN_ARGS": "--batch-mode --no-transfer-progress", "MAVEN_OPTS": "-Dmaven.repo.local=/cache/m2"},
+          volumes: ["/h/cache:/cache"]
+        }
   ),
   expect(
     "helm: a kubeconfig, a namespace, a cache and the host network",
     helm(kubeconfig = "/h/.kube/config", namespace = "web", network = "host", cache_dir = "/h/cache")
-      == #docker(
-        "alpine/k8s:1.37.0",
-        env = {
+      == #alpine/k8s:1.37.0{
+        env: {
           "KUBECONFIG": "/run/kube/config",
           "KUBE_CONFIG_PATH": "/run/kube/config",
           "HELM_NAMESPACE": "web",
@@ -478,30 +460,29 @@ all(): Array<String> = [
           "HELM_CONFIG_HOME": "/cache/helm/config",
           "HELM_DATA_HOME": "/cache/helm/data"
         },
-        volumes = ["/h/.kube/config:/run/kube/config:ro", "/h/cache:/cache"],
-        network = "host"
-      )
+        volumes: ["/h/.kube/config:/run/kube/config:ro", "/h/cache:/cache"],
+        network: "host"
+      }
   ),
   expect(
     "tofu takes terraform's variables; packer's are PKR_VAR_*",
     tofu(variables = {"region": "r"}, cache_dir = "/h/tf")
-      == #docker(
-        "ghcr.io/opentofu/opentofu:1.12.6",
-        env = {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0", "TF_VAR_region": "r", "TF_PLUGIN_CACHE_DIR": "/cache"},
-        volumes = ["/h/tf:/cache"]
-      )
+      == #ghcr.io/opentofu/opentofu:1.12.6{
+        env: {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0", "TF_VAR_region": "r", "TF_PLUGIN_CACHE_DIR": "/cache"},
+        volumes: ["/h/tf:/cache"]
+      }
       && packer(variables = {"region": "r"})
-        == #docker("hashicorp/packer:1.16.1", env = {"CHECKPOINT_DISABLE": "1", "PKR_VAR_region": "r"}, volumes = [])
+        == #hashicorp/packer:1.16.1{env: {"CHECKPOINT_DISABLE": "1", "PKR_VAR_region": "r"}, volumes: []}
   ),
   expect(
-    "pulumi: --language picks the image of that runtime",
-    pulumi(language = "python")
-      == #docker("pulumi/pulumi-python:3.265.0", env = merge({"PULUMI_SKIP_UPDATE_CHECK": "true"}, trusted()), volumes = [])
+    "pulumi: another runtime is another image, passed as --image",
+    pulumi(image = #pulumi/pulumi-python:3.265.0)
+      == #pulumi/pulumi-python:3.265.0{env: merge({"PULUMI_SKIP_UPDATE_CHECK": "true"}, trusted()), volumes: []}
   ),
   expect(
     "psql takes a pg_setup's variables and joins a network",
     psql(host = "db", user = "app", password = "pw", network = "compose_default")
-      == #docker("postgres:18.6-alpine3.24", env = {"PGHOST": "db", "PGUSER": "app", "PGPASSWORD": "pw"}, volumes = [], network = "compose_default")
+      == #postgres:18.6-alpine3.24{env: {"PGHOST": "db", "PGUSER": "app", "PGPASSWORD": "pw"}, volumes: [], network: "compose_default"}
   ),
   // Tools built from a recipe compare with themselves (see unix below).
   expect(
