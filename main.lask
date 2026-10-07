@@ -1,8 +1,9 @@
 // lask-module-tools — ready-made execution environments for the tools
 // a Lask task runs.
 //
-// Each tool is a function returning an Environment. `--tag` picks the
-// release of its image; its other keyword parameters are what the tool
+// Each tool is a function returning a Runnable. `--image` picks the
+// release of its image, as a head such as #python:3.13.5-alpine3.22; its
+// other keyword parameters are what the tool
 // needs from the environment it runs in: the variables it reads, its
 // credentials, and the host directories it has to see. A parameter left
 // null sets nothing. Design: doc/design.md.

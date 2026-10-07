@@ -2,12 +2,11 @@
 
 import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
-// Python at --tag, configured by its parameters.
+// Python, configured by its parameters.
 //
-// The image is python at --tag, 3.12.14-alpine3.24 unless another is
-// given. The reference is built from the argument when the function
-// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
-// pull it once with `docker pull python:<tag>`, and a run never pulls.
+// The image is #python:3.12.14-alpine3.24 unless --image names another.
+// `lask env build` pulls and pins whichever image is used (lask spec
+// 10.3); a run never pulls.
 //
 // Output reaches the command log as it happens (PYTHONUNBUFFERED), and
 // no __pycache__ is written into the project, which the container
@@ -15,7 +14,7 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // check for a newer version of itself. --extra_env can change any of
 // these.
 //
-// @param tag              The python image tag to run.
+// @param image            The image to run; another release is passed as image = #python:<tag>.
 // @param index_url        PIP_INDEX_URL; masked in the command log, since a private index URL often carries a credential.
 // @param extra_index_url  PIP_EXTRA_INDEX_URL; masked in the command log.
 // @param cache_dir        Host directory mounted at /cache, where pip keeps its cache (PIP_CACHE_DIR).
@@ -24,14 +23,13 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // @return The environment, for `command { "python" } on ...` or `$[...]`.
 // @example lask eval python --cache_dir /tmp/pip-cache
 python(
-  --tag: String = "3.12.14-alpine3.24",
+  --image: Environment = #python:3.12.14-alpine3.24,
   --index_url!!: String | Null = null,
   --extra_index_url!!: String | Null = null,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "python:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     {"PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1", "PIP_DISABLE_PIP_VERSION_CHECK": "1"},
     extra_env,

@@ -6,9 +6,9 @@ import { ssh_setup } from "./setups.lask"
 // ansible-core, configured by its parameters.
 //
 // There is no official image, so the image is built from
-// lib/images/ansible/Dockerfile: ansible-core 2.21.4 on the Python image
-// of python(), with the SSH client. Its versions are fixed in the
-// recipe, so it has no --tag, and `lask env build` (or `lask deps
+// lib/images/ansible/Dockerfile: ansible-core 2.21.4 on the Python
+// image of python(), with the SSH client. Its versions are fixed in the
+// recipe, so it takes no --image, and `lask env build` (or `lask deps
 // sync`) builds it once per machine (lask spec 10.3). A run never
 // builds.
 //
@@ -38,7 +38,7 @@ ansible(
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = do {
+): Runnable = do {
   ssh = ssh_setup(dir = ssh_dir, agent_socket = ssh_agent_socket)
   own = vars({
     "ANSIBLE_CONFIG": config,
@@ -48,13 +48,12 @@ ansible(
     "ANSIBLE_COLLECTIONS_PATH": in_cache(cache_dir, "ansible/collections"),
     "ANSIBLE_ROLES_PATH": in_cache(cache_dir, "ansible/roles")
   })
-  return #docker(
-    dockerfile = "images/ansible/Dockerfile",
-    env = layered_env({"PYTHONUNBUFFERED": "1"}, extra_env, with, merge(ssh.env, own)),
-    volumes = layered_volumes(with, concat_array(concat_array(
+  return #./images/ansible/Dockerfile{
+    env: layered_env({"PYTHONUNBUFFERED": "1"}, extra_env, with, merge(ssh.env, own)),
+    volumes: layered_volumes(with, concat_array(concat_array(
       ssh.volumes,
       mount(vault_password_file, "/run/secrets/vault-password:ro")),
       mount(cache_dir, "/cache")
     ))
-  )
+  }
 }

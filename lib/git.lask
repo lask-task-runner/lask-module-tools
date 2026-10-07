@@ -7,10 +7,10 @@ import { git_setup, ssh_setup } from "./setups.lask"
 // Git, configured by its parameters.
 //
 // The image is built from lib/images/unix/Dockerfile, as for unix(), so
-// it has no --tag, and `lask env build` (or `lask deps sync`) builds it.
-// The container sees none of the host's Git configuration: the
-// identity, a token for https and an SSH identity are given here, and
-// the mounted project is trusted (safe.directory).
+// it takes no --image, and `lask env build` (or `lask deps sync`)
+// builds it. The container sees none of the host's Git configuration:
+// the identity, a token for https and an SSH identity are given here,
+// and the mounted project is trusted (safe.directory).
 //
 // @param name              GIT_AUTHOR_NAME and GIT_COMMITTER_NAME.
 // @param email             GIT_AUTHOR_EMAIL and GIT_COMMITTER_EMAIL.
@@ -33,14 +33,13 @@ git(
   --ssh_agent_socket: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = do {
+): Runnable = do {
   config = git_setup(token = token, host = host, token_user = token_user, name = name, email = email)
   ssh = ssh_setup(dir = ssh_dir, agent_socket = ssh_agent_socket)
-  return #docker(
-    dockerfile = "images/unix/Dockerfile",
-    env = layered_env({}, extra_env, with, merge(config.env, ssh.env)),
-    volumes = layered_volumes(with, ssh.volumes)
-  )
+  return #./images/unix/Dockerfile{
+    env: layered_env({}, extra_env, with, merge(config.env, ssh.env)),
+    volumes: layered_volumes(with, ssh.volumes)
+  }
 }
 
 // The GitHub CLI, configured by its parameters.
@@ -65,16 +64,15 @@ gh(
   --repo: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  dockerfile = "images/unix/Dockerfile",
-  env = layered_env(
+): Runnable = #./images/unix/Dockerfile{
+  env: layered_env(
     merge({"GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1", "GH_PAGER": ""}, git_trust()),
     extra_env,
     with,
     vars({"GH_TOKEN": token, "GH_HOST": host, "GH_REPO": repo})
   ),
-  volumes = layered_volumes(with, [])
-)
+  volumes: layered_volumes(with, [])
+}
 
 // The GitLab CLI, configured by its parameters.
 //
@@ -94,13 +92,12 @@ glab(
   --host: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  dockerfile = "images/unix/Dockerfile",
-  env = layered_env(
+): Runnable = #./images/unix/Dockerfile{
+  env: layered_env(
     merge({"GLAB_CHECK_UPDATE": "false", "GLAB_NO_PROMPT": "true"}, git_trust()),
     extra_env,
     with,
     vars({"GITLAB_TOKEN": token, "GITLAB_HOST": host})
   ),
-  volumes = layered_volumes(with, [])
-)
+  volumes: layered_volumes(with, [])
+}

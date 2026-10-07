@@ -38,12 +38,9 @@ aws_setup(
 
 // The AWS CLI v2, configured by its parameters.
 //
-// The image is amazon/aws-cli at --tag, 2.36.41 unless another is
-// given. The reference is built from the argument when the function
-// runs, so Lask treats it as a reference computed at run time (lask
-// spec 10.3): `lask env build` does not pull or pin it. Pull the image
-// once with `docker pull amazon/aws-cli:<tag>`; a run uses it as it is
-// on the daemon, and never pulls.
+// The image is #amazon/aws-cli:2.36.41 unless --image names another.
+// `lask env build` pulls and pins whichever image is used (lask spec
+// 10.3); a run never pulls.
 //
 // Locally, log in on the host (`aws sso login`) and mount the result
 // with `config_dir = home(".aws")`; the mount is read-only, so an
@@ -54,7 +51,7 @@ aws_setup(
 // The pager is off by default (AWS_PAGER=""), so output is never held
 // behind `less`; --extra_env can turn it back on.
 //
-// @param tag                The amazon/aws-cli image tag to run.
+// @param image              The image to run; another release is passed as image = #amazon/aws-cli:<tag>.
 // @param profile            AWS_PROFILE: a profile from the config directory.
 // @param region             AWS_REGION and AWS_DEFAULT_REGION.
 // @param endpoint_url       AWS_ENDPOINT_URL, for LocalStack or another AWS-compatible endpoint.
@@ -66,9 +63,8 @@ aws_setup(
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "aws" } on ...` or `$[...]`.
 // @example lask eval aws --profile dev --region ap-northeast-1
-// @example lask eval aws --tag 2.36.41 --profile dev
 aws(
-  --tag: String = "2.36.41",
+  --image: Environment = #amazon/aws-cli:2.36.41,
   --profile: String | Null = null,
   --region: String | Null = null,
   --endpoint_url: String | Null = null,
@@ -78,7 +74,7 @@ aws(
   --config_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = do {
+): Runnable = do {
   own = aws_setup(
     profile = profile,
     region = region,
@@ -88,8 +84,7 @@ aws(
     session_token = session_token,
     config_dir = config_dir
   )
-  return #docker(
-    "amazon/aws-cli:#{tag}",
+  return runnable(image,
     env = layered_env({"AWS_PAGER": ""}, extra_env, with, own.env),
     volumes = layered_volumes(with, own.volumes)
   )

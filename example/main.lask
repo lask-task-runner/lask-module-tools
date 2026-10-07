@@ -4,22 +4,22 @@
 // (`lask deps add tools --git ...`) and imports it as a namespace. The
 // relative import below stands in for that here.
 //
-//   docker pull amazon/aws-cli:2.36.41    # once; see aws_tag below
+//   lask env build --module example/main.lask   # pulls and pins aws_image
 //   lask check --module example/main.lask
 //   lask cmd --module example/main.lask aws s3 ls
 //   lask run --module example/main.lask whoami
 
 import * as tools from "../main.lask"
 
-// The amazon/aws-cli release this project runs. The image reference is
-// built from it at run time, so `lask env build` does not pull it: pull
-// amazon/aws-cli:<aws_tag> once whenever this changes.
-aws_tag = "2.36.41"
+// The amazon/aws-cli release this project runs. It is a head written
+// here, so `lask env build` pulls it and pins its digest in the lock;
+// run it again whenever this changes.
+aws_image = #amazon/aws-cli:2.36.41
 
 // Locally: log in on the host first (`aws sso login --profile dev`), then
 // let the container read the result. The environment is evaluated when a
 // command runs, so HOME is read then, on the machine that runs it.
-command { "aws" } on tools.aws(tag = aws_tag, profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
+command { "aws" } on tools.aws(image = aws_image, profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
 
 // Which identity the declared environment runs as.
 //
@@ -40,7 +40,7 @@ ci_whoami(
   --session_token!!: String | Null = find_env("AWS_SESSION_TOKEN")
 ): String = do {
   box = tools.aws(
-    tag = aws_tag,
+    image = aws_image,
     region = region,
     access_key_id = access_key_id,
     secret_access_key = secret_access_key,
@@ -55,7 +55,7 @@ ci_whoami(
 // @return The buckets LocalStack holds.
 local_buckets(--endpoint: String = "http://host.docker.internal:4566"): String = do {
   box = tools.aws(
-    tag = aws_tag,
+    image = aws_image,
     region = "us-east-1",
     endpoint_url = endpoint,
     access_key_id = "test",

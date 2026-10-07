@@ -8,7 +8,7 @@ Section numbers refer to the Lask specification (`lask/doc/spec.md`).
 
 ## 1. Goals
 
-- One place where the image for each tool is chosen, so a project never has to find a working image or tag on its own — and can still run another release of it with `--tag`.
+- One place where the image for each tool is chosen, so a project never has to find a working image or tag on its own — and can still run another release of it with `--image`.
 - Every environment is configured by named arguments, not by knowing which variables a tool reads: `aws(profile = "dev")`, not `env = {"AWS_PROFILE": "dev"}`.
 - Environments compose. A tool that needs another tool's credentials — the Terraform AWS provider, an Ansible dynamic inventory — takes them as a value, without the caller restating them.
 
@@ -20,11 +20,11 @@ Section numbers refer to the Lask specification (`lask/doc/spec.md`).
 
 ## 3. One Function per Tool
 
-Every tool is a function returning an `Environment`:
+Every tool is a function returning a `Runnable`, the image and the run options it runs with:
 
 ```lask
-aws(--tag: String = "2.36.41", --profile: String | Null = null, ...): Environment =
-  #docker("amazon/aws-cli:#{tag}", ...)
+aws(--image: Environment = #amazon/aws-cli:2.36.41, --profile: String | Null = null, ...): Runnable =
+  runnable(image, env = ..., volumes = ...)
 ```
 
 It serves both ways of running a command, because the environment of a command declaration is an ordinary expression (ch. 5, since lask#44):
@@ -56,7 +56,7 @@ Every parameter is a keyword parameter with a default, so every function can be 
 
 | Kind | Type | Default | Meaning of the default |
 | --- | --- | --- | --- |
-| Image release | `--tag: String` | the release this module was tested against | The tool's image at that tag (§4.4). |
+| Image release | `--image: Environment` | the image of the release this module was tested against | The image the tool runs and configures (§4.4). |
 | Variable the tool reads | `String \| Null` | `null` | Not set. The variable is left out; `""` sets it to the empty string. |
 | Secret | `String \| Null`, marked `!!` | `null` | Not set, and nothing registered for masking (6.10). A value is masked in the command log, including in the environment metadata, whatever the caller passed (12.3). |
 | Host directory to read | `String \| Null` (a host path) | `null` | Not mounted. Mounted read-only when given. |
@@ -97,31 +97,35 @@ tf = tools.terraform(variables = {"app_version": "1.2.3"}, with = [creds])
 
 The same `creds` value can be handed to `ansible(with = [...])` for an AWS dynamic inventory, and a future `gcloud_setup` slots into the same list.
 
-### 4.4 The Image Release Is `--tag`
+### 4.4 The Image Release Is `--image`
 
-Each tool fixes the repository of its image and takes the release as `--tag`, defaulting to the release this module was written and tested against:
+Each tool takes its image as `--image`, an `Environment` whose default is the image of the release this module was written and tested against, and says how to run whichever it gets by giving it to `runnable` with its options (lask 15.5):
 
 ```lask
-aws(--tag: String = "2.36.41", ...): Environment = #docker("amazon/aws-cli:#{tag}", ...)
+aws(--image: Environment = #amazon/aws-cli:2.36.41, ...): Runnable = runnable(image, env = ..., volumes = ...)
 ```
 
-A project that needs another release says so at the call, and nothing else changes: `tools.aws(tag = "2.37.0", profile = "dev")`.
+A project that needs another release says so at the call, as an image head, and nothing else changes: `tools.aws(image = #amazon/aws-cli:2.37.0, profile = "dev")`.
 
-The image reference is built from the argument when the function runs, so Lask treats it as a reference computed at run time (10.3, 11.4):
+An image is named only by the head of an environment expression (lask 6.7), so either way it is a head someone wrote — the default here, or the caller's in their module — and is known without running anything:
 
-- `lask envs` reports it as `<dynamic>`, and `lask env build` / `lask deps sync` neither pull nor pin it.
-- A run uses the image as it is on the daemon, and never pulls it: an image that is not there is `E-IO-IMAGE-MISSING`, whose diagnostic says to pull it. A project pulls each tool's image once, `docker pull amazon/aws-cli:2.36.41`, and again when it changes `--tag`.
-- The lock does not record the image's digest. The tag — an exact one, §5 — is what fixes the image, as far as the registry keeps it where it is.
+- `lask envs` and `lask env list` report it, and `lask env build` / `lask deps sync` pull it and pin its digest in the lock (10.3). The images required are the heads reachable from the project's entry module: a tool the project does not reach is not pulled, and a tool it reaches has its default image pulled even where the caller passes another.
+- A run uses the pinned image, and never pulls it: an image that is not there is `E-IO-IMAGE-MISSING`, whose diagnostic names `lask env build`.
+- `--image` cannot be given on the command line: no CLI argument can name an image (lask 11.2). `lask eval aws` runs the default.
 
-A tool built from a recipe (§5.3, §5.10, §5.11) has no `--tag`. Its version is a build argument, and build arguments are literals (10.2), since they decide which image is built before anything runs. Its recipe is pinned the way every recipe is.
+`--image` is an `Environment`, never a `Runnable`: it carries the image and its image options (`platform`), and no run option. The run options are the tool's, given once in its `runnable` call (lask 8.8), so a caller's value for one of them goes in through the tool's parameters — `--extra_env`, `--with`, `--network` and the rest — and `aws(image = #amazon/aws-cli:2.37.0{memory: "1g"})` is a type error.
+
+Nothing checks that the image passed is the tool's: `aws(image = #node:24)` builds an environment that runs node with the AWS variables. It is the caller's choice, written where they make it.
+
+A tool built from a recipe (§5.3, §5.10, §5.11) takes no `--image`. Its version is a build argument, and build arguments are literals (10.2), since they decide which image is built before anything runs. Its recipe is pinned the way every recipe is.
 
 ### 4.5 Container Options
 
-A container option given `null` is left out (10.2), so a tool can take `--user: String | Null = null` and pass it straight to `#docker(...)`. A tool exposes an option only when it needs one: `network` for a client that reaches a server or a cluster — the database clients, `kubectl`, `helm`, the testing tools — and `init` and `shm_size` for `playwright`. Every other tool exposes variables and mounts only; one that needs more — a `user` for §11's root-owned files — adds the parameter and passes it through.
+A container option given `null` is left out (10.2), so a tool can take `--user: String | Null = null` and pass it straight to `runnable(...)`. A tool exposes an option only when it needs one: `network` for a client that reaches a server or a cluster — the database clients, `kubectl`, `helm`, the testing tools — and `init` and `shm_size` for `playwright`. Every other tool exposes variables and mounts only; one that needs more — a `user` for §11's root-owned files — adds the parameter and passes it through.
 
 ## 5. Catalog
 
-Every function below is implemented. The README lists each one's image, default tag and command words, by genre; this chapter records why each is built the way it is.
+Every function below is implemented. The README lists each one's default image and command words, by genre; this chapter records why each is built the way it is.
 
 | Genre | Functions | Setups |
 | --- | --- | --- |
@@ -145,7 +149,7 @@ An image is chosen by these rules, in order:
 1. **It has `/bin/sh`.** Lask runs every command through `/bin/sh -c` (10.5). A distroless or scratch image cannot run one: `registry.k8s.io/kubectl`, `anchore/grype`, `anchore/syft`. Where a publisher offers a variant with a shell, that variant is the default: `koalaman/shellcheck-alpine`, `hadolint/hadolint:*-alpine`, `ruff:*-alpine`, `grpcurl:*-alpine`.
 2. **It is published for amd64 and arm64.** A developer's Mac is arm64 and CI is usually amd64. `google/cloud-sdk` on Docker Hub, `registry.k8s.io/kustomize/kustomize` and `gcr.io/bazel-public/bazel` are amd64 only.
 3. **The publisher's own image**, where rules 1 and 2 allow it. Otherwise a well-kept community image: `alpine/k8s` for kubectl, Helm and Kustomize. Otherwise a recipe in `lib/images/` (§4.4): `unix`, `ansible`, `protoc`, `bazel`, `robot`, and `grype`/`syft`, whose binaries the recipe copies out of Anchore's images.
-4. **An exact tag, down to the patch release and the base-image suffix,** as the default of `--tag`. The reference is computed at run time, so the lock does not pin its digest (§4.4): the exact tag is what fixes the image. A recipe pins its base by digest and its packages by version where the package manager allows.
+4. **An exact tag, down to the patch release and the base-image suffix,** in the default of `--image`. The lock pins its digest (§4.4); the exact tag is what tells a reader which release that is. A recipe pins its base by digest and its packages by version where the package manager allows.
 5. **A release still in support.** In particular, not `node:20.20.2-alpine3.23`, which the `lask` examples still use: Node 20 reached end of life on 2026-04-30. An LTS release where a tool has them: Java 25, .NET 10, MySQL 8.4.
 6. **Debian rather than Alpine where musl breaks the usual workflow:** `golang` (cgo and `-race` need a C toolchain), `rust`, `haskell`. Alpine elsewhere, for size.
 
@@ -153,7 +157,7 @@ An image is chosen by these rules, in order:
 
 | Parameter | Sets |
 | --- | --- |
-| `--tag` | the image, `amazon/aws-cli:<tag>`; default `2.36.41` |
+| `--image` | the image, `#amazon/aws-cli:<tag>`; default `#amazon/aws-cli:2.36.41` |
 | `--profile` | `AWS_PROFILE` |
 | `--region` | `AWS_REGION` and `AWS_DEFAULT_REGION` — the CLI and the SDKs read different ones |
 | `--endpoint_url` | `AWS_ENDPOINT_URL` — LocalStack or another AWS-compatible endpoint |
@@ -172,7 +176,7 @@ The access key id is not a `!!` parameter: it identifies a key and is not a secr
 
 | Parameter | Sets |
 | --- | --- |
-| `--tag` | the image, `hashicorp/terraform:<tag>`; default `1.16.4` |
+| `--image` | the image, `#hashicorp/terraform:<tag>`; default `#hashicorp/terraform:1.16.4` |
 | `--workspace` | `TF_WORKSPACE` |
 | `--log` | `TF_LOG` |
 | `--variables: Map<String>` | `TF_VAR_<name>` for each entry |
@@ -188,7 +192,7 @@ The parameter is `--variables`, not `--vars`: a parameter named `vars` would sha
 
 ### 5.3 `ansible` (implemented)
 
-A recipe, since there is no official image: ansible-core 2.21.4, with the SSH client, `sshpass` and Git, on the Python image `python` runs, pinned by its digest. Its version is part of the recipe, so it takes no `--tag` (§4.4); a new version is a new release of this module.
+A recipe, since there is no official image: ansible-core 2.21.4, with the SSH client, `sshpass` and Git, on the Python image `python` runs, pinned by its digest. Its version is part of the recipe, so it takes no `--image` (§4.4); a new version is a new release of this module.
 
 | Parameter | Sets |
 | --- | --- |
@@ -205,7 +209,7 @@ Defaults: `PYTHONUNBUFFERED=1`, so a playbook's output reaches the command log a
 
 | Parameter | Sets |
 | --- | --- |
-| `--tag` | the image, `golang:<tag>`; default `1.27.1-trixie` |
+| `--image` | the image, `#golang:<tag>`; default `#golang:1.27.1-trixie` |
 | `--goproxy` | `GOPROXY` |
 | `--goprivate` | `GOPRIVATE` |
 | `--goflags` | `GOFLAGS` |
@@ -213,13 +217,13 @@ Defaults: `PYTHONUNBUFFERED=1`, so a playbook's output reaches the command log a
 | `--goos`, `--goarch` | `GOOS`, `GOARCH` |
 | `--cache_dir` | mounts at `/cache`; `GOMODCACHE=/cache/mod`, `GOCACHE=/cache/build` |
 
-Defaults: `GOTOOLCHAIN=local`, so Go stays at the release `--tag` names: a `go.mod` asking for a newer one fails rather than downloading it into a container that is thrown away. The project is trusted by Git (§5.11), so `go build` can stamp its revision. A private module over https takes `with = [git_setup(token = ...)]`.
+Defaults: `GOTOOLCHAIN=local`, so Go stays at the release its image holds: a `go.mod` asking for a newer one fails rather than downloading it into a container that is thrown away. The project is trusted by Git (§5.11), so `go build` can stamp its revision. A private module over https takes `with = [git_setup(token = ...)]`.
 
 ### 5.5 `node` (implemented)
 
 | Parameter | Sets |
 | --- | --- |
-| `--tag` | the image, `node:<tag>`; default `24.21.0-alpine3.24`, an LTS release |
+| `--image` | the image, `#node:<tag>`; default `#node:24.21.0-alpine3.24`, an LTS release |
 | `--node_env` | `NODE_ENV` |
 | `--node_options` | `NODE_OPTIONS` |
 | `--registry` | `npm_config_registry` |
@@ -232,7 +236,7 @@ Default: `npm_config_update_notifier=false`, so npm prints no update notice into
 
 | Parameter | Sets |
 | --- | --- |
-| `--tag` | the image, `python:<tag>`; default `3.12.14-alpine3.24` |
+| `--image` | the image, `#python:<tag>`; default `#python:3.12.14-alpine3.24` |
 | `--index_url!!` | `PIP_INDEX_URL` — secret, since a private index URL often carries a credential |
 | `--extra_index_url!!` | `PIP_EXTRA_INDEX_URL` |
 | `--cache_dir` | mounts at `/cache`; `PIP_CACHE_DIR=/cache/pip` |
@@ -269,7 +273,7 @@ The official `gcc` image has no CMake. A CMake entry needs a recipe, which this 
 
 | Parameter | Sets |
 | --- | --- |
-| `--tag` | the image, `mcr.microsoft.com/playwright:<tag>`; default `v1.63.0-noble` (Ubuntu 24.04) |
+| `--image` | the image, `#mcr.microsoft.com/playwright:<tag>`; default `#mcr.microsoft.com/playwright:v1.63.0-noble` (Ubuntu 24.04) |
 | `--shm_size` | the container's `/dev/shm`; default `"1g"`, `null` for Docker's 64MB |
 | `--registry` | `npm_config_registry` |
 | `--npm_token!!` | `NPM_TOKEN` |
@@ -277,7 +281,7 @@ The official `gcc` image has no CMake. A CMake entry needs a recipe, which this 
 
 Defaults: `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`, `npm_config_update_notifier=false`, and the container options `init = true` and `shm_size = "1g"`.
 
-The image carries the browsers of one Playwright release, so `--tag` must match the `@playwright/test` version the project installs. The browsers are never downloaded: a mismatch fails at once rather than fetching them into a container that is thrown away. The init process reaps the browsers' child processes. Chromium runs out of Docker's default 64MB of shared memory; Playwright's own advice is `--ipc=host`, which `#docker` has no option for, and a larger `/dev/shm` does the same job without sharing the host's IPC namespace.
+The image carries the browsers of one Playwright release, so the tag of `--image` must match the `@playwright/test` version the project installs. The browsers are never downloaded: a mismatch fails at once rather than fetching them into a container that is thrown away. The init process reaps the browsers' child processes. Chromium runs out of Docker's default 64MB of shared memory; Playwright's own advice is `--ipc=host`, which Lask has no option for, and a larger `/dev/shm` does the same job without sharing the host's IPC namespace.
 
 The tests run through `npx`, which is `node`'s command word, and a module exports one declaration per word, so `playwright` exports none. A project gives it where it is used, `$[tools.playwright()] npx playwright test`, or declares `npx` on it in a module that does not import `node`'s.
 
@@ -285,7 +289,7 @@ The tests run through `npx`, which is `node`'s command word, and a module export
 
 The everyday command-line tools in one image: bash, curl, wget, openssl, jq, yq, envsubst, GNU coreutils, findutils, grep, sed, awk, diff, file, tar, gzip, xz, bzip2, zip, unzip, rsync, make and the SSH client, and git, gh and glab for `git`, `gh` and `glab` (§5.11). A command string runs in one environment (ch. 5), so `curl -s … | jq -r .id` needs both in the same image; one image per tool would make every such pipeline a conflict.
 
-No image on a registry holds this set, so it is a recipe, `lib/images/unix/Dockerfile`: Alpine 3.24 pinned by its digest, and the packages as Alpine's repository has them when the image is built. Like `ansible` it has no `--tag` (§4.4). Unlike the other tools, `lask env build` / `lask deps sync` build it: a recipe is enumerated statically, wherever it is written. Its parameters are `--with` and `--extra_env` only (a proxy, `HTTPS_PROXY`, is the usual one).
+No image on a registry holds this set, so it is a recipe, `lib/images/unix/Dockerfile`: Alpine 3.24 pinned by its digest, and the packages as Alpine's repository has them when the image is built. Like `ansible` it takes no `--image` (§4.4); `lask env build` / `lask deps sync` build it. Its parameters are `--with` and `--extra_env` only (a proxy, `HTTPS_PROXY`, is the usual one).
 
 Exported words: the programs a project comes here for — `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `rsync`, and the archivers. Not `git`, `gh`, `glab` or `ssh`, which need an identity, nor `make`, which is `cc`'s. The shell's own words (`grep`, `sed`, `awk`, `sort`, …) are in the image but not exported: every image has them, and a project that imported them would pull a string such as `npm test | grep ok` into this environment and conflict with `node`.
 
@@ -299,7 +303,7 @@ The README gives each function's parameters. What is not visible from them:
 - **`kubectl`, `helm` and `kustomize`** share `alpine/k8s`, whose tag follows kubectl's release. It carries the AWS CLI, so an EKS kubeconfig's `aws eks get-token` works with `aws_setup` in `--with`; it has no GKE auth plugin. kubectl reads no variable for a context or a namespace; `kube_setup` sets Helm's and Terraform's.
 - **The cloud setups** set each variable under every name the tools read: `CLOUDSDK_*` for gcloud and `GOOGLE_*` for the SDKs and Terraform; `ARM_*` for Terraform and `AZURE_*` for the SDKs. `az` does not log in from them by itself: the command runs `az login --service-principal` first.
 - **The database clients** read what they can from the environment. `mysql` reads no user and no database, and `redis-cli` no host: those are set as variables for the command line (`MYSQL_USER`, `MYSQL_DATABASE`) or given there. `migrate` takes its database only on the command line, so `database_url` is `DATABASE_URL` for `-database "$DATABASE_URL"`.
-- **`pulumi`** takes `--language` beside `--tag`: `pulumi/pulumi-<language>` holds one runtime, where `pulumi/pulumi` holds all of them at several times the size.
+- **`pulumi`** runs `pulumi/pulumi-nodejs` unless `--image` names another runtime's image, `#pulumi/pulumi-python:3.265.0` and the like: each holds one runtime, where `pulumi/pulumi` holds all of them at several times the size.
 - **`bazel`** is Bazelisk, which runs the release `.bazelversion` names. Bazel's output root follows `XDG_CACHE_HOME`, so `--cache_dir` keeps it, and a build is incremental across runs.
 - **`robot`** holds Robot Framework and RequestsLibrary; another library is installed in the same command. A browser library is better served by `playwright`.
 - **`docker_setup`** hands a container the host's daemon, and so root on the host. No tool takes it by default; the caller asks for it (10.7).
@@ -356,15 +360,15 @@ The command line of this repository reaches a re-exported function as it reaches
 
 ## 8. Testing
 
-1. **Static gate.** `lask check` on `main.lask`, `example/main.lask` and `test/selftest.lask`. (`lask envs` reports each tool's image as `<dynamic>`: its reference is built from `--tag`, §4.4.)
-2. **Exact environments, without Docker.** An environment compares structurally, so `test/selftest.lask` states each expected environment in full and compares with `==`: the image `--tag` picks, which variables are set, that `null` leaves one out while `""` sets it, the precedence of §4.2, and the mounts. `lask eval --module test/selftest.lask all`.
+1. **Static gate.** `lask check` on `main.lask`, `example/main.lask` and `test/selftest.lask`. (`lask env list` reports each image a tool's command words reach, §4.4.)
+2. **Exact environments, without Docker.** An environment compares structurally, so `test/selftest.lask` states each expected environment in full and compares with `==`: the image `--image` picks, which variables are set, that `null` leaves one out while `""` sets it, the precedence of §4.2, and the mounts. `lask eval --module test/selftest.lask all`.
 3. **Declarability.** The selftest declares a command on each function, so a function that stops being effect-free fails `lask check` (ch. 5).
-4. **Smoke, with Docker.** Each tool's version command, through its declared command word: `lask env build --module test/selftest.lask`, then `lask eval --module test/selftest.lask smoke`. The selftest writes the images it expects as literals, and a reference written as a literal resolves through the lock alone (lask spec 10.4), even where a tool computes the same reference at run time; `lask env build` pulls and pins them.
+4. **Smoke, with Docker.** Each tool's version command, through its declared command word: `lask env build --module test/selftest.lask`, then `lask eval --module test/selftest.lask smoke`. Every image is a head, in the selftest or as a tool's default, so `lask env build` pulls and pins each one it reaches.
 
 ## 9. Adding a Tool
 
 1. Pick the image by the rules of §5 and update the catalog table.
-2. Write `<tool>(...)` in `lib/<tool>.lask` from what `lib/common.lask` provides, with `--tag` defaulting to the chosen release (§4.4), and `<tool>_setup` only if another tool needs its credentials (§4.3).
+2. Write `<tool>(...)` in `lib/<tool>.lask` from what `lib/common.lask` provides, with `--image` defaulting to the chosen release's image (§4.4), and `<tool>_setup` only if another tool needs its credentials (§4.3).
 3. Re-export them from `main.lask`. If its default environment is useful as it is (§3), declare its command words in its file and re-export them too, with `export command { ... } from`.
 4. Add its cases to `test/selftest.lask`, and its section to the README.
 
@@ -388,4 +392,3 @@ Before those: a command declaration takes a call or a namespace member as its en
 - **SSH keys in a container.** A read-only mount of `~/.ssh` into a root container may be refused by `ssh` for file ownership. `ssh_setup` takes an agent socket instead, but its host path differs between Linux (`$SSH_AUTH_SOCK`) and Docker Desktop (`/run/host-services/ssh-auth.sock`), so the caller gives it.
 - **`home()` on Windows**, where `HOME` is usually unset and `USERPROFILE` is the equivalent.
 - **Next candidates.** `terragrunt`; the container image tools (crane, skopeo, cosign) with `registry_setup`; the Docker CLI and buildx with `docker_setup`; a CMake recipe beside `cc`.
-- **An option given `null` is kept in the environment value** by lask, against 10.2: `#docker("a", shm_size = null) == #docker("a")` is false. The selftest writes such options out as `null` until lask drops them.

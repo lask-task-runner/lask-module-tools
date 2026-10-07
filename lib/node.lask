@@ -2,19 +2,17 @@
 
 import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
-// Node.js at --tag, configured by its parameters.
+// Node.js, configured by its parameters.
 //
-// The image is node at --tag, 24.21.0-alpine3.24 (an LTS release)
-// unless another is given. The reference is built from the argument
-// when the function runs, so `lask env build` does not pull or pin it
-// (lask spec 10.3): pull it once with `docker pull node:<tag>`, and a
-// run never pulls.
+// The image is #node:24.21.0-alpine3.24 (an LTS release) unless --image
+// names another. `lask env build` pulls and pins whichever image is
+// used (lask spec 10.3); a run never pulls.
 //
 // npm does not check for a newer version of itself, which would
 // otherwise print a notice into the command log. --extra_env can change
 // that.
 //
-// @param tag           The node image tag to run.
+// @param image         The image to run; another release is passed as image = #node:<tag>.
 // @param node_env      NODE_ENV.
 // @param node_options  NODE_OPTIONS.
 // @param registry      npm_config_registry: the registry npm installs from.
@@ -25,7 +23,7 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // @return The environment, for `command { "npm" } on ...` or `$[...]`.
 // @example lask eval node --node_env production
 node(
-  --tag: String = "24.21.0-alpine3.24",
+  --image: Environment = #node:24.21.0-alpine3.24,
   --node_env: String | Null = null,
   --node_options: String | Null = null,
   --registry: String | Null = null,
@@ -33,8 +31,7 @@ node(
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "node:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     {"npm_config_update_notifier": "false"},
     extra_env,

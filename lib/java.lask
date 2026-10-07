@@ -2,26 +2,24 @@
 
 import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
-// The Eclipse Temurin JDK at --tag, configured by its parameters.
+// The Eclipse Temurin JDK, configured by its parameters.
 //
-// The image is eclipse-temurin at --tag, 25.0.4.1_1-jdk-noble (Java 25,
-// an LTS release) unless another is given. The reference is built from
-// the argument when the function runs, so `lask env build` does not
-// pull or pin it (lask spec 10.3): pull it once, and a run never pulls.
+// The image is #eclipse-temurin:25.0.4.1_1-jdk-noble (Java 25, an LTS
+// release) unless --image names another. `lask env build` pulls and
+// pins whichever image is used (lask spec 10.3); a run never pulls.
 //
-// @param tag                The eclipse-temurin image tag to run.
+// @param image              The image to run; another release is passed as image = #eclipse-temurin:<tag>.
 // @param java_tool_options  JAVA_TOOL_OPTIONS, which every JVM in the container reads.
 // @param with               Setups of other tools this environment should also carry.
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "java" } on ...` or `$[...]`.
 // @example lask eval java --java_tool_options -Xmx2g
 java(
-  --tag: String = "25.0.4.1_1-jdk-noble",
+  --image: Environment = #eclipse-temurin:25.0.4.1_1-jdk-noble,
   --java_tool_options: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "eclipse-temurin:#{tag}",
+): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, vars({"JAVA_TOOL_OPTIONS": java_tool_options})),
   volumes = layered_volumes(with, [])
 )
@@ -36,14 +34,14 @@ internal maven_opts_with(opts: String | Null, cache_dir: String | Null): String 
   }
 }
 
-// Maven at --tag, on Temurin 25, configured by its parameters.
+// Maven, on Temurin 25, configured by its parameters.
 //
-// The image is maven at --tag, 3.9.16-eclipse-temurin-25-noble unless
-// another is given; pull it once, as for java. Maven runs in batch mode
+// The image is #maven:3.9.16-eclipse-temurin-25-noble unless --image
+// names another. Maven runs in batch mode
 // without transfer progress (MAVEN_ARGS), so the command log holds the
 // build rather than a download meter.
 //
-// @param tag                The maven image tag to run.
+// @param image              The image to run; another release is passed as image = #maven:<tag>.
 // @param java_tool_options  JAVA_TOOL_OPTIONS.
 // @param maven_opts         MAVEN_OPTS.
 // @param cache_dir          Host directory mounted at /cache; the local repository is /cache/m2 (-Dmaven.repo.local, added to MAVEN_OPTS).
@@ -52,14 +50,13 @@ internal maven_opts_with(opts: String | Null, cache_dir: String | Null): String 
 // @return The environment, for `command { "mvn" } on ...` or `$[...]`.
 // @example lask eval maven --cache_dir /tmp/cache
 maven(
-  --tag: String = "3.9.16-eclipse-temurin-25-noble",
+  --image: Environment = #maven:3.9.16-eclipse-temurin-25-noble,
   --java_tool_options: String | Null = null,
   --maven_opts: String | Null = null,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "maven:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     {"MAVEN_ARGS": "--batch-mode --no-transfer-progress"},
     extra_env,
@@ -72,14 +69,13 @@ maven(
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )
 
-// Gradle at --tag, on Temurin 25, configured by its parameters.
+// Gradle, on Temurin 25, configured by its parameters.
 //
-// The image is gradle at --tag, 9.8.0-jdk25-noble unless another is
-// given; pull it once, as for java. A project's own wrapper,
-// `./gradlew`, runs here too, though as a path it is no command word:
-// give the environment with `$[...]`.
+// The image is #gradle:9.8.0-jdk25-noble unless --image names another.
+// A project's own wrapper, `./gradlew`, runs here too, though as a path
+// it is no command word: give the environment with `$[...]`.
 //
-// @param tag                The gradle image tag to run.
+// @param image              The image to run; another release is passed as image = #gradle:<tag>.
 // @param java_tool_options  JAVA_TOOL_OPTIONS.
 // @param gradle_opts        GRADLE_OPTS.
 // @param cache_dir          Host directory mounted at /cache; the Gradle user home is /cache/gradle (GRADLE_USER_HOME).
@@ -88,14 +84,13 @@ maven(
 // @return The environment, for `command { "gradle" } on ...` or `$[...]`.
 // @example lask eval gradle --cache_dir /tmp/cache
 gradle(
-  --tag: String = "9.8.0-jdk25-noble",
+  --image: Environment = #gradle:9.8.0-jdk25-noble,
   --java_tool_options: String | Null = null,
   --gradle_opts: String | Null = null,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "gradle:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     {},
     extra_env,

@@ -11,13 +11,11 @@ internal tf_env(workspace: String | Null, log: String | Null, variables: Map<Str
     "TF_PLUGIN_CACHE_DIR": if (cache_dir == null) { null } else { "/cache" }
   }))
 
-// Terraform at --tag, configured by its parameters.
+// Terraform, configured by its parameters.
 //
-// The image is hashicorp/terraform at --tag, 1.16.4 unless another is
-// given. The reference is built from the argument when the function
-// runs, so `lask env build` does not pull or pin it (lask spec 10.3):
-// pull it once with `docker pull hashicorp/terraform:<tag>`, and a run
-// never pulls.
+// The image is #hashicorp/terraform:1.16.4 unless --image names
+// another. `lask env build` pulls and pins whichever image is used
+// (lask spec 10.3); a run never pulls.
 //
 // Nothing waits on a prompt (TF_INPUT=0), and Terraform leaves out the
 // hints it gives a person at a terminal (TF_IN_AUTOMATION=1). A
@@ -26,7 +24,7 @@ internal tf_env(workspace: String | Null, log: String | Null, variables: Map<Str
 // --variables as TF_VAR_* variables of the container, never on the command
 // line; bind them with `!!` where they come from, and they are masked.
 //
-// @param tag        The hashicorp/terraform image tag to run.
+// @param image      The image to run; another release is passed as image = #hashicorp/terraform:<tag>.
 // @param workspace  TF_WORKSPACE.
 // @param log        TF_LOG, e.g. "DEBUG".
 // @param variables  Input variables, each set as TF_VAR_<name>.
@@ -36,15 +34,14 @@ internal tf_env(workspace: String | Null, log: String | Null, variables: Map<Str
 // @return The environment, for `command { "terraform" } on ...` or `$[...]`.
 // @example lask eval terraform --workspace staging
 terraform(
-  --tag: String = "1.16.4",
+  --image: Environment = #hashicorp/terraform:1.16.4,
   --workspace: String | Null = null,
   --log: String | Null = null,
   --variables: Map<String> = {},
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "hashicorp/terraform:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"},
     extra_env,
@@ -54,17 +51,16 @@ terraform(
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )
 
-// OpenTofu at --tag, configured by the parameters of terraform.
+// OpenTofu, configured by the parameters of terraform.
 //
-// The image is ghcr.io/opentofu/opentofu at --tag, 1.12.6 unless
-// another is given. OpenTofu reads Terraform's variables, so every
-// parameter means what it means for terraform: TF_INPUT=0,
-// TF_IN_AUTOMATION=1, TF_VAR_* from --variables, the plugin cache at
-// the /cache mount point. The reference is built from the argument when
-// the function runs, so `lask env build` does not pull or pin it (lask
-// spec 10.3): pull it once, and a run never pulls.
+// The image is #ghcr.io/opentofu/opentofu:1.12.6 unless --image names
+// another. OpenTofu reads Terraform's variables, so every parameter
+// means what it means for terraform: TF_INPUT=0, TF_IN_AUTOMATION=1,
+// TF_VAR_* from --variables, the plugin cache at the /cache mount
+// point. `lask env build` pulls and pins whichever image is used (lask
+// spec 10.3); a run never pulls.
 //
-// @param tag        The opentofu image tag to run.
+// @param image      The image to run; another release is passed as image = #ghcr.io/opentofu/opentofu:<tag>.
 // @param workspace  TF_WORKSPACE.
 // @param log        TF_LOG, e.g. "DEBUG".
 // @param variables  Input variables, each set as TF_VAR_<name>.
@@ -74,15 +70,14 @@ terraform(
 // @return The environment, for `command { "tofu" } on ...` or `$[...]`.
 // @example lask eval tofu --workspace staging
 tofu(
-  --tag: String = "1.12.6",
+  --image: Environment = #ghcr.io/opentofu/opentofu:1.12.6,
   --workspace: String | Null = null,
   --log: String | Null = null,
   --variables: Map<String> = {},
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
-): Environment = #docker(
-  "ghcr.io/opentofu/opentofu:#{tag}",
+): Runnable = runnable(image,
   env = layered_env(
     {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"},
     extra_env,
