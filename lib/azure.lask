@@ -37,8 +37,8 @@ azure_setup(
 // The Azure CLI, configured by its parameters.
 //
 // The image is #mcr.microsoft.com/azure-cli:2.90.0 unless --image names
-// another. `lask env build` pulls and pins whichever image is used
-// (lask spec 10.3); a run never pulls.
+// another. `lask sync` pulls and pins whichever image is used (lask spec
+// 10.3); a run never pulls.
 //
 // Telemetry is off (AZURE_CORE_COLLECT_TELEMETRY=false). Locally, log
 // in on the host (`az login`) and pass config_dir = home(".azure"). az

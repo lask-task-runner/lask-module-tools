@@ -14,7 +14,7 @@ The tools themselves are not wrapped: `$ aws s3 sync ...` is already the cleares
 
 Requires a Lask that names an image only by the head of an environment expression and gives run options through `runnable` (`#python:3.12`, `runnable(image, ...)`), in place of the removed `#docker(...)`.
 
-Run `lask env build` (or `lask deps sync`) before the first command: it pulls and pins the image of every tool your program reaches, and builds the ones made from a recipe in this module — marked *recipe* below. A run never pulls (lask spec 10.3). A tool your program does not reach is not pulled.
+Run `lask sync` before the first command: it pulls and pins the image of every tool your program reaches, and builds the ones made from a recipe in this module — marked *recipe* below. A run never pulls (lask spec 10.3). A tool your program does not reach is not pulled.
 
 ## Install
 
@@ -26,7 +26,7 @@ lask deps add tools --git https://github.com/lask-task-runner/lask-module-tools 
 
 Every tool follows the same rules:
 
-- **`--image` picks the release of the tool's image**, and defaults to the one this module was written and tested against. Pass another as an image head, `tools.python(image = #python:3.13.5-alpine3.22)`: the image is written in your module, so `lask env build` pins it. A recipe tool takes no `--image`.
+- **`--image` picks the release of the tool's image**, and defaults to the one this module was written and tested against. Pass another as an image head, `tools.python(image = #python:3.13.5-alpine3.22)`: the image is written in your module, so `lask sync` pins it. A recipe tool takes no `--image`.
 - **A parameter left `null` sets nothing.** Every parameter defaults to `null`, and a variable given `null` is left out. `""` is a value: it sets its variable to the empty string.
 - **Secrets are `!!` parameters**, so they are masked in the command log, including in the environment it records — whatever the caller passed. They default to `null` like the rest, and a `null` secret registers nothing for masking.
 - **A host path is mounted, never expanded.** Lask starts `docker` without a shell, so `~` would reach the daemon as a directory named `~`. Use `tools.home(".aws")`.
@@ -363,7 +363,7 @@ import command { "curl", "jq" } from "tools"
 latest(): String = $ curl -fsSL https://api.github.com/repos/hashicorp/terraform/releases/latest | jq -r .tag_name
 ```
 
-It is built from a recipe in this module, `lib/images/unix/Dockerfile` (Alpine 3.24, pinned by its digest), so it takes no `--image`, and `lask deps sync` or `lask env build` builds it once per machine. Its parameters are `--with` and `--extra_env` — `extra_env = {"HTTPS_PROXY": "..."}` behind a proxy.
+It is built from a recipe in this module, `lib/images/unix/Dockerfile` (Alpine 3.24, pinned by its digest), so it takes no `--image`, and `lask sync` builds it once per machine. Its parameters are `--with` and `--extra_env` — `extra_env = {"HTTPS_PROXY": "..."}` behind a proxy.
 
 Exported words: `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`, `xz`, `bzip2`, `zip`, `unzip`, `rsync`, on `unix()`. The shell's own words (`grep`, `sed`, `awk`, `sort`, …) are in the image but not exported: every image has them, and importing them would make a string such as `npm test | grep ok` conflict. They run here whenever an exported word selects this environment. Nor are `git`, `gh`, `glab` and `ssh`, which need an identity, or `make`, which is `cc`'s.
 
@@ -377,6 +377,6 @@ Each tool, or each family of tools, lives in `lib/<name>.lask`, built from `lib/
 lask check                                       # the module
 lask check --module example/main.lask            # a project using it
 lask eval --module test/selftest.lask all        # every environment, compared exactly; no Docker
-lask env build --module test/selftest.lask       # pulls and pins the images the selftest names, builds the recipes
+lask sync --module test/selftest.lask            # pulls and pins the images the selftest names, builds the recipes
 lask eval --module test/selftest.lask smoke      # runs each tool; needs Docker
 ```

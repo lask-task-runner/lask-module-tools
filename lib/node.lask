@@ -5,8 +5,8 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // Node.js, configured by its parameters.
 //
 // The image is #node:24.21.0-alpine3.24 (an LTS release) unless --image
-// names another. `lask env build` pulls and pins whichever image is
-// used (lask spec 10.3); a run never pulls.
+// names another. `lask sync` pulls and pins whichever image is used (lask
+// spec 10.3); a run never pulls.
 //
 // npm does not check for a newer version of itself, which would
 // otherwise print a notice into the command log. --extra_env can change

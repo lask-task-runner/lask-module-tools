@@ -4,9 +4,9 @@ import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSet
 
 // GHC, with Cabal and Stack, configured by its parameters.
 //
-// The image is #haskell:9.12.4-slim-bookworm unless --image names
-// another. `lask env build` pulls and pins whichever image is used
-// (lask spec 10.3); a run never pulls.
+// The image is #haskell:9.12.4-slim-bookworm unless --image names another.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // Stack in this image is not told to use the GHC beside it: give
 // `stack --system-ghc` for a resolver on this GHC, or let Stack install

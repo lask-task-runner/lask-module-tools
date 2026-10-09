@@ -5,8 +5,8 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // The Eclipse Temurin JDK, configured by its parameters.
 //
 // The image is #eclipse-temurin:25.0.4.1_1-jdk-noble (Java 25, an LTS
-// release) unless --image names another. `lask env build` pulls and
-// pins whichever image is used (lask spec 10.3); a run never pulls.
+// release) unless --image names another. `lask sync` pulls and pins
+// whichever image is used (lask spec 10.3); a run never pulls.
 //
 // @param image              The image to run; another release is passed as image = #eclipse-temurin:<tag>.
 // @param java_tool_options  JAVA_TOOL_OPTIONS, which every JVM in the container reads.

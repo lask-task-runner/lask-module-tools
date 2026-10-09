@@ -4,9 +4,9 @@ import { vars, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
 // GCC, with Make, configured by its parameters.
 //
-// The image is #gcc:16.2.0 unless --image names another. It has no
-// CMake. `lask env build` pulls and pins whichever image is used (lask
-// spec 10.3); a run never pulls.
+// The image is #gcc:16.2.0 unless --image names another. It has no CMake.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // @param image      The image to run; another release is passed as image = #gcc:<tag>.
 // @param cc         CC.

@@ -6,11 +6,11 @@ import { git_setup, ssh_setup } from "./setups.lask"
 
 // Git, configured by its parameters.
 //
-// The image is built from lib/images/unix/Dockerfile, as for unix(), so
-// it takes no --image, and `lask env build` (or `lask deps sync`)
-// builds it. The container sees none of the host's Git configuration:
-// the identity, a token for https and an SSH identity are given here,
-// and the mounted project is trusted (safe.directory).
+// The image is built from lib/images/unix/Dockerfile, as for unix(), so it
+// takes no --image, and `lask sync` builds it. The container sees none of
+// the host's Git configuration: the identity, a token for https and an SSH
+// identity are given here, and the mounted project is trusted
+// (safe.directory).
 //
 // @param name              GIT_AUTHOR_NAME and GIT_COMMITTER_NAME.
 // @param email             GIT_AUTHOR_EMAIL and GIT_COMMITTER_EMAIL.

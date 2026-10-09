@@ -4,11 +4,10 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 
 // Ruby, configured by its parameters.
 //
-// The image is #ruby:4.0.7-alpine3.24 unless --image names another.
-// Alpine has no C toolchain, so a gem with a native extension and no
-// prebuilt musl gem needs a Debian tag, e.g. 4.0.7-slim-trixie. `lask
-// env build` pulls and pins whichever image is used (lask spec 10.3); a
-// run never pulls.
+// The image is #ruby:4.0.7-alpine3.24 unless --image names another. Alpine
+// has no C toolchain, so a gem with a native extension and no prebuilt
+// musl gem needs a Debian tag, e.g. 4.0.7-slim-trixie. `lask sync` pulls
+// and pins whichever image is used (lask spec 10.3); a run never pulls.
 //
 // Bundler does not warn that it runs as root
 // (BUNDLE_SILENCE_ROOT_WARNING=1): every container here does.

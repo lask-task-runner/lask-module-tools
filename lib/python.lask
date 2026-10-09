@@ -5,8 +5,8 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // Python, configured by its parameters.
 //
 // The image is #python:3.12.14-alpine3.24 unless --image names another.
-// `lask env build` pulls and pins whichever image is used (lask spec
-// 10.3); a run never pulls.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // Output reaches the command log as it happens (PYTHONUNBUFFERED), and
 // no __pycache__ is written into the project, which the container

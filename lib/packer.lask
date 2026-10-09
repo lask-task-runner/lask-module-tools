@@ -5,8 +5,8 @@ import { vars, mount, in_cache, prefixed, layered_env, layered_volumes, ToolSetu
 // Packer, configured by its parameters.
 //
 // The image is #hashicorp/packer:1.16.1 unless --image names another.
-// `lask env build` pulls and pins whichever image is used (lask spec
-// 10.3); a run never pulls.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // Packer does not call home (CHECKPOINT_DISABLE=1). A builder's
 // credentials come in through --with: aws_setup for amazon-ebs,

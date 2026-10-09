@@ -5,12 +5,12 @@ import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSet
 // Pulumi, with the runtime of one language, configured by its
 // parameters.
 //
-// The image is #pulumi/pulumi-nodejs:3.265.0 unless --image names
-// another. Another language's runtime is another image of the same
-// release, passed the same way: `image = #pulumi/pulumi-python:3.265.0`,
-// or pulumi-go, pulumi-dotnet or pulumi-java; pulumi/pulumi holds every
-// runtime and is several times the size. `lask env build` pulls and
-// pins whichever image is used (lask spec 10.3); a run never pulls.
+// The image is #pulumi/pulumi-nodejs:3.265.0 unless --image names another.
+// Another language's runtime is another image of the same release, passed
+// the same way: `image = #pulumi/pulumi-python:3.265.0`, or pulumi-go,
+// pulumi-dotnet or pulumi-java; pulumi/pulumi holds every runtime and is
+// several times the size. `lask sync` pulls and pins whichever image is
+// used (lask spec 10.3); a run never pulls.
 //
 // Pulumi checks for no update (PULUMI_SKIP_UPDATE_CHECK=true). A
 // provider's credentials come in through --with, as for terraform.

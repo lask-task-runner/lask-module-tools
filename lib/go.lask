@@ -4,10 +4,10 @@ import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSet
 
 // Go, configured by its parameters.
 //
-// The image is #golang:1.27.1-trixie unless --image names another:
-// Debian rather than Alpine, so cgo and `go test -race` find a C
-// toolchain. `lask env build` pulls and pins whichever image is used
-// (lask spec 10.3); a run never pulls.
+// The image is #golang:1.27.1-trixie unless --image names another: Debian
+// rather than Alpine, so cgo and `go test -race` find a C toolchain.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // GOTOOLCHAIN=local keeps Go to the release its image holds: a go.mod
 // that asks for a newer one fails instead of downloading it into a

@@ -10,10 +10,10 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // @playwright/test version the project installs: the image carries the
 // browsers of one Playwright release, and another release does not find
 // them. The browsers are never downloaded here
-// (PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1), so a mismatch fails at once
-// rather than fetching browsers into the container on every run. `lask
-// env build` pulls and pins whichever image is used (lask spec 10.3); a
-// run never pulls.
+// (PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1), so a mismatch fails at once rather
+// than fetching browsers into the container on every run. `lask sync`
+// pulls and pins whichever image is used (lask spec 10.3); a run never
+// pulls.
 //
 // The container runs with an init process, which reaps the browser's
 // child processes, and with a larger /dev/shm than Docker's 64MB, which

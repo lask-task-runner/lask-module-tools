@@ -4,10 +4,9 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 
 // The .NET SDK, configured by its parameters.
 //
-// The image is #mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24 (.NET
-// 10, an LTS release) unless --image names another. `lask env build`
-// pulls and pins whichever image is used (lask spec 10.3); a run never
-// pulls.
+// The image is #mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24 (.NET 10,
+// an LTS release) unless --image names another. `lask sync` pulls and pins
+// whichever image is used (lask spec 10.3); a run never pulls.
 //
 // The CLI sends no telemetry and prints no banner
 // (DOTNET_CLI_TELEMETRY_OPTOUT=1, DOTNET_NOLOGO=1).
