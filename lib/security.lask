@@ -2,11 +2,11 @@
 // semgrep. Each needs nothing from the caller to scan the project, so
 // each exports its command word.
 //
-// Each image is taken as --image, a head written here as its default or
-// by the caller: `lask env build` pulls and pins whichever is used
-// (lask spec 10.3), and a run never pulls. Scanning a container image
-// needs that image's registry (registry_setup) or the host's daemon
-// (docker_setup) through --with.
+// Each image is taken as --image, a head written here as its default or by
+// the caller: `lask sync` pulls and pins whichever is used (lask spec
+// 10.3), and a run never pulls. Scanning a container image needs that
+// image's registry (registry_setup) or the host's daemon (docker_setup)
+// through --with.
 
 import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 
@@ -83,9 +83,8 @@ checkov(
 //
 // Anchore's images have no shell, so the image is built from
 // lib/images/anchore/Dockerfile, which copies grype v0.119.0 and syft
-// v1.52.0 onto Alpine: it takes no --image, and `lask env build` (or
-// `lask deps sync`) builds it. Grype checks for no update
-// (GRYPE_CHECK_FOR_APP_UPDATE=false).
+// v1.52.0 onto Alpine: it takes no --image, and `lask sync` builds it.
+// Grype checks for no update (GRYPE_CHECK_FOR_APP_UPDATE=false).
 //
 // Without --cache_dir, every run downloads the vulnerability database.
 //

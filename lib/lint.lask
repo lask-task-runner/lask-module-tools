@@ -2,10 +2,10 @@
 // ruff and actionlint. Each needs nothing from the caller, so each
 // exports its command word.
 //
-// Each image is taken as --image, a head written here as its default or
-// by the caller: `lask env build` pulls and pins whichever is used
-// (lask spec 10.3), and a run never pulls. A tool's own image is used
-// where it has a shell, which a lask command runs through.
+// Each image is taken as --image, a head written here as its default or by
+// the caller: `lask sync` pulls and pins whichever is used (lask spec
+// 10.3), and a run never pulls. A tool's own image is used where it has a
+// shell, which a lask command runs through.
 
 import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 

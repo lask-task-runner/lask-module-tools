@@ -2,9 +2,9 @@
 // ApacheBench. Each needs nothing from the caller, so each exports its
 // command word.
 //
-// Each image is taken as --image, a head written here as its default or
-// by the caller: `lask env build` pulls and pins whichever is used
-// (lask spec 10.3), and a run never pulls. A server on the host is at
+// Each image is taken as --image, a head written here as its default or by
+// the caller: `lask sync` pulls and pins whichever is used (lask spec
+// 10.3), and a run never pulls. A server on the host is at
 // host.docker.internal from a container with Docker Desktop, and at
 // localhost with network = "host"; a server in a Compose project is on
 // that project's network, which --network joins.
@@ -76,10 +76,10 @@ newman(
 //
 // There is no official image, so the image is built from
 // lib/images/robot/Dockerfile: Robot Framework 7.5 and RequestsLibrary
-// 0.9.7 on the Python image of python(). It takes no --image, and `lask
-// env build` (or `lask deps sync`) builds it. Another library is
-// installed in the same command, `pip install -r requirements.txt &&
-// robot tests`; a browser library is better served by playwright().
+// 0.9.7 on the Python image of python(). It takes no --image, and
+// `lask sync` builds it. Another library is installed in the same command,
+// `pip install -r requirements.txt && robot tests`; a browser library is
+// better served by playwright().
 //
 // @param options    ROBOT_OPTIONS, which robot reads before its command line, e.g. "--outputdir results".
 // @param network    The container's network: a Compose network, or "host".

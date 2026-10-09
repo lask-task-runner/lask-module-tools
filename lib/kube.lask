@@ -36,12 +36,12 @@ kube_setup(
 // kubectl, configured by its parameters.
 //
 // The image is #alpine/k8s:1.37.0 unless --image names another: its tag
-// follows kubectl's release, and it carries Helm, Kustomize, the AWS
-// CLI and eksctl beside it, so a kubeconfig whose user runs `aws eks
+// follows kubectl's release, and it carries Helm, Kustomize, the AWS CLI
+// and eksctl beside it, so a kubeconfig whose user runs `aws eks
 // get-token` works with `with = [aws_setup(...)]`. It has no
 // gke-gcloud-auth-plugin. The kubectl image of registry.k8s.io has no
-// shell, which every command here runs through. `lask env build` pulls
-// and pins whichever image is used (lask spec 10.3); a run never pulls.
+// shell, which every command here runs through. `lask sync` pulls and pins
+// whichever image is used (lask spec 10.3); a run never pulls.
 //
 // A cluster the kubeconfig reaches at 127.0.0.1 — kind, minikube — is
 // the host's, not the container's: give network = "host".

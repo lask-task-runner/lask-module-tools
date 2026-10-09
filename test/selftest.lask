@@ -6,12 +6,12 @@
 //
 //   lask eval --module test/selftest.lask all
 //
-// `smoke` is the exception: it runs each tool, and so needs Docker and
-// the images, which a run never pulls. Every image is a head written in
-// this module or in main.lask, so `lask env build` pins each one it
-// reaches (lask spec 10.3); run it first:
+// `smoke` is the exception: it runs each tool, and so needs Docker and the
+// images, which a run never pulls. Every image is a head written in this
+// module or in main.lask, so `lask sync` pins each one it reaches (lask
+// spec 10.3); run it first:
 //
-//   lask env build --module test/selftest.lask
+//   lask sync --module test/selftest.lask
 //   lask eval --module test/selftest.lask smoke
 
 import {
@@ -513,10 +513,10 @@ internal version_of(r: CommandResult): String = do {
   trim(if (r.stdout != "") { r.stdout } else { r.stderr })
 }
 
-// Runs each tool: through its command word where the module exports
-// one, or aws and terraform as declared here, and through `$[...]`
-// where it needs a credential to be useful. Needs Docker, and the images
-// `lask env build` pins and builds.
+// Runs each tool: through its command word where the module exports one,
+// or aws and terraform as declared here, and through `$[...]` where it
+// needs a credential to be useful. Needs Docker, and the images
+// `lask sync` pins and builds.
 //
 // @return One version line per tool.
 smoke(): Array<String> = do {

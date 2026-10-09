@@ -39,8 +39,8 @@ aws_setup(
 // The AWS CLI v2, configured by its parameters.
 //
 // The image is #amazon/aws-cli:2.36.41 unless --image names another.
-// `lask env build` pulls and pins whichever image is used (lask spec
-// 10.3); a run never pulls.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // Locally, log in on the host (`aws sso login`) and mount the result
 // with `config_dir = home(".aws")`; the mount is read-only, so an

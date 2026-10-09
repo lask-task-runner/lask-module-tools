@@ -6,11 +6,10 @@ import { ssh_setup } from "./setups.lask"
 // ansible-core, configured by its parameters.
 //
 // There is no official image, so the image is built from
-// lib/images/ansible/Dockerfile: ansible-core 2.21.4 on the Python
-// image of python(), with the SSH client. Its versions are fixed in the
-// recipe, so it takes no --image, and `lask env build` (or `lask deps
-// sync`) builds it once per machine (lask spec 10.3). A run never
-// builds.
+// lib/images/ansible/Dockerfile: ansible-core 2.21.4 on the Python image
+// of python(), with the SSH client. Its versions are fixed in the recipe,
+// so it takes no --image, and `lask sync` builds it once per machine (lask
+// spec 10.3). A run never builds.
 //
 // Output reaches the command log as it happens (PYTHONUNBUFFERED=1).
 // A collection a playbook needs is installed with `ansible-galaxy

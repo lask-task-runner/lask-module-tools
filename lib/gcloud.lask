@@ -42,8 +42,8 @@ gcloud_setup(
 // The image is
 // #gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim unless
 // --image names another; the Docker Hub copy, google/cloud-sdk, is
-// published for amd64 only. `lask env build` pulls and pins whichever
-// image is used (lask spec 10.3); a run never pulls.
+// published for amd64 only. `lask sync` pulls and pins whichever image is
+// used (lask spec 10.3); a run never pulls.
 //
 // gcloud never prompts (CLOUDSDK_CORE_DISABLE_PROMPTS=1). Locally, log
 // in on the host (`gcloud auth login`, `gcloud auth

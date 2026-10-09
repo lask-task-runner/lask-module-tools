@@ -13,9 +13,9 @@ internal tf_env(workspace: String | Null, log: String | Null, variables: Map<Str
 
 // Terraform, configured by its parameters.
 //
-// The image is #hashicorp/terraform:1.16.4 unless --image names
-// another. `lask env build` pulls and pins whichever image is used
-// (lask spec 10.3); a run never pulls.
+// The image is #hashicorp/terraform:1.16.4 unless --image names another.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // Nothing waits on a prompt (TF_INPUT=0), and Terraform leaves out the
 // hints it gives a person at a terminal (TF_IN_AUTOMATION=1). A
@@ -54,11 +54,11 @@ terraform(
 // OpenTofu, configured by the parameters of terraform.
 //
 // The image is #ghcr.io/opentofu/opentofu:1.12.6 unless --image names
-// another. OpenTofu reads Terraform's variables, so every parameter
-// means what it means for terraform: TF_INPUT=0, TF_IN_AUTOMATION=1,
-// TF_VAR_* from --variables, the plugin cache at the /cache mount
-// point. `lask env build` pulls and pins whichever image is used (lask
-// spec 10.3); a run never pulls.
+// another. OpenTofu reads Terraform's variables, so every parameter means
+// what it means for terraform: TF_INPUT=0, TF_IN_AUTOMATION=1, TF_VAR_*
+// from --variables, the plugin cache at the /cache mount point.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // @param image      The image to run; another release is passed as image = #ghcr.io/opentofu/opentofu:<tag>.
 // @param workspace  TF_WORKSPACE.

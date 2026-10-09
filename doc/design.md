@@ -109,8 +109,8 @@ A project that needs another release says so at the call, as an image head, and 
 
 An image is named only by the head of an environment expression (lask 6.7), so either way it is a head someone wrote — the default here, or the caller's in their module — and is known without running anything:
 
-- `lask envs` and `lask env list` report it, and `lask env build` / `lask deps sync` pull it and pin its digest in the lock (10.3). The images required are the heads reachable from the project's entry module: a tool the project does not reach is not pulled, and a tool it reaches has its default image pulled even where the caller passes another.
-- A run uses the pinned image, and never pulls it: an image that is not there is `E-IO-IMAGE-MISSING`, whose diagnostic names `lask env build`.
+- `lask envs list` reports it, and `lask sync` pulls it and pins its digest in the lock (10.3). The images required are the heads reachable from the project's entry module: a tool the project does not reach is not pulled, and a tool it reaches has its default image pulled even where the caller passes another.
+- A run uses the pinned image, and never pulls it: an image that is not there is `E-IO-IMAGE-MISSING`, whose diagnostic names `lask sync`.
 - `--image` cannot be given on the command line: no CLI argument can name an image (lask 11.2). `lask eval aws` runs the default.
 
 `--image` is an `Environment`, never a `Runnable`: it carries the image and its image options (`platform`), and no run option. The run options are the tool's, given once in its `runnable` call (lask 8.8), so a caller's value for one of them goes in through the tool's parameters — `--extra_env`, `--with`, `--network` and the rest — and `aws(image = #amazon/aws-cli:2.37.0{memory: "1g"})` is a type error.
@@ -289,7 +289,7 @@ The tests run through `npx`, which is `node`'s command word, and a module export
 
 The everyday command-line tools in one image: bash, curl, wget, openssl, jq, yq, envsubst, GNU coreutils, findutils, grep, sed, awk, diff, file, tar, gzip, xz, bzip2, zip, unzip, rsync, make and the SSH client, and git, gh and glab for `git`, `gh` and `glab` (§5.11). A command string runs in one environment (ch. 5), so `curl -s … | jq -r .id` needs both in the same image; one image per tool would make every such pipeline a conflict.
 
-No image on a registry holds this set, so it is a recipe, `lib/images/unix/Dockerfile`: Alpine 3.24 pinned by its digest, and the packages as Alpine's repository has them when the image is built. Like `ansible` it takes no `--image` (§4.4); `lask env build` / `lask deps sync` build it. Its parameters are `--with` and `--extra_env` only (a proxy, `HTTPS_PROXY`, is the usual one).
+No image on a registry holds this set, so it is a recipe, `lib/images/unix/Dockerfile`: Alpine 3.24 pinned by its digest, and the packages as Alpine's repository has them when the image is built. Like `ansible` it takes no `--image` (§4.4); `lask sync` builds it. Its parameters are `--with` and `--extra_env` only (a proxy, `HTTPS_PROXY`, is the usual one).
 
 Exported words: the programs a project comes here for — `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `rsync`, and the archivers. Not `git`, `gh`, `glab` or `ssh`, which need an identity, nor `make`, which is `cc`'s. The shell's own words (`grep`, `sed`, `awk`, `sort`, …) are in the image but not exported: every image has them, and a project that imported them would pull a string such as `npm test | grep ok` into this environment and conflict with `node`.
 
@@ -360,10 +360,10 @@ The command line of this repository reaches a re-exported function as it reaches
 
 ## 8. Testing
 
-1. **Static gate.** `lask check` on `main.lask`, `example/main.lask` and `test/selftest.lask`. (`lask env list` reports each image a tool's command words reach, §4.4.)
+1. **Static gate.** `lask check` on `main.lask`, `example/main.lask` and `test/selftest.lask`. (`lask envs list` reports each image a tool's command words reach, §4.4.)
 2. **Exact environments, without Docker.** An environment compares structurally, so `test/selftest.lask` states each expected environment in full and compares with `==`: the image `--image` picks, which variables are set, that `null` leaves one out while `""` sets it, the precedence of §4.2, and the mounts. `lask eval --module test/selftest.lask all`.
 3. **Declarability.** The selftest declares a command on each function, so a function that stops being effect-free fails `lask check` (ch. 5).
-4. **Smoke, with Docker.** Each tool's version command, through its declared command word: `lask env build --module test/selftest.lask`, then `lask eval --module test/selftest.lask smoke`. Every image is a head, in the selftest or as a tool's default, so `lask env build` pulls and pins each one it reaches.
+4. **Smoke, with Docker.** Each tool's version command, through its declared command word: `lask sync --module test/selftest.lask`, then `lask eval --module test/selftest.lask smoke`. Every image is a head, in the selftest or as a tool's default, so `lask sync` pulls and pins each one it reaches.
 
 ## 9. Adding a Tool
 

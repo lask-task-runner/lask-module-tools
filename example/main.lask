@@ -4,16 +4,16 @@
 // (`lask deps add tools --git ...`) and imports it as a namespace. The
 // relative import below stands in for that here.
 //
-//   lask env build --module example/main.lask   # pulls and pins aws_image
+//   lask sync --module example/main.lask   # pulls and pins aws_image
 //   lask check --module example/main.lask
 //   lask cmd --module example/main.lask aws s3 ls
 //   lask run --module example/main.lask whoami
 
 import * as tools from "../main.lask"
 
-// The amazon/aws-cli release this project runs. It is a head written
-// here, so `lask env build` pulls it and pins its digest in the lock;
-// run it again whenever this changes.
+// The amazon/aws-cli release this project runs. It is a head written here,
+// so `lask sync` pulls it and pins its digest in the lock; run it again
+// whenever this changes.
 aws_image = #amazon/aws-cli:2.36.41
 
 // Locally: log in on the host first (`aws sso login --profile dev`), then

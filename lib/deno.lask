@@ -4,9 +4,9 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 
 // Deno, configured by its parameters.
 //
-// The image is #denoland/deno:alpine-2.9.7 unless --image names
-// another. `lask env build` pulls and pins whichever image is used
-// (lask spec 10.3); a run never pulls.
+// The image is #denoland/deno:alpine-2.9.7 unless --image names another.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
 //
 // Deno checks for no update and never prompts for a permission
 // (DENO_NO_UPDATE_CHECK=1, DENO_NO_PROMPT=1): a permission not granted
