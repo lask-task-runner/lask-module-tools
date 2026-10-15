@@ -62,7 +62,7 @@ git_setup(
     "GIT_AUTHOR_EMAIL": email,
     "GIT_COMMITTER_EMAIL": email
   })
-  return {env: merge(config, identity), volumes: []}
+  {env: merge(config, identity), volumes: []}
 }
 
 // The host's Docker daemon, for a tool that starts or inspects

@@ -36,7 +36,7 @@ git(
 ): Runnable = do {
   config = git_setup(token = token, host = host, token_user = token_user, name = name, email = email)
   ssh = ssh_setup(dir = ssh_dir, agent_socket = ssh_agent_socket)
-  return #./images/unix/Dockerfile{
+  #./images/unix/Dockerfile{
     env: layered_env({}, extra_env, with, merge(config.env, ssh.env)),
     volumes: layered_volumes(with, ssh.volumes)
   }
