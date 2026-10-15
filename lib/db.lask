@@ -69,7 +69,7 @@ psql(
   --extra_env: Map<String> = {}
 ): Runnable = do {
   own = pg_setup(host = host, port = port, user = user, password = password, database = database, sslmode = sslmode)
-  return runnable(image,
+  runnable(image,
     env = layered_env({}, extra_env, with, own.env),
     volumes = layered_volumes(with, []),
     network = network

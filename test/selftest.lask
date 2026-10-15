@@ -509,8 +509,9 @@ all(): Array<String> = [
 // A program's version line, run through its command word. Some print
 // it on stderr.
 internal version_of(r: CommandResult): String = do {
-  if (r.code != 0) { return fail(error(r.code, r.stderr)) }
-  trim(if (r.stdout != "") { r.stdout } else { r.stderr })
+  if (r.code != 0) { fail(error(r.code, r.stderr)) } else {
+    trim(if (r.stdout != "") { r.stdout } else { r.stderr })
+  }
 }
 
 // Runs each tool: through its command word where the module exports one,

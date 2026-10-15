@@ -78,7 +78,7 @@ gcloud(
     access_token = access_token,
     config_dir = config_dir
   )
-  return runnable(image,
+  runnable(image,
     env = layered_env({"CLOUDSDK_CORE_DISABLE_PROMPTS": "1"}, extra_env, with, own.env),
     volumes = layered_volumes(with, own.volumes)
   )
