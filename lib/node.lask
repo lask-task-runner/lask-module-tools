@@ -4,7 +4,7 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 
 // Node.js, configured by its parameters.
 //
-// The image is #node:24.21.0-alpine3.24 (an LTS release) unless --image
+// The image is #node:24.22.1-alpine3.24 (an LTS release) unless --image
 // names another. `lask sync` pulls and pins whichever image is used (lask
 // spec 10.3); a run never pulls.
 //
@@ -23,7 +23,7 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // @return The environment, for `command { "npm" } on ...` or `$[...]`.
 // @example lask eval node --node_env production
 node(
-  --image: Environment = #node:24.21.0-alpine3.24,
+  --image: Environment = #node:24.22.1-alpine3.24,
   --node_env: String | Null = null,
   --node_options: String | Null = null,
   --registry: String | Null = null,
