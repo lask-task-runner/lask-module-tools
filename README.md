@@ -51,7 +51,7 @@ Every function returns a `Runnable`, which `$[...]` and `command ... on` take as
 | Function | Image, default | Command words |
 |---|---|---|
 | `python` | `python:3.12.14-alpine3.24` | `python`, `python3`, `pip`, `pip3` |
-| `node` | `node:24.21.0-alpine3.24` | `node`, `npm`, `npx`, `corepack` |
+| `node` | `node:24.22.1-alpine3.24` | `node`, `npm`, `npx`, `corepack` |
 | `go` | `golang:1.27.1-trixie` | `go`, `gofmt` |
 | `java` | `eclipse-temurin:25.0.4.1_1-jdk-noble` | `java`, `javac`, `jar` |
 | `maven` | `maven:3.9.16-eclipse-temurin-25-noble` | `mvn` |
@@ -269,7 +269,7 @@ Exported words: `python`, `python3`, `pip`, `pip3`, on `python()` at its default
 
 ### `node` — Node.js, with npm and npx
 
-Image `#node:24.21.0-alpine3.24` (an LTS release) unless `--image` names another. Its command words are exported too:
+Image `#node:24.22.1-alpine3.24` (an LTS release) unless `--image` names another. Its command words are exported too:
 
 ```lask
 import command { "node", "npm", "npx" } from "tools"
@@ -279,7 +279,7 @@ build(): String = $ cd web && npm ci && npm run build
 
 | Parameter | Sets |
 |---|---|
-| `--image` | the image, as a head: `#node:<tag>`; default `#node:24.21.0-alpine3.24` |
+| `--image` | the image, as a head: `#node:<tag>`; default `#node:24.22.1-alpine3.24` |
 | `--node_env` | `NODE_ENV` |
 | `--node_options` | `NODE_OPTIONS` |
 | `--registry` | `npm_config_registry` |
@@ -289,7 +289,7 @@ build(): String = $ cd web && npm ci && npm run build
 
 Default: `npm_config_update_notifier=false`, so npm prints no update notice into the command log.
 
-Exported words: `node`, `npm`, `npx`, `corepack`, on `node()` at its defaults. Declare them yourself for another release: `command { "node", "npm", "npx" } on tools.node(image = #node:22.23.3-alpine3.24)`.
+Exported words: `node`, `npm`, `npx`, `corepack`, on `node()` at its defaults. Declare them yourself for another release: `command { "node", "npm", "npx" } on tools.node(image = #node:22.23.4-alpine3.24)`.
 
 A command string runs in one environment, so `$ python … && node …` is a conflict: split it, or give the environment with `$[...]`.
 

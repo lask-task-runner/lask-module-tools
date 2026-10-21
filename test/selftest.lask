@@ -170,12 +170,12 @@ all(): Array<String> = [
   ),
   expect(
     "node runs without npm's update notice",
-    node() == #node:24.21.0-alpine3.24{env: {"npm_config_update_notifier": "false"}, volumes: []}
+    node() == #node:24.22.1-alpine3.24{env: {"npm_config_update_notifier": "false"}, volumes: []}
   ),
   expect(
     "node: NODE_ENV, a token and a cache directory",
     node(node_env = "production", npm_token = "t0k3n", cache_dir = "/h/cache")
-      == #node:24.21.0-alpine3.24{
+      == #node:24.22.1-alpine3.24{
         env: {
           "npm_config_update_notifier": "false",
           "NODE_ENV": "production",

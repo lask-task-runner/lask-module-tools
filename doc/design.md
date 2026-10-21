@@ -150,7 +150,7 @@ An image is chosen by these rules, in order:
 2. **It is published for amd64 and arm64.** A developer's Mac is arm64 and CI is usually amd64. `google/cloud-sdk` on Docker Hub, `registry.k8s.io/kustomize/kustomize` and `gcr.io/bazel-public/bazel` are amd64 only.
 3. **The publisher's own image**, where rules 1 and 2 allow it. Otherwise a well-kept community image: `alpine/k8s` for kubectl, Helm and Kustomize. Otherwise a recipe in `lib/images/` (§4.4): `unix`, `ansible`, `protoc`, `bazel`, `robot`, and `grype`/`syft`, whose binaries the recipe copies out of Anchore's images.
 4. **An exact tag, down to the patch release and the base-image suffix,** in the default of `--image`. The lock pins its digest (§4.4); the exact tag is what tells a reader which release that is. A recipe pins its base by digest and its packages by version where the package manager allows.
-5. **A release still in support.** In particular, not `node:20.20.2-alpine3.23`, which the `lask` examples still use: Node 20 reached end of life on 2026-04-30. An LTS release where a tool has them: Java 25, .NET 10, MySQL 8.4.
+5. **A release still in support.** In particular, not Node 20: it reached end of life on 2026-04-30. An LTS release where a tool has them: Java 25, .NET 10, MySQL 8.4.
 6. **Debian rather than Alpine where musl breaks the usual workflow:** `golang` (cgo and `-race` need a C toolchain), `rust`, `haskell`. Alpine elsewhere, for size.
 
 ### 5.1 `aws` / `aws_setup` (implemented)
@@ -223,7 +223,7 @@ Defaults: `GOTOOLCHAIN=local`, so Go stays at the release its image holds: a `go
 
 | Parameter | Sets |
 | --- | --- |
-| `--image` | the image, `#node:<tag>`; default `#node:24.21.0-alpine3.24`, an LTS release |
+| `--image` | the image, `#node:<tag>`; default `#node:24.22.1-alpine3.24`, an LTS release |
 | `--node_env` | `NODE_ENV` |
 | `--node_options` | `NODE_OPTIONS` |
 | `--registry` | `npm_config_registry` |
