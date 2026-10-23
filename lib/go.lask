@@ -58,5 +58,224 @@ go(
 )
 
 // Go works as it is, so its command words are exported, declared on the
-// default environment.
-command { "go", "gofmt" } on go()
+// default environment, with the schemas a command string that runs them
+// is checked against (lask spec ch. 5).
+command { "go", "gofmt" } on go() schema { "go": go_schema, "gofmt": gofmt_schema }
+
+// The command schema of go (lask spec ch. 5), read from `go help` and the
+// flag definitions of cmd/go in #golang:1.27.1-trixie. A boolean flag
+// also takes =true or =false, so its value is "optional". test, vet,
+// fix, doc and tool are not closed: test passes the flags it does not
+// know to the test binary, vet and fix take each analyzer's flags, and
+// doc and tool have flags their help does not list.
+internal go_opt_C: CommandOption = { names: ["-C"], value: "required", description: "change to this directory before running the command; must come first" }
+internal go_opt_a: CommandOption = { names: ["-a"], value: "optional", description: "force rebuilding of packages that are already up to date" }
+internal go_opt_asan: CommandOption = { names: ["-asan"], value: "optional", description: "enable interoperation with address sanitizer" }
+internal go_opt_asmflags: CommandOption = { names: ["-asmflags"], value: "required", description: "arguments for each go tool asm invocation" }
+internal go_opt_bug_v: CommandOption = { names: ["-v"], value: "optional" }
+internal go_opt_build_o: CommandOption = { names: ["-o"], value: "required", description: "write the executable or object to this file or directory" }
+internal go_opt_buildmode: CommandOption = { names: ["-buildmode"], value: "required", values: ["archive", "c-archive", "c-shared", "default", "shared", "exe", "pie", "plugin"], description: "the build mode" }
+internal go_opt_buildvcs: CommandOption = { names: ["-buildvcs"], value: "optional", values: ["true", "false", "auto"], description: "whether to stamp binaries with version control information" }
+internal go_opt_clean_cache: CommandOption = { names: ["-cache"], value: "optional", description: "remove the entire build cache" }
+internal go_opt_clean_fuzzcache: CommandOption = { names: ["-fuzzcache"], value: "optional", description: "remove the files stored for fuzz testing" }
+internal go_opt_clean_i: CommandOption = { names: ["-i"], value: "optional", description: "remove the installed archive or binary" }
+internal go_opt_clean_modcache: CommandOption = { names: ["-modcache"], value: "optional", description: "remove the entire module download cache" }
+internal go_opt_clean_r: CommandOption = { names: ["-r"], value: "optional", description: "apply recursively to the dependencies" }
+internal go_opt_clean_testcache: CommandOption = { names: ["-testcache"], value: "optional", description: "expire all test results" }
+internal go_opt_compiler: CommandOption = { names: ["-compiler"], value: "required", values: ["gc", "gccgo"], description: "the compiler to use" }
+internal go_opt_cover: CommandOption = { names: ["-cover"], value: "optional", description: "enable code coverage instrumentation" }
+internal go_opt_covermode: CommandOption = { names: ["-covermode"], value: "required", values: ["set", "count", "atomic"], description: "the mode for coverage analysis" }
+internal go_opt_coverpkg: CommandOption = { names: ["-coverpkg"], value: "required", description: "apply coverage analysis to the packages matching these patterns" }
+internal go_opt_debug_actiongraph: CommandOption = { names: ["-debug-actiongraph"], value: "required" }
+internal go_opt_debug_runtime_trace: CommandOption = { names: ["-debug-runtime-trace"], value: "required" }
+internal go_opt_debug_trace: CommandOption = { names: ["-debug-trace"], value: "required" }
+internal go_opt_env_changed: CommandOption = { names: ["-changed"], value: "optional", description: "print only the settings that differ from the default" }
+internal go_opt_env_json: CommandOption = { names: ["-json"], value: "optional", description: "print in JSON" }
+internal go_opt_env_u: CommandOption = { names: ["-u"], value: "optional", description: "unset the variables given" }
+internal go_opt_env_w: CommandOption = { names: ["-w"], value: "optional", description: "set the variables given, as NAME=VALUE" }
+internal go_opt_fmt_mod: CommandOption = { names: ["-mod"], value: "required", values: ["readonly", "vendor"], description: "the module download mode" }
+internal go_opt_fmt_n: CommandOption = { names: ["-n"], value: "optional", description: "print the commands but do not run them" }
+internal go_opt_fmt_x: CommandOption = { names: ["-x"], value: "optional", description: "print the commands" }
+internal go_opt_gccgoflags: CommandOption = { names: ["-gccgoflags"], value: "required", description: "arguments for each gccgo compiler/linker invocation" }
+internal go_opt_gcflags: CommandOption = { names: ["-gcflags"], value: "required", description: "arguments for each go tool compile invocation" }
+internal go_opt_generate_run: CommandOption = { names: ["-run"], value: "required", description: "run only the directives matching this expression" }
+internal go_opt_generate_skip: CommandOption = { names: ["-skip"], value: "required", description: "skip the directives matching this expression" }
+internal go_opt_get_d: CommandOption = { names: ["-d"], value: "optional" }
+internal go_opt_get_f: CommandOption = { names: ["-f"], value: "optional" }
+internal go_opt_get_fix: CommandOption = { names: ["-fix"], value: "optional" }
+internal go_opt_get_insecure: CommandOption = { names: ["-insecure"], value: "optional" }
+internal go_opt_get_m: CommandOption = { names: ["-m"], value: "optional" }
+internal go_opt_get_t: CommandOption = { names: ["-t"], value: "optional", description: "also get the modules needed to build tests" }
+internal go_opt_get_tool: CommandOption = { names: ["-tool"], value: "optional", description: "add a tool line to go.mod" }
+internal go_opt_get_u: CommandOption = { names: ["-u"], value: "optional", description: "update modules to newer releases" }
+internal go_opt_installsuffix: CommandOption = { names: ["-installsuffix"], value: "required", description: "a suffix for the package installation directory" }
+internal go_opt_json: CommandOption = { names: ["-json"], value: "optional", description: "emit build output in JSON" }
+internal go_opt_ldflags: CommandOption = { names: ["-ldflags"], value: "required", description: "arguments for each go tool link invocation" }
+internal go_opt_linkshared: CommandOption = { names: ["-linkshared"], value: "optional", description: "link against shared libraries made with -buildmode=shared" }
+internal go_opt_list_compiled: CommandOption = { names: ["-compiled"], value: "optional", description: "set CompiledGoFiles" }
+internal go_opt_list_deps: CommandOption = { names: ["-deps"], value: "optional", description: "also list the dependencies" }
+internal go_opt_list_e: CommandOption = { names: ["-e"], value: "optional", description: "tolerate erroneous packages" }
+internal go_opt_list_export: CommandOption = { names: ["-export"], value: "optional", description: "set Export to the file with export data" }
+internal go_opt_list_f: CommandOption = { names: ["-f"], value: "required", description: "an alternate format, a Go template" }
+internal go_opt_list_find: CommandOption = { names: ["-find"], value: "optional", description: "identify the named packages without resolving their dependencies" }
+internal go_opt_list_m: CommandOption = { names: ["-m"], value: "optional", description: "list modules instead of packages" }
+internal go_opt_list_retracted: CommandOption = { names: ["-retracted"], value: "optional", description: "report retracted module versions" }
+internal go_opt_list_reuse: CommandOption = { names: ["-reuse"], value: "required", description: "reuse the output of an earlier -json run" }
+internal go_opt_list_test: CommandOption = { names: ["-test"], value: "optional", description: "also list the test binaries" }
+internal go_opt_list_u: CommandOption = { names: ["-u"], value: "optional", description: "add information about available upgrades" }
+internal go_opt_list_versions: CommandOption = { names: ["-versions"], value: "optional", description: "list a module's available versions" }
+internal go_opt_mod: CommandOption = { names: ["-mod"], value: "required", values: ["readonly", "vendor", "mod"], description: "the module download mode" }
+internal go_opt_mod_download_json: CommandOption = { names: ["-json"], value: "optional", description: "print each module as JSON" }
+internal go_opt_mod_download_reuse: CommandOption = { names: ["-reuse"], value: "required", description: "reuse an earlier -json run" }
+internal go_opt_mod_download_x: CommandOption = { names: ["-x"], value: "optional", description: "print the commands" }
+internal go_opt_mod_edit_dropexclude: CommandOption = { names: ["-dropexclude"], value: "required" }
+internal go_opt_mod_edit_dropgodebug: CommandOption = { names: ["-dropgodebug"], value: "required" }
+internal go_opt_mod_edit_dropignore: CommandOption = { names: ["-dropignore"], value: "required" }
+internal go_opt_mod_edit_dropreplace: CommandOption = { names: ["-dropreplace"], value: "required" }
+internal go_opt_mod_edit_droprequire: CommandOption = { names: ["-droprequire"], value: "required" }
+internal go_opt_mod_edit_dropretract: CommandOption = { names: ["-dropretract"], value: "required" }
+internal go_opt_mod_edit_droptool: CommandOption = { names: ["-droptool"], value: "required" }
+internal go_opt_mod_edit_exclude: CommandOption = { names: ["-exclude"], value: "required" }
+internal go_opt_mod_edit_fmt: CommandOption = { names: ["-fmt"], value: "optional", description: "reformat go.mod" }
+internal go_opt_mod_edit_go: CommandOption = { names: ["-go"], value: "required" }
+internal go_opt_mod_edit_godebug: CommandOption = { names: ["-godebug"], value: "required" }
+internal go_opt_mod_edit_ignore: CommandOption = { names: ["-ignore"], value: "required" }
+internal go_opt_mod_edit_json: CommandOption = { names: ["-json"], value: "optional", description: "print go.mod in JSON" }
+internal go_opt_mod_edit_module: CommandOption = { names: ["-module"], value: "required" }
+internal go_opt_mod_edit_print: CommandOption = { names: ["-print"], value: "optional", description: "print go.mod in its text form" }
+internal go_opt_mod_edit_replace: CommandOption = { names: ["-replace"], value: "required" }
+internal go_opt_mod_edit_require: CommandOption = { names: ["-require"], value: "required" }
+internal go_opt_mod_edit_retract: CommandOption = { names: ["-retract"], value: "required" }
+internal go_opt_mod_edit_tool: CommandOption = { names: ["-tool"], value: "required" }
+internal go_opt_mod_edit_toolchain: CommandOption = { names: ["-toolchain"], value: "required" }
+internal go_opt_mod_graph_go: CommandOption = { names: ["-go"], value: "required", description: "the Go version to report the graph for" }
+internal go_opt_mod_graph_x: CommandOption = { names: ["-x"], value: "optional", description: "print the commands" }
+internal go_opt_mod_tidy_compat: CommandOption = { names: ["-compat"], value: "required", description: "the Go version to stay compatible with" }
+internal go_opt_mod_tidy_diff: CommandOption = { names: ["-diff"], value: "optional", description: "print the changes as a diff instead of making them" }
+internal go_opt_mod_tidy_e: CommandOption = { names: ["-e"], value: "optional", description: "proceed despite errors" }
+internal go_opt_mod_tidy_go: CommandOption = { names: ["-go"], value: "required", description: "the Go version to write to go.mod" }
+internal go_opt_mod_tidy_v: CommandOption = { names: ["-v"], value: "optional", description: "report the removed modules" }
+internal go_opt_mod_tidy_x: CommandOption = { names: ["-x"], value: "optional", description: "print the commands" }
+internal go_opt_mod_vendor_e: CommandOption = { names: ["-e"], value: "optional", description: "proceed despite errors" }
+internal go_opt_mod_vendor_o: CommandOption = { names: ["-o"], value: "required", description: "write the vendor tree to this directory" }
+internal go_opt_mod_vendor_v: CommandOption = { names: ["-v"], value: "optional", description: "report the vendored modules and packages" }
+internal go_opt_mod_why_m: CommandOption = { names: ["-m"], value: "optional", description: "treat the arguments as modules" }
+internal go_opt_mod_why_vendor: CommandOption = { names: ["-vendor"], value: "optional", description: "ignore the imports of tests in other modules" }
+internal go_opt_modcacherw: CommandOption = { names: ["-modcacherw"], value: "optional", description: "leave new module cache directories writable" }
+internal go_opt_modfile: CommandOption = { names: ["-modfile"], value: "required", description: "an alternate go.mod file" }
+internal go_opt_msan: CommandOption = { names: ["-msan"], value: "optional", description: "enable interoperation with memory sanitizer" }
+internal go_opt_n: CommandOption = { names: ["-n"], value: "optional", description: "print the commands but do not run them" }
+internal go_opt_overlay: CommandOption = { names: ["-overlay"], value: "required", description: "a JSON file that overlays files for the build" }
+internal go_opt_p: CommandOption = { names: ["-p"], value: "required", description: "the number of programs that can run in parallel" }
+internal go_opt_pgo: CommandOption = { names: ["-pgo"], value: "required", description: "a profile for profile-guided optimization, auto or off" }
+internal go_opt_pkgdir: CommandOption = { names: ["-pkgdir"], value: "required", description: "install and load all packages from this directory" }
+internal go_opt_race: CommandOption = { names: ["-race"], value: "optional", description: "enable data race detection" }
+internal go_opt_run_exec: CommandOption = { names: ["-exec"], value: "required", description: "invoke the binary through this program" }
+internal go_opt_tags: CommandOption = { names: ["-tags"], value: "required", description: "a comma-separated list of build tags" }
+internal go_opt_test_args: CommandOption = { names: ["-args"], stops: true, description: "pass the rest of the command line to the test binary" }
+internal go_opt_test_artifacts: CommandOption = { names: ["-artifacts"], value: "optional", description: "save test artifacts in the output directory" }
+internal go_opt_test_bench: CommandOption = { names: ["-bench"], value: "required", description: "run only the benchmarks matching this expression" }
+internal go_opt_test_benchmem: CommandOption = { names: ["-benchmem"], value: "optional", description: "print memory allocation statistics for benchmarks" }
+internal go_opt_test_benchtime: CommandOption = { names: ["-benchtime"], value: "required", description: "run each benchmark for this long or this many times" }
+internal go_opt_test_blockprofile: CommandOption = { names: ["-blockprofile"], value: "required" }
+internal go_opt_test_blockprofilerate: CommandOption = { names: ["-blockprofilerate"], value: "required" }
+internal go_opt_test_c: CommandOption = { names: ["-c"], value: "optional", description: "compile the test binary but do not run it" }
+internal go_opt_test_count: CommandOption = { names: ["-count"], value: "required", description: "run each test, benchmark and fuzz seed this many times" }
+internal go_opt_test_coverprofile: CommandOption = { names: ["-coverprofile"], value: "required", description: "write a coverage profile to this file" }
+internal go_opt_test_cpu: CommandOption = { names: ["-cpu"], value: "required", description: "a list of GOMAXPROCS values to run with" }
+internal go_opt_test_cpuprofile: CommandOption = { names: ["-cpuprofile"], value: "required" }
+internal go_opt_test_exec: CommandOption = { names: ["-exec"], value: "required", description: "run the test binary through this program" }
+internal go_opt_test_failfast: CommandOption = { names: ["-failfast"], value: "optional", description: "stop after the first test failure" }
+internal go_opt_test_fullpath: CommandOption = { names: ["-fullpath"], value: "optional", description: "show full file names in error messages" }
+internal go_opt_test_fuzz: CommandOption = { names: ["-fuzz"], value: "required", description: "run the fuzz test matching this expression" }
+internal go_opt_test_fuzzminimizetime: CommandOption = { names: ["-fuzzminimizetime"], value: "required", description: "spend this long minimizing a failing input" }
+internal go_opt_test_fuzztime: CommandOption = { names: ["-fuzztime"], value: "required", description: "fuzz for this long or this many iterations" }
+internal go_opt_test_list: CommandOption = { names: ["-list"], value: "required", description: "list the tests, benchmarks, fuzz tests or examples matching this expression" }
+internal go_opt_test_memprofile: CommandOption = { names: ["-memprofile"], value: "required" }
+internal go_opt_test_memprofilerate: CommandOption = { names: ["-memprofilerate"], value: "required" }
+internal go_opt_test_mutexprofile: CommandOption = { names: ["-mutexprofile"], value: "required" }
+internal go_opt_test_mutexprofilefraction: CommandOption = { names: ["-mutexprofilefraction"], value: "required" }
+internal go_opt_test_o: CommandOption = { names: ["-o"], value: "required", description: "compile the test binary to this file" }
+internal go_opt_test_outputdir: CommandOption = { names: ["-outputdir"], value: "required", description: "place output files from profiling in this directory" }
+internal go_opt_test_parallel: CommandOption = { names: ["-parallel"], value: "required", description: "the maximum number of tests to run in parallel" }
+internal go_opt_test_run: CommandOption = { names: ["-run"], value: "required", description: "run only the tests and examples matching this expression" }
+internal go_opt_test_short: CommandOption = { names: ["-short"], value: "optional", description: "tell long-running tests to shorten their run time" }
+internal go_opt_test_shuffle: CommandOption = { names: ["-shuffle"], value: "required", description: "randomize the order of tests: off, on or a seed" }
+internal go_opt_test_skip: CommandOption = { names: ["-skip"], value: "required", description: "skip the tests matching this expression" }
+internal go_opt_test_timeout: CommandOption = { names: ["-timeout"], value: "required", description: "panic if a test binary runs longer than this" }
+internal go_opt_test_trace: CommandOption = { names: ["-trace"], value: "required" }
+internal go_opt_test_vet: CommandOption = { names: ["-vet"], value: "required", description: "the checks go vet runs during go test, or off" }
+internal go_opt_toolexec: CommandOption = { names: ["-toolexec"], value: "required", description: "a program to invoke the toolchain programs through" }
+internal go_opt_trimpath: CommandOption = { names: ["-trimpath"], value: "optional", description: "remove file system paths from the executable" }
+internal go_opt_v: CommandOption = { names: ["-v"], value: "optional", description: "print the names of packages as they are compiled" }
+internal go_opt_version_json: CommandOption = { names: ["-json"], value: "optional", description: "print the module information in JSON" }
+internal go_opt_version_m: CommandOption = { names: ["-m"], value: "optional", description: "print each executable's embedded module information" }
+internal go_opt_version_v: CommandOption = { names: ["-v"], value: "optional", description: "report unrecognized files" }
+internal go_opt_work: CommandOption = { names: ["-work"], value: "optional", description: "print the temporary work directory and keep it" }
+internal go_opt_work_edit_dropgodebug: CommandOption = { names: ["-dropgodebug"], value: "required" }
+internal go_opt_work_edit_dropreplace: CommandOption = { names: ["-dropreplace"], value: "required" }
+internal go_opt_work_edit_dropuse: CommandOption = { names: ["-dropuse"], value: "required" }
+internal go_opt_work_edit_fmt: CommandOption = { names: ["-fmt"], value: "optional", description: "reformat go.work" }
+internal go_opt_work_edit_go: CommandOption = { names: ["-go"], value: "required" }
+internal go_opt_work_edit_godebug: CommandOption = { names: ["-godebug"], value: "required" }
+internal go_opt_work_edit_json: CommandOption = { names: ["-json"], value: "optional", description: "print go.work in JSON" }
+internal go_opt_work_edit_print: CommandOption = { names: ["-print"], value: "optional", description: "print go.work in its text form" }
+internal go_opt_work_edit_replace: CommandOption = { names: ["-replace"], value: "required" }
+internal go_opt_work_edit_toolchain: CommandOption = { names: ["-toolchain"], value: "required" }
+internal go_opt_work_edit_use: CommandOption = { names: ["-use"], value: "required" }
+internal go_opt_work_use_r: CommandOption = { names: ["-r"], value: "optional", description: "search the directories recursively" }
+internal go_opt_work_vendor_e: CommandOption = { names: ["-e"], value: "optional" }
+internal go_opt_work_vendor_o: CommandOption = { names: ["-o"], value: "required" }
+internal go_opt_work_vendor_v: CommandOption = { names: ["-v"], value: "optional" }
+internal go_opt_x: CommandOption = { names: ["-x"], value: "optional", description: "print the commands" }
+
+go_schema: CommandSchema = {
+  root: { closed: true, style: "single-dash", description: "the Go toolchain" },
+  subcommands: {
+    "bug": { closed: true, options: [go_opt_bug_v, go_opt_C], description: "start a bug report" },
+    "build": { closed: true, options: [go_opt_C, go_opt_a, go_opt_n, go_opt_p, go_opt_race, go_opt_msan, go_opt_asan, go_opt_cover, go_opt_covermode, go_opt_coverpkg, go_opt_v, go_opt_work, go_opt_x, go_opt_asmflags, go_opt_buildmode, go_opt_buildvcs, go_opt_compiler, go_opt_gccgoflags, go_opt_gcflags, go_opt_installsuffix, go_opt_json, go_opt_ldflags, go_opt_linkshared, go_opt_mod, go_opt_modcacherw, go_opt_modfile, go_opt_overlay, go_opt_pgo, go_opt_pkgdir, go_opt_tags, go_opt_trimpath, go_opt_toolexec, go_opt_debug_actiongraph, go_opt_debug_runtime_trace, go_opt_debug_trace, go_opt_build_o], description: "compile packages and dependencies" },
+    "clean": { closed: true, options: [go_opt_C, go_opt_a, go_opt_n, go_opt_p, go_opt_race, go_opt_msan, go_opt_asan, go_opt_v, go_opt_work, go_opt_x, go_opt_asmflags, go_opt_buildmode, go_opt_buildvcs, go_opt_compiler, go_opt_gccgoflags, go_opt_gcflags, go_opt_installsuffix, go_opt_ldflags, go_opt_linkshared, go_opt_mod, go_opt_modcacherw, go_opt_modfile, go_opt_overlay, go_opt_pgo, go_opt_pkgdir, go_opt_tags, go_opt_trimpath, go_opt_toolexec, go_opt_debug_actiongraph, go_opt_debug_runtime_trace, go_opt_debug_trace, go_opt_clean_i, go_opt_clean_r, go_opt_clean_cache, go_opt_clean_testcache, go_opt_clean_modcache, go_opt_clean_fuzzcache], description: "remove object files and cached files" },
+    "doc": { description: "show documentation for package or symbol" },
+    "env": { closed: true, options: [go_opt_env_changed, go_opt_env_json, go_opt_env_u, go_opt_env_w, go_opt_C, go_opt_n, go_opt_x], description: "print Go environment information" },
+    "fix": { description: "apply fixes suggested by static checkers" },
+    "fmt": { closed: true, options: [go_opt_fmt_n, go_opt_fmt_x, go_opt_fmt_mod, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "gofmt (reformat) package sources" },
+    "generate": { closed: true, options: [go_opt_n, go_opt_x, go_opt_v, go_opt_generate_run, go_opt_generate_skip, go_opt_C, go_opt_a, go_opt_asan, go_opt_asmflags, go_opt_buildmode, go_opt_buildvcs, go_opt_compiler, go_opt_debug_actiongraph, go_opt_debug_runtime_trace, go_opt_debug_trace, go_opt_gccgoflags, go_opt_gcflags, go_opt_installsuffix, go_opt_ldflags, go_opt_linkshared, go_opt_mod, go_opt_modcacherw, go_opt_modfile, go_opt_msan, go_opt_overlay, go_opt_p, go_opt_pgo, go_opt_pkgdir, go_opt_race, go_opt_tags, go_opt_toolexec, go_opt_trimpath, go_opt_work], description: "generate Go files by processing source" },
+    "get": { closed: true, options: [go_opt_C, go_opt_a, go_opt_n, go_opt_p, go_opt_race, go_opt_msan, go_opt_asan, go_opt_v, go_opt_work, go_opt_x, go_opt_asmflags, go_opt_buildmode, go_opt_buildvcs, go_opt_compiler, go_opt_gccgoflags, go_opt_gcflags, go_opt_installsuffix, go_opt_json, go_opt_ldflags, go_opt_linkshared, go_opt_modcacherw, go_opt_modfile, go_opt_overlay, go_opt_pgo, go_opt_pkgdir, go_opt_tags, go_opt_trimpath, go_opt_toolexec, go_opt_debug_actiongraph, go_opt_debug_runtime_trace, go_opt_debug_trace, go_opt_get_t, go_opt_get_u, go_opt_get_tool, go_opt_get_d, go_opt_get_f, go_opt_get_fix, go_opt_get_insecure, go_opt_get_m], description: "add dependencies to current module and install them" },
+    "help": { closed: true, stop_at_first_positional: true, description: "show help for a command or topic" },
+    "install": { closed: true, options: [go_opt_C, go_opt_a, go_opt_n, go_opt_p, go_opt_race, go_opt_msan, go_opt_asan, go_opt_cover, go_opt_covermode, go_opt_coverpkg, go_opt_v, go_opt_work, go_opt_x, go_opt_asmflags, go_opt_buildmode, go_opt_buildvcs, go_opt_compiler, go_opt_gccgoflags, go_opt_gcflags, go_opt_installsuffix, go_opt_json, go_opt_ldflags, go_opt_linkshared, go_opt_mod, go_opt_modcacherw, go_opt_modfile, go_opt_overlay, go_opt_pgo, go_opt_pkgdir, go_opt_tags, go_opt_trimpath, go_opt_toolexec, go_opt_debug_actiongraph, go_opt_debug_runtime_trace, go_opt_debug_trace], description: "compile and install packages and dependencies" },
+    "list": { closed: true, options: [go_opt_C, go_opt_a, go_opt_n, go_opt_p, go_opt_race, go_opt_msan, go_opt_asan, go_opt_cover, go_opt_covermode, go_opt_coverpkg, go_opt_v, go_opt_work, go_opt_x, go_opt_asmflags, go_opt_buildmode, go_opt_buildvcs, go_opt_compiler, go_opt_gccgoflags, go_opt_gcflags, go_opt_installsuffix, go_opt_json, go_opt_ldflags, go_opt_linkshared, go_opt_mod, go_opt_modcacherw, go_opt_modfile, go_opt_overlay, go_opt_pgo, go_opt_pkgdir, go_opt_tags, go_opt_trimpath, go_opt_toolexec, go_opt_debug_actiongraph, go_opt_debug_runtime_trace, go_opt_debug_trace, go_opt_list_compiled, go_opt_list_deps, go_opt_list_e, go_opt_list_export, go_opt_list_f, go_opt_list_find, go_opt_list_m, go_opt_list_retracted, go_opt_list_reuse, go_opt_list_test, go_opt_list_u, go_opt_list_versions], description: "list packages or modules" },
+    "mod": { closed: true, description: "module maintenance" },
+    "mod download": { closed: true, options: [go_opt_mod_download_x, go_opt_mod_download_json, go_opt_mod_download_reuse, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "download modules to local cache" },
+    "mod edit": { closed: true, options: [go_opt_mod_edit_dropexclude, go_opt_mod_edit_dropgodebug, go_opt_mod_edit_dropignore, go_opt_mod_edit_dropreplace, go_opt_mod_edit_droprequire, go_opt_mod_edit_dropretract, go_opt_mod_edit_droptool, go_opt_mod_edit_exclude, go_opt_mod_edit_go, go_opt_mod_edit_godebug, go_opt_mod_edit_ignore, go_opt_mod_edit_module, go_opt_mod_edit_replace, go_opt_mod_edit_require, go_opt_mod_edit_retract, go_opt_mod_edit_tool, go_opt_mod_edit_toolchain, go_opt_mod_edit_fmt, go_opt_mod_edit_json, go_opt_mod_edit_print, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_n, go_opt_overlay, go_opt_x], description: "edit go.mod from tools or scripts" },
+    "mod graph": { closed: true, options: [go_opt_mod_graph_go, go_opt_mod_graph_x, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "print module requirement graph" },
+    "mod init": { closed: true, options: [go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "initialize new module in current directory" },
+    "mod tidy": { closed: true, options: [go_opt_mod_tidy_compat, go_opt_mod_tidy_diff, go_opt_mod_tidy_e, go_opt_mod_tidy_go, go_opt_mod_tidy_v, go_opt_mod_tidy_x, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "add missing and remove unused modules" },
+    "mod vendor": { closed: true, options: [go_opt_mod_vendor_e, go_opt_mod_vendor_o, go_opt_mod_vendor_v, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "make vendored copy of dependencies" },
+    "mod verify": { closed: true, options: [go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "verify dependencies have expected content" },
+    "mod why": { closed: true, options: [go_opt_mod_why_m, go_opt_mod_why_vendor, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "explain why packages or modules are needed" },
+    "run": { closed: true, stop_at_first_positional: true, options: [go_opt_C, go_opt_a, go_opt_n, go_opt_p, go_opt_race, go_opt_msan, go_opt_asan, go_opt_cover, go_opt_covermode, go_opt_coverpkg, go_opt_v, go_opt_work, go_opt_x, go_opt_asmflags, go_opt_buildmode, go_opt_buildvcs, go_opt_compiler, go_opt_gccgoflags, go_opt_gcflags, go_opt_installsuffix, go_opt_json, go_opt_ldflags, go_opt_linkshared, go_opt_mod, go_opt_modcacherw, go_opt_modfile, go_opt_overlay, go_opt_pgo, go_opt_pkgdir, go_opt_tags, go_opt_trimpath, go_opt_toolexec, go_opt_debug_actiongraph, go_opt_debug_runtime_trace, go_opt_debug_trace, go_opt_run_exec], description: "compile and run Go program" },
+    "telemetry": { closed: true, description: "manage telemetry data and settings" },
+    "test": { intermixed: true, options: [go_opt_C, go_opt_a, go_opt_n, go_opt_p, go_opt_race, go_opt_msan, go_opt_asan, go_opt_cover, go_opt_covermode, go_opt_coverpkg, go_opt_v, go_opt_work, go_opt_x, go_opt_asmflags, go_opt_buildmode, go_opt_buildvcs, go_opt_compiler, go_opt_gccgoflags, go_opt_gcflags, go_opt_installsuffix, go_opt_json, go_opt_ldflags, go_opt_linkshared, go_opt_mod, go_opt_modcacherw, go_opt_modfile, go_opt_overlay, go_opt_pgo, go_opt_pkgdir, go_opt_tags, go_opt_trimpath, go_opt_toolexec, go_opt_debug_actiongraph, go_opt_debug_runtime_trace, go_opt_debug_trace, go_opt_test_args, go_opt_test_c, go_opt_test_exec, go_opt_test_o, go_opt_test_artifacts, go_opt_test_bench, go_opt_test_benchtime, go_opt_test_count, go_opt_test_cpu, go_opt_test_failfast, go_opt_test_fullpath, go_opt_test_fuzz, go_opt_test_fuzztime, go_opt_test_fuzzminimizetime, go_opt_test_list, go_opt_test_outputdir, go_opt_test_parallel, go_opt_test_run, go_opt_test_short, go_opt_test_shuffle, go_opt_test_skip, go_opt_test_timeout, go_opt_test_vet, go_opt_test_benchmem, go_opt_test_blockprofile, go_opt_test_blockprofilerate, go_opt_test_coverprofile, go_opt_test_cpuprofile, go_opt_test_memprofile, go_opt_test_memprofilerate, go_opt_test_mutexprofile, go_opt_test_mutexprofilefraction, go_opt_test_trace], description: "test packages" },
+    "tool": { stop_at_first_positional: true, description: "run specified go tool" },
+    "version": { closed: true, options: [go_opt_version_m, go_opt_version_v, go_opt_version_json, go_opt_C], description: "print Go version" },
+    "vet": { description: "report likely mistakes in packages" },
+    "work": { closed: true, description: "workspace maintenance" },
+    "work edit": { closed: true, options: [go_opt_work_edit_dropgodebug, go_opt_work_edit_dropreplace, go_opt_work_edit_dropuse, go_opt_work_edit_go, go_opt_work_edit_godebug, go_opt_work_edit_replace, go_opt_work_edit_toolchain, go_opt_work_edit_use, go_opt_work_edit_fmt, go_opt_work_edit_json, go_opt_work_edit_print, go_opt_C], description: "edit go.work from tools or scripts" },
+    "work init": { closed: true, options: [go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "initialize workspace file" },
+    "work sync": { closed: true, options: [go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "sync workspace build list to modules" },
+    "work use": { closed: true, options: [go_opt_work_use_r, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "add modules to workspace file" },
+    "work vendor": { closed: true, options: [go_opt_work_vendor_e, go_opt_work_vendor_o, go_opt_work_vendor_v, go_opt_C, go_opt_modcacherw, go_opt_modfile, go_opt_overlay], description: "make vendored copy of dependencies" }
+  }
+}
+
+internal gofmt_opt_cpuprofile: CommandOption = { names: ["-cpuprofile"], value: "required", description: "write a CPU profile to this file" }
+internal gofmt_opt_d: CommandOption = { names: ["-d"], value: "optional", description: "display diffs instead of rewriting files" }
+internal gofmt_opt_e: CommandOption = { names: ["-e"], value: "optional", description: "report all errors" }
+internal gofmt_opt_l: CommandOption = { names: ["-l"], value: "optional", description: "list files whose formatting differs from gofmt's" }
+internal gofmt_opt_r: CommandOption = { names: ["-r"], value: "required", description: "a rewrite rule, such as 'a[b:len(a)] -> a[b:]'" }
+internal gofmt_opt_s: CommandOption = { names: ["-s"], value: "optional", description: "simplify code" }
+internal gofmt_opt_w: CommandOption = { names: ["-w"], value: "optional", description: "write the result to the source file instead of stdout" }
+
+// The command schema of gofmt, from `gofmt -h`.
+gofmt_schema: CommandSchema = { root: { closed: true, style: "single-dash", options: [gofmt_opt_cpuprofile, gofmt_opt_d, gofmt_opt_e, gofmt_opt_l, gofmt_opt_r, gofmt_opt_s, gofmt_opt_w], description: "format Go source" } }
+

@@ -48,6 +48,14 @@ A tool **exports its command words when its default environment is useful as it 
 
 A tool **does not export them when it needs configuring first**. `aws` with no profile and no credentials fails at the first call, so the declaration belongs to the project that knows which account to use. A project that needs it in several modules declares it once and exports it from its own module.
 
+### Command schemas
+
+An exported command word comes with a command schema (lask spec ch. 5) when its options are fixed by the program rather than by what a project installs: `go`, `gofmt`, `python`, `pip`, `cargo` and `make`. `node`, `npm` and the rest have none yet, because they take flags from plugins and configuration as well as their own.
+
+Each schema describes the release in the tool's default image, and is read from that release rather than from documentation: the program's help, and, where it has one, the source that defines its flags. It is then checked against the program in both directions: every option it lists is one the program accepts, and every option name the program uses anywhere is one it lists wherever the program accepts it. A command is `closed` only where that holds; one whose options another program also defines — `go test` and `go vet`, `cargo clippy` — is left open, so an option it does not know is advised rather than rejected. A program that takes a long option shortened to a unique prefix (pip, make) says so with `abbreviations`.
+
+A project that runs another release with `--image` may find an option the schema does not list. It then declares the word itself, with or without the exported schema.
+
 ## 4. Function Conventions
 
 ### 4.1 Parameters
@@ -360,7 +368,7 @@ The command line of this repository reaches a re-exported function as it reaches
 
 ## 8. Testing
 
-1. **Static gate.** `lask check` on `main.lask`, `example/main.lask` and `test/selftest.lask`. (`lask envs list` reports each image a tool's command words reach, §4.4.)
+1. **Static gate.** `lask check` on `main.lask`, `example/main.lask`, `test/selftest.lask` and `test/schemas.lask`, whose commands every command schema must accept. (`lask envs list` reports each image a tool's command words reach, §4.4.)
 2. **Exact environments, without Docker.** An environment compares structurally, so `test/selftest.lask` states each expected environment in full and compares with `==`: the image `--image` picks, which variables are set, that `null` leaves one out while `""` sets it, the precedence of §4.2, and the mounts. `lask eval --module test/selftest.lask all`.
 3. **Declarability.** The selftest declares a command on each function, so a function that stops being effect-free fails `lask check` (ch. 5).
 4. **Smoke, with Docker.** Each tool's version command, through its declared command word: `lask sync --module test/selftest.lask`, then `lask eval --module test/selftest.lask smoke`. Every image is a head, in the selftest or as a tool's default, so `lask sync` pulls and pins each one it reaches.
@@ -369,7 +377,7 @@ The command line of this repository reaches a re-exported function as it reaches
 
 1. Pick the image by the rules of §5 and update the catalog table.
 2. Write `<tool>(...)` in `lib/<tool>.lask` from what `lib/common.lask` provides, with `--image` defaulting to the chosen release's image (§4.4), and `<tool>_setup` only if another tool needs its credentials (§4.3).
-3. Re-export them from `main.lask`. If its default environment is useful as it is (§3), declare its command words in its file and re-export them too, with `export command { ... } from`.
+3. Re-export them from `main.lask`. If its default environment is useful as it is (§3), declare its command words in its file and re-export them too, with `export command { ... } from`. Give a word a command schema read from the default image's release (§3), and add commands that run it to `test/schemas.lask`.
 4. Add its cases to `test/selftest.lask`, and its section to the README.
 
 ## 10. Prerequisites in Lask
@@ -383,6 +391,7 @@ Every gap in Lask found while designing this module has been closed:
 | P3 | A container option could not say "not given"; `""` reached the daemon. | lask#49, lask#50 |
 | P4 | Registry images were not pinned in the lock, and runs pulled by tag. | lask#47 |
 | P5 | The CLI could not invoke a function its module re-exports. | lask#46 |
+| P6 | A command word said nothing about its program's options, and a word its image lacked failed only when it ran. | lask#129 |
 
 Before those: a command declaration takes a call or a namespace member as its environment, and command words can be exported and imported (lask#44).
 

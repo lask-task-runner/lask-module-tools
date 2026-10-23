@@ -26,22 +26,22 @@ export { az, azure_setup } from "./lib/azure.lask"
 
 // ---- Languages: each works as it is, so each exports its words ------
 
-export { python } from "./lib/python.lask"
+export { python, python_schema, pip_schema } from "./lib/python.lask"
 export command { "python", "python3", "pip", "pip3" } from "./lib/python.lask"
 
 export { node } from "./lib/node.lask"
 export command { "node", "npm", "npx", "corepack" } from "./lib/node.lask"
 
-export { go } from "./lib/go.lask"
+export { go, go_schema, gofmt_schema } from "./lib/go.lask"
 export command { "go", "gofmt" } from "./lib/go.lask"
 
 export { java, maven, gradle } from "./lib/java.lask"
 export command { "java", "javac", "jar", "mvn", "gradle" } from "./lib/java.lask"
 
-export { rust } from "./lib/rust.lask"
+export { rust, cargo_schema } from "./lib/rust.lask"
 export command { "cargo", "rustc", "rustup" } from "./lib/rust.lask"
 
-export { cc } from "./lib/cc.lask"
+export { cc, make_schema } from "./lib/cc.lask"
 export command { "gcc", "g++", "cc", "c++", "make" } from "./lib/cc.lask"
 
 export { ruby } from "./lib/ruby.lask"
