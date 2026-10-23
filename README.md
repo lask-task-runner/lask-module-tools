@@ -38,6 +38,13 @@ Every tool follows the same rules:
 
 Every function returns a `Runnable`, which `$[...]` and `command ... on` take as they take an `Environment`. A tool that works as it is exports its command words, which a project imports by name (`import command { "go" } from "tools"`); a tool that needs a credential, a cluster or a server exports none, and the project declares its own (`command { "kubectl" } on tools.kubectl(...)`). Every image has `/bin/sh`, which a Lask command runs through.
 
+`go`, `gofmt`, `python`, `python3`, `pip`, `pip3`, `cargo` and `make` come with a **command schema** (Lask 0.12.0 or later): a command string that runs one is checked before it runs, so `$ go biuld ./...` or `$ cargo build --relase` is an error rather than a failed task, and an editor completes and describes their options. Each schema describes the release in the tool's default image, and is exported (`go_schema`, `gofmt_schema`, `python_schema`, `pip_schema`, `cargo_schema`, `make_schema`) for a project that declares the word itself:
+
+```lask
+import * as tools from "tools"
+command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
+```
+
 ### Cloud CLIs
 
 | Function | Image, default | Command words |
@@ -376,7 +383,8 @@ Each tool, or each family of tools, lives in `lib/<name>.lask`, built from `lib/
 ```text
 lask check                                       # the module
 lask check --module example/main.lask            # a project using it
+lask check --module test/schemas.lask            # commands every command schema must accept
 lask eval --module test/selftest.lask all        # every environment, compared exactly; no Docker
-lask sync --module test/selftest.lask            # pulls and pins the images the selftest names, builds the recipes
+lask sync --module test/selftest.lask            # pulls and pins the images the selftest names, builds the recipes, and checks each image has the command words declared on it
 lask eval --module test/selftest.lask smoke      # runs each tool; needs Docker
 ```

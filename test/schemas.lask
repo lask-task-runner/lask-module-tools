@@ -1,0 +1,27 @@
+// Commands a project would write, checked against the command schemas
+// of the exported words (lask spec ch. 5). `lask check` fails if a schema
+// rejects any of them:
+//
+//   lask check --module test/schemas.lask
+
+import command { "go", "gofmt", "python", "python3", "pip", "cargo", "make" } from "../main.lask"
+
+a() = $ go build -o bin/app -ldflags "-s -w" -trimpath ./cmd/app
+b() = $ go test -race -count=1 -run 'TestA|TestB' ./... -v
+c() = $ go test ./... -args -custom-flag
+d() = $ go mod tidy -v && go mod download -x
+e() = $ go vet ./... && go run ./cmd/tool --whatever -x
+f() = $ gofmt -l -s -w .
+g() = $ go env -w GOFLAGS=-mod=mod && go version -m bin/app
+h() = $ go list -m -json all && go install golang.org/x/tools/cmd/goimports@latest
+i() = $ go generate -run stringer ./... && go clean -cache -testcache
+j() = $ python -m pytest -k smoke -x -q tests/
+k() = $ python -u -W error -c 'import sys; print(sys.argv)' --not-ours
+l() = $ python3 -OO script.py --flag
+m() = $ pip install --no-cache-dir -r requirements.txt --upgrade && pip freeze --exclude-editable
+n() = $ pip install --upgrade-strat eager -q --index-url https://example.com/simple pkg==1.0
+o() = $ cargo build --release --locked -p app --features "a b" && cargo test --workspace -- --nocapture
+p() = $ cargo run --release --bin server -- --port 8080
+q() = $ cargo clippy --all-targets -- -D warnings && cargo fmt -- --check
+s() = $ make -j8 -C build all CFLAGS=-O2 && make --dry install
+t() = $ make -k --no-print-directory test V=1 -Oline

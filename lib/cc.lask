@@ -47,5 +47,59 @@ cc(
 )
 
 // The compilers and Make work as they are, so their command words are
-// exported.
-command { "gcc", "g++", "cc", "c++", "make" } on cc()
+// exported, make with the schema a command string that runs it is checked
+// against (lask spec ch. 5).
+command { "gcc", "g++", "cc", "c++", "make" } on cc() schema { "make": make_schema }
+
+// The command schema of GNU make 4.4.1 (lask spec ch. 5), from
+// `make --help` in #gcc:16.2.0, with the options it keeps for itself
+// (--jobserver-auth, --jobserver-fds, --temp-stdin). It reads long
+// options with getopt_long, which takes a unique prefix of one. Targets
+// and VAR=value assignments may come among the options.
+make_schema: CommandSchema = {
+  root: {
+    closed: true,
+    abbreviations: true,
+    options: [
+      { names: ["-b", "-m"], description: "ignored for compatibility" },
+      { names: ["-B", "--always-make"], description: "unconditionally make all targets" },
+      { names: ["-C", "--directory"], value: "required", description: "change to this directory before doing anything" },
+      { names: ["-d"], description: "print lots of debugging information" },
+      { names: ["--debug"], value: "optional", description: "print various types of debugging information" },
+      { names: ["-e", "--environment-overrides"], description: "environment variables override makefiles" },
+      { names: ["-E", "--eval"], value: "required", description: "evaluate this string as a makefile statement" },
+      { names: ["-f", "--file", "--makefile"], value: "required", description: "read this file as a makefile" },
+      { names: ["-h", "--help"], description: "print the help message and exit" },
+      { names: ["-i", "--ignore-errors"], description: "ignore errors from recipes" },
+      { names: ["-I", "--include-dir"], value: "required", description: "search this directory for included makefiles" },
+      { names: ["-j", "--jobs"], value: "optional", description: "allow this many jobs at once; infinite jobs with no number" },
+      { names: ["--jobserver-style"], value: "required", description: "the style of jobserver to use" },
+      { names: ["-k", "--keep-going"], description: "keep going when some targets can't be made" },
+      { names: ["-l", "--load-average", "--max-load"], value: "optional", description: "don't start multiple jobs unless the load is below this" },
+      { names: ["-L", "--check-symlink-times"], description: "use the latest mtime between symlinks and target" },
+      { names: ["-n", "--just-print", "--dry-run", "--recon"], description: "don't run any recipe; just print them" },
+      { names: ["-o", "--old-file", "--assume-old"], value: "required", description: "consider this file very old and don't remake it" },
+      { names: ["-O", "--output-sync"], value: "optional", description: "synchronize the output of parallel jobs by this type" },
+      { names: ["-p", "--print-data-base"], description: "print make's internal database" },
+      { names: ["-q", "--question"], description: "run no recipe; the exit status says if up to date" },
+      { names: ["-r", "--no-builtin-rules"], description: "disable the built-in implicit rules" },
+      { names: ["-R", "--no-builtin-variables"], description: "disable the built-in variable settings" },
+      { names: ["--shuffle"], value: "optional", description: "shuffle prerequisites and goals: a seed, random, reverse or none" },
+      { names: ["-s", "--silent", "--quiet"], description: "don't echo recipes" },
+      { names: ["--no-silent"], description: "echo recipes" },
+      { names: ["-S", "--no-keep-going", "--stop"], description: "turn off -k" },
+      { names: ["-t", "--touch"], description: "touch targets instead of remaking them" },
+      { names: ["--trace"], description: "print tracing information" },
+      { names: ["-v", "--version"], description: "print the version number of make and exit" },
+      { names: ["-w", "--print-directory"], description: "print the current directory" },
+      { names: ["--no-print-directory"], description: "turn off -w" },
+      { names: ["-W", "--what-if", "--new-file", "--assume-new"], value: "required", description: "consider this file infinitely new" },
+      { names: ["--warn-undefined-variables"], description: "warn when an undefined variable is referenced" },
+      { names: ["--jobserver-auth"], value: "required" },
+      { names: ["--jobserver-fds"], value: "required" },
+      { names: ["--temp-stdin"], value: "required" }
+    ],
+    description: "GNU make"
+  }
+}
+
