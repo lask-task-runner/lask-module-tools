@@ -1,0 +1,50 @@
+// Maven, on Temurin 25.
+
+import { ToolSetup, layered_env, layered_volumes, mount, vars } from "./common.lask"
+
+// The system property that points Maven's local repository into the
+// cache, after whatever MAVEN_OPTS the caller gave.
+internal maven_opts_with(opts: String | Null, cache_dir: String | Null): String | Null = case (cache_dir) {
+  Null -> opts
+  else -> case (opts) {
+    Null -> "-Dmaven.repo.local=/cache/m2"
+    else -> "#{opts} -Dmaven.repo.local=/cache/m2"
+  }
+}
+
+// Maven, on Temurin 25, configured by its parameters.
+//
+// The image is #maven:3.9.16-eclipse-temurin-25-noble unless --image
+// names another. Maven runs in batch mode
+// without transfer progress (MAVEN_ARGS), so the command log holds the
+// build rather than a download meter.
+//
+// @param image              The image to run; another release is passed as image = #maven:<tag>.
+// @param java_tool_options  JAVA_TOOL_OPTIONS.
+// @param maven_opts         MAVEN_OPTS.
+// @param cache_dir          Host directory mounted at /cache; the local repository is /cache/m2 (-Dmaven.repo.local, added to MAVEN_OPTS).
+// @param with               Setups of other tools this environment should also carry.
+// @param extra_env          Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "mvn" } on ...` or `$[...]`.
+// @example lask eval maven.env --cache_dir /tmp/cache
+env(
+  --image: Environment = #maven:3.9.16-eclipse-temurin-25-noble,
+  --java_tool_options: String | Null = null,
+  --maven_opts: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(
+    {"MAVEN_ARGS": "--batch-mode --no-transfer-progress"},
+    extra_env,
+    with,
+    vars({
+      "JAVA_TOOL_OPTIONS": java_tool_options,
+      "MAVEN_OPTS": maven_opts_with(maven_opts, cache_dir)
+    })
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+command { "mvn" } on env()

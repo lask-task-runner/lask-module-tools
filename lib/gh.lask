@@ -1,0 +1,35 @@
+// The GitHub CLI.
+
+import { ToolSetup, git_trust, layered_env, layered_volumes, vars } from "./common.lask"
+
+// The GitHub CLI, configured by its parameters.
+//
+// The image is that of unix.env(), as for git. gh never prompts, checks for
+// no update, and pages nothing (GH_PROMPT_DISABLED=1,
+// GH_NO_UPDATE_NOTIFIER=1, GH_PAGER=""). The token authenticates gh's
+// own API calls; a command that also runs git over https — `gh pr
+// checkout`, `gh repo clone` — takes `with = [git.setup(token = ...)]`
+// as well.
+//
+// @param token      GH_TOKEN; masked in the command log.
+// @param host       GH_HOST, for GitHub Enterprise Server.
+// @param repo       GH_REPO, "owner/name": the repository a command acts on when it is not the project's.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "gh" } on ...` or `$[...]`.
+// @example lask eval gh.env --repo lask-task-runner/lask
+env(
+  --token!!: String | Null = null,
+  --host: String | Null = null,
+  --repo: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = #./images/unix/Dockerfile{
+  env: layered_env(
+    merge({"GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1", "GH_PAGER": ""}, git_trust()),
+    extra_env,
+    with,
+    vars({"GH_TOKEN": token, "GH_HOST": host, "GH_REPO": repo})
+  ),
+  volumes: layered_volumes(with, [])
+}

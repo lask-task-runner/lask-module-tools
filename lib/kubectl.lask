@@ -1,0 +1,43 @@
+// kubectl, the Kubernetes CLI.
+
+import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
+import * as kube from "./kube.lask"
+
+// kubectl, configured by its parameters.
+//
+// The image is #alpine/k8s:1.37.0 unless --image names another: its tag
+// follows kubectl's release, and it carries Helm, Kustomize, the AWS CLI
+// and eksctl beside it, so a kubeconfig whose user runs `aws eks
+// get-token` works with `with = [aws.setup(...)]`. It has no
+// gke-gcloud-auth-plugin. The kubectl image of registry.k8s.io has no
+// shell, which every command here runs through. `lask sync` pulls and pins
+// whichever image is used (lask spec 10.3); a run never pulls.
+//
+// A cluster the kubeconfig reaches at 127.0.0.1 — kind, minikube — is
+// the host's, not the container's: give network = "host".
+//
+// @param image       The image to run; another release is passed as image = #alpine/k8s:<tag>.
+// @param kubeconfig  Host path of the kubeconfig, mounted read-only (KUBECONFIG).
+// @param context     HELM_KUBECONTEXT and KUBE_CTX; kubectl itself takes `--context`.
+// @param namespace   HELM_NAMESPACE; kubectl itself takes `-n`.
+// @param network     The container's network, e.g. "host".
+// @param with        Setups of other tools this environment should also carry: a cloud's credentials for the kubeconfig's exec plugin.
+// @param extra_env   Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "kubectl" } on ...` or `$[...]`.
+// @example lask eval kubectl.env --kubeconfig /home/me/.kube/config
+env(
+  --image: Environment = #alpine/k8s:1.37.0,
+  --kubeconfig: String | Null = null,
+  --context: String | Null = null,
+  --namespace: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = do {
+  own = kube.setup(kubeconfig = kubeconfig, context = context, namespace = namespace)
+  runnable(image,
+    env = layered_env({}, extra_env, with, own.env),
+    volumes = layered_volumes(with, own.volumes),
+    network = network
+  )
+}

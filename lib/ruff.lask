@@ -1,0 +1,24 @@
+// Ruff, the Python linter and formatter.
+
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
+
+// Ruff, the Python linter and formatter,
+// ghcr.io/astral-sh/ruff:0.16.9-alpine by default.
+//
+// @param image      The image to run; another release is passed as image = #ghcr.io/astral-sh/ruff:<tag>.
+// @param cache_dir  Host directory mounted at /cache; Ruff's cache is /cache/ruff (RUFF_CACHE_DIR) instead of .ruff_cache in the project.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "ruff" } on ...` or `$[...]`.
+// @example lask eval ruff.env
+env(
+  --image: Environment = #ghcr.io/astral-sh/ruff:0.16.9-alpine,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({}, extra_env, with, vars({"RUFF_CACHE_DIR": in_cache(cache_dir, "ruff")})),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+command { "ruff" } on env()

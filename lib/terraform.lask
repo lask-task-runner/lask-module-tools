@@ -1,15 +1,6 @@
 // Terraform.
 
-import { vars, mount, prefixed, layered_env, layered_volumes, ToolSetup } from "./common.lask"
-
-// The variables Terraform and OpenTofu read, from the parameters they
-// share.
-internal tf_env(workspace: String | Null, log: String | Null, variables: Map<String>, cache_dir: String | Null): Map<String> =
-  merge(prefixed("TF_VAR_", variables), vars({
-    "TF_WORKSPACE": workspace,
-    "TF_LOG": log,
-    "TF_PLUGIN_CACHE_DIR": if (cache_dir == null) { null } else { "/cache" }
-  }))
+import { ToolSetup, layered_env, layered_volumes, mount, tf_env } from "./common.lask"
 
 // Terraform, configured by its parameters.
 //
@@ -20,7 +11,7 @@ internal tf_env(workspace: String | Null, log: String | Null, variables: Map<Str
 // Nothing waits on a prompt (TF_INPUT=0), and Terraform leaves out the
 // hints it gives a person at a terminal (TF_IN_AUTOMATION=1). A
 // provider's credentials come in through --with: the AWS provider takes
-// `with = [aws_setup(...)]`. Secrets for input variables go through
+// `with = [aws.setup(...)]`. Secrets for input variables go through
 // --variables as TF_VAR_* variables of the container, never on the command
 // line; bind them with `!!` where they come from, and they are masked.
 //
@@ -32,45 +23,9 @@ internal tf_env(workspace: String | Null, log: String | Null, variables: Map<Str
 // @param with       Setups of other tools this environment should also carry: a provider's credentials.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "terraform" } on ...` or `$[...]`.
-// @example lask eval terraform --workspace staging
-terraform(
+// @example lask eval terraform.env --workspace staging
+env(
   --image: Environment = #hashicorp/terraform:1.16.4,
-  --workspace: String | Null = null,
-  --log: String | Null = null,
-  --variables: Map<String> = {},
-  --cache_dir: String | Null = null,
-  --with: Array<ToolSetup> = [],
-  --extra_env: Map<String> = {}
-): Runnable = runnable(image,
-  env = layered_env(
-    {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"},
-    extra_env,
-    with,
-    tf_env(workspace, log, variables, cache_dir)
-  ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
-)
-
-// OpenTofu, configured by the parameters of terraform.
-//
-// The image is #ghcr.io/opentofu/opentofu:1.12.6 unless --image names
-// another. OpenTofu reads Terraform's variables, so every parameter means
-// what it means for terraform: TF_INPUT=0, TF_IN_AUTOMATION=1, TF_VAR_*
-// from --variables, the plugin cache at the /cache mount point.
-// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
-// run never pulls.
-//
-// @param image      The image to run; another release is passed as image = #ghcr.io/opentofu/opentofu:<tag>.
-// @param workspace  TF_WORKSPACE.
-// @param log        TF_LOG, e.g. "DEBUG".
-// @param variables  Input variables, each set as TF_VAR_<name>.
-// @param cache_dir  Host directory mounted at /cache and used as the plugin cache itself (TF_PLUGIN_CACHE_DIR).
-// @param with       Setups of other tools this environment should also carry: a provider's credentials.
-// @param extra_env  Any other variable; below --with and the named parameters.
-// @return The environment, for `command { "tofu" } on ...` or `$[...]`.
-// @example lask eval tofu --workspace staging
-tofu(
-  --image: Environment = #ghcr.io/opentofu/opentofu:1.12.6,
   --workspace: String | Null = null,
   --log: String | Null = null,
   --variables: Map<String> = {},

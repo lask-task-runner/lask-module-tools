@@ -1,0 +1,25 @@
+// Checkov, misconfigurations in infrastructure code.
+
+import { ToolSetup, git_trust, layered_env, layered_volumes, vars } from "./common.lask"
+
+// Checkov, bridgecrew/checkov:3.3.19 by default: misconfigurations in
+// Terraform, CloudFormation, Kubernetes manifests, Dockerfiles and
+// workflows.
+//
+// @param image      The image to run; another release is passed as image = #bridgecrew/checkov:<tag>.
+// @param api_key    BC_API_KEY, for the Prisma Cloud platform; masked in the command log.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "checkov" } on ...` or `$[...]`.
+// @example lask eval checkov.env
+env(
+  --image: Environment = #bridgecrew/checkov:3.3.19,
+  --api_key!!: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(git_trust(), extra_env, with, vars({"BC_API_KEY": api_key})),
+  volumes = layered_volumes(with, [])
+)
+
+command { "checkov" } on env()

@@ -1,0 +1,42 @@
+// Helm, in the image of kubectl.
+
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
+import * as kube from "./kube.lask"
+
+// Helm, in the image of kubectl, configured by its parameters.
+//
+// The image is alpine/k8s, as for kubectl: one image for the cluster's
+// tools, so a kubeconfig works the same in each.
+//
+// @param image       The image to run; another release is passed as image = #alpine/k8s:<tag>.
+// @param kubeconfig  Host path of the kubeconfig, mounted read-only (KUBECONFIG).
+// @param context     HELM_KUBECONTEXT.
+// @param namespace   HELM_NAMESPACE.
+// @param network     The container's network, e.g. "host".
+// @param cache_dir   Host directory mounted at /cache; Helm's cache, configuration and data live under /cache/helm (HELM_CACHE_HOME, HELM_CONFIG_HOME, HELM_DATA_HOME), so added repositories and plugins outlive the container.
+// @param with        Setups of other tools this environment should also carry.
+// @param extra_env   Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "helm" } on ...` or `$[...]`.
+// @example lask eval helm.env --namespace web --cache_dir /tmp/cache
+env(
+  --image: Environment = #alpine/k8s:1.37.0,
+  --kubeconfig: String | Null = null,
+  --context: String | Null = null,
+  --namespace: String | Null = null,
+  --network: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = do {
+  own = kube.setup(kubeconfig = kubeconfig, context = context, namespace = namespace)
+  cache = vars({
+    "HELM_CACHE_HOME": in_cache(cache_dir, "helm/cache"),
+    "HELM_CONFIG_HOME": in_cache(cache_dir, "helm/config"),
+    "HELM_DATA_HOME": in_cache(cache_dir, "helm/data")
+  })
+  runnable(image,
+    env = layered_env({}, extra_env, with, merge(own.env, cache)),
+    volumes = layered_volumes(with, concat_array(own.volumes, mount(cache_dir, "/cache"))),
+    network = network
+  )
+}

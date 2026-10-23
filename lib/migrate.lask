@@ -1,0 +1,29 @@
+// golang-migrate.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// golang-migrate.
+//
+// The image is #migrate/migrate:v4.20.1 unless --image names another.
+// migrate takes its database on the command line only, so the URL is
+// set as DATABASE_URL for it: `migrate -database "$DATABASE_URL" -path
+// db/migrations up`. The URL carries the password, and is masked whole.
+//
+// @param image         The image to run; another release is passed as image = #migrate/migrate:<tag>.
+// @param database_url  DATABASE_URL; masked in the command log.
+// @param network       The container's network: a Compose network, or "host".
+// @param with          Setups of other tools this environment should also carry.
+// @param extra_env     Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "migrate" } on ...` or `$[...]`.
+// @example lask eval migrate.env --database_url postgres://app:pw@host.docker.internal:5432/app
+env(
+  --image: Environment = #migrate/migrate:v4.20.1,
+  --database_url!!: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({}, extra_env, with, vars({"DATABASE_URL": database_url})),
+  volumes = layered_volumes(with, []),
+  network = network
+)

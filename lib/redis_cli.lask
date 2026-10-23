@@ -1,0 +1,29 @@
+// redis-cli, the Redis client.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// redis-cli.
+//
+// The image is #redis:8.10.2-alpine unless --image names another.
+// redis-cli reads its password from the environment (REDISCLI_AUTH) and
+// nothing else: the host goes on its command line, `redis-cli -h
+// host.docker.internal`.
+//
+// @param image      The image to run; another release is passed as image = #redis:<tag>.
+// @param password   REDISCLI_AUTH; masked in the command log.
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "redis-cli" } on ...` or `$[...]`.
+// @example lask eval redis_cli.env
+env(
+  --image: Environment = #redis:8.10.2-alpine,
+  --password!!: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({}, extra_env, with, vars({"REDISCLI_AUTH": password})),
+  volumes = layered_volumes(with, []),
+  network = network
+)

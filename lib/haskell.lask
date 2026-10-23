@@ -1,6 +1,6 @@
 // Haskell: GHC, Cabal and Stack.
 
-import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // GHC, with Cabal and Stack, configured by its parameters.
 //
@@ -17,8 +17,8 @@ import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSet
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "cabal" } on ...` or `$[...]`.
-// @example lask eval haskell --cache_dir /tmp/cache
-haskell(
+// @example lask eval haskell.env --cache_dir /tmp/cache
+env(
   --image: Environment = #haskell:9.12.4-slim-bookworm,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
@@ -35,4 +35,4 @@ haskell(
 
 // GHC, Cabal and Stack work as they are, so their command words are
 // exported.
-command { "ghc", "ghci", "runghc", "cabal", "stack" } on haskell()
+command { "ghc", "ghci", "runghc", "cabal", "stack" } on env()

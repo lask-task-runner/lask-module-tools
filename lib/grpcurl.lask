@@ -1,0 +1,24 @@
+// grpcurl, a command-line gRPC client.
+
+import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
+
+// grpcurl, fullstorydev/grpcurl:v1.9.3-alpine by default.
+//
+// @param image      The image to run; another release is passed as image = #fullstorydev/grpcurl:<tag>.
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "grpcurl" } on ...` or `$[...]`.
+// @example lask eval grpcurl.env --network host
+env(
+  --image: Environment = #fullstorydev/grpcurl:v1.9.3-alpine,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({}, extra_env, with, {}),
+  volumes = layered_volumes(with, []),
+  network = network
+)
+
+command { "grpcurl" } on env()

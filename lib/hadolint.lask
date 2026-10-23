@@ -1,0 +1,22 @@
+// hadolint, the Dockerfile linter.
+
+import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
+
+// hadolint, the Dockerfile linter, hadolint/hadolint:v2.15.1-alpine by
+// default. A .hadolint.yaml in the project configures it.
+//
+// @param image      The image to run; another release is passed as image = #hadolint/hadolint:<tag>.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable, e.g. HADOLINT_FAILURE_THRESHOLD; below --with.
+// @return The environment, for `command { "hadolint" } on ...` or `$[...]`.
+// @example lask eval hadolint.env
+env(
+  --image: Environment = #hadolint/hadolint:v2.15.1-alpine,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({}, extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+command { "hadolint" } on env()

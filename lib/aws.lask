@@ -1,6 +1,6 @@
 // The AWS CLI v2.
 
-import { ToolSetup, vars, mount, layered_env, layered_volumes } from "./common.lask"
+import { ToolSetup, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // What the AWS CLI and SDKs need from an environment: a profile, a
 // region, an endpoint, credentials, and the directory profiles live in.
@@ -15,7 +15,7 @@ import { ToolSetup, vars, mount, layered_env, layered_volumes } from "./common.l
 // @param session_token      AWS_SESSION_TOKEN; masked in the command log.
 // @param config_dir         Host directory mounted read-only as /root/.aws, usually home(".aws").
 // @return The variables and mounts, for a tool's --with.
-aws_setup(
+setup(
   --profile: String | Null = null,
   --region: String | Null = null,
   --endpoint_url: String | Null = null,
@@ -62,8 +62,8 @@ aws_setup(
 // @param with               Setups of other tools this environment should also carry.
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "aws" } on ...` or `$[...]`.
-// @example lask eval aws --profile dev --region ap-northeast-1
-aws(
+// @example lask eval aws.env --profile dev --region ap-northeast-1
+env(
   --image: Environment = #amazon/aws-cli:2.36.41,
   --profile: String | Null = null,
   --region: String | Null = null,
@@ -75,7 +75,7 @@ aws(
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = do {
-  own = aws_setup(
+  own = setup(
     profile = profile,
     region = region,
     endpoint_url = endpoint_url,

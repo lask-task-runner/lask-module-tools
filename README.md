@@ -5,7 +5,7 @@ Ready-made execution environments for the tools a [Lask](https://github.com/lask
 ```lask
 import * as tools from "tools"
 
-command { "aws" } on tools.aws(profile = "dev", config_dir = tools.home(".aws"))
+command { "aws" } on tools.aws.env(profile = "dev", config_dir = tools.home(".aws"))
 
 deploy(): String = $ aws s3 sync web/dist s3://my-bucket --delete
 ```
@@ -26,28 +26,30 @@ lask deps add tools --git https://github.com/lask-task-runner/lask-module-tools 
 
 Every tool follows the same rules:
 
-- **`--image` picks the release of the tool's image**, and defaults to the one this module was written and tested against. Pass another as an image head, `tools.python(image = #python:3.13.5-alpine3.22)`: the image is written in your module, so `lask sync` pins it. A recipe tool takes no `--image`.
+- **`--image` picks the release of the tool's image**, and defaults to the one this module was written and tested against. Pass another as an image head, `tools.python.env(image = #python:3.13.5-alpine3.22)`: the image is written in your module, so `lask sync` pins it. A recipe tool takes no `--image`.
 - **A parameter left `null` sets nothing.** Every parameter defaults to `null`, and a variable given `null` is left out. `""` is a value: it sets its variable to the empty string.
 - **Secrets are `!!` parameters**, so they are masked in the command log, including in the environment it records — whatever the caller passed. They default to `null` like the rest, and a `null` secret registers nothing for masking.
 - **A host path is mounted, never expanded.** Lask starts `docker` without a shell, so `~` would reach the daemon as a directory named `~`. Use `tools.home(".aws")`.
-- **`--with: Array<ToolSetup>`** carries another tool's variables and mounts, so the Terraform AWS provider can run with the same account as the AWS CLI: `terraform(with = [tools.aws_setup(profile = "dev")])`.
+- **`--with: Array<ToolSetup>`** carries another tool's variables and mounts, so the Terraform AWS provider can run with the same account as the AWS CLI: `tools.terraform.env(with = [tools.aws.setup(profile = "dev")])`.
 - **`--extra_env: Map<String>`** sets any variable the tool has no parameter for.
 - **Precedence**, later wins: the tool's defaults, `--extra_env`, each setup in `--with`, the tool's own named parameters.
 
 ## Catalog
 
-Every function returns a `Runnable`, which `$[...]` and `command ... on` take as they take an `Environment`. A tool that works as it is exports its command words, which a project imports by name (`import command { "go" } from "tools"`); a tool that needs a credential, a cluster or a server exports none, and the project declares its own (`command { "kubectl" } on tools.kubectl(...)`). Every image has `/bin/sh`, which a Lask command runs through.
+Every tool is a namespace: `tools.<name>.env(...)` returns a `Runnable`, which `$[...]` and `command ... on` take as they take an `Environment`, and a tool another tool can carry has `tools.<name>.setup(...)`. A tool that works as it is exports its command words, which a project imports by name (`import command { "go" } from "tools"`); a tool that needs a credential, a cluster or a server exports none, and the project declares its own (`command { "kubectl" } on tools.kubectl.env(...)`). Every image has `/bin/sh`, which a Lask command runs through.
 
-`go`, `gofmt`, `python`, `python3`, `pip`, `pip3`, `cargo` and `make` come with a **command schema** (Lask 0.12.0 or later): a command string that runs one is checked before it runs, so `$ go biuld ./...` or `$ cargo build --relase` is an error rather than a failed task, and an editor completes and describes their options. Each schema describes the release in the tool's default image, and is exported (`go_schema`, `gofmt_schema`, `python_schema`, `pip_schema`, `cargo_schema`, `make_schema`) for a project that declares the word itself:
+`go`, `gofmt`, `python`, `python3`, `pip`, `pip3`, `cargo` and `make` come with a **command schema** (Lask 0.12.0 or later): a command string that runs one is checked before it runs, so `$ go biuld ./...` or `$ cargo build --relase` is an error rather than a failed task, and an editor completes and describes their options. A tool's `schema` holds the schemas of its words for the release in its default image, and `schema_<version>` the same under that release's number (`tools.go.schema_1_27_1`); the two change together when the default image does. A project that declares a word itself gives it the tool's schemas:
 
 ```lask
 import * as tools from "tools"
-command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
+command { "go" } on tools.go.env(goos = "linux") schema tools.go.schema
 ```
+
+A schema describes one release. A project that runs another, with `--image`, declares the words itself and gives them the schema of that release if this module has one, or none.
 
 ### Cloud CLIs
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `aws` | `amazon/aws-cli:2.36.41` | — |
 | `gcloud` | `gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim` | — |
@@ -55,7 +57,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Languages
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `python` | `python:3.12.14-alpine3.24` | `python`, `python3`, `pip`, `pip3` |
 | `node` | `node:24.22.1-alpine3.24` | `node`, `npm`, `npx`, `corepack` |
@@ -73,7 +75,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Container orchestration
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `kubectl` | `alpine/k8s:1.37.0` | — |
 | `helm` | `alpine/k8s:1.37.0` | — |
@@ -81,7 +83,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### IaC
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `terraform` | `hashicorp/terraform:1.16.4` | — |
 | `tofu` | `ghcr.io/opentofu/opentofu:1.12.6` | — |
@@ -91,7 +93,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Database clients
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `psql` | `postgres:18.6-alpine3.24` | — |
 | `mysql` | `mysql:8.4.11` | — |
@@ -101,7 +103,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Git and code hosts
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `git` | *recipe*: the image of `unix` | — |
 | `gh` | *recipe*: the image of `unix` | — |
@@ -109,7 +111,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Build and code generation
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `buf` | `bufbuild/buf:1.73.0` | `buf` |
 | `protoc` | *recipe*: protobuf and the gRPC plugins on Alpine 3.24 | `protoc` |
@@ -117,7 +119,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Linters and formatters
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `shellcheck` | `koalaman/shellcheck-alpine:v0.11.0` | `shellcheck` |
 | `hadolint` | `hadolint/hadolint:v2.15.1-alpine` | `hadolint` |
@@ -128,7 +130,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Security scanners
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `trivy` | `aquasec/trivy:0.74.0` | `trivy` |
 | `gitleaks` | `zricethezav/gitleaks:v8.30.1` | `gitleaks` |
@@ -139,7 +141,7 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Secret managers
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `vault` | `hashicorp/vault:1.21.4` | — |
 | `sops` | `ghcr.io/getsops/sops:v3.13.3-alpine` | — |
@@ -147,13 +149,13 @@ command { "go" } on tools.go(goos = "linux") schema { "go": tools.go_schema }
 
 ### Everyday tools
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `unix` | *recipe*: Alpine 3.24 with the tools below | `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`, `xz`, `bzip2`, `zip`, `unzip`, `rsync` |
 
 ### API, HTTP, E2E and load testing
 
-| Function | Image, default | Command words |
+| Namespace | Image, default | Command words |
 |---|---|---|
 | `playwright` | `mcr.microsoft.com/playwright:v1.63.0-noble` | — (its tests run through node's `npx`) |
 | `k6` | `grafana/k6:1.8.1` | `k6` |
@@ -168,26 +170,26 @@ A setup is what one tool needs from an environment, as a value another tool's `-
 
 | Setup | Parameters | Sets |
 |---|---|---|
-| `aws_setup` | `profile`, `region`, `endpoint_url`, `access_key_id`, `secret_access_key!!`, `session_token!!`, `config_dir` | `AWS_*`; mounts `~/.aws` read-only |
-| `gcloud_setup` | `project`, `region`, `credentials_file`, `access_token!!`, `config_dir` | `CLOUDSDK_*` for gcloud and `GOOGLE_*` for the SDKs; mounts the credentials file read-only and `~/.config/gcloud` |
-| `azure_setup` | `subscription_id`, `tenant_id`, `client_id`, `client_secret!!`, `config_dir` | `ARM_*` for Terraform and `AZURE_*` for the SDKs; mounts `~/.azure` |
-| `kube_setup` | `kubeconfig`, `context`, `namespace` | `KUBECONFIG`, `KUBE_CONFIG_PATH`, `HELM_KUBECONTEXT`, `KUBE_CTX`, `HELM_NAMESPACE`; mounts the kubeconfig read-only |
-| `pg_setup` | `host`, `port`, `user`, `password!!`, `database`, `sslmode` | `PG*`, which libpq, psycopg and node-postgres read |
-| `vault_setup` | `addr`, `token!!`, `namespace`, `skip_verify` | `VAULT_*` |
-| `ssh_setup` | `dir`, `agent_socket` | mounts the key directory read-only at `/root/.ssh`, the agent socket at `SSH_AUTH_SOCK` |
-| `git_setup` | `token!!`, `host`, `token_user`, `name`, `email` | trusts the mounted project; with a token, rewrites `https://<host>/` and `git@<host>:` to https with the token; the commit identity |
-| `docker_setup` | `socket` | mounts the host's Docker daemon: root on the host, so ask for it only where it is needed |
-| `registry_setup` | `registry`, `username`, `password!!`, `config_dir` | each scanner's registry credentials, or a Docker configuration read-only (`DOCKER_CONFIG`) |
+| `aws.setup` | `profile`, `region`, `endpoint_url`, `access_key_id`, `secret_access_key!!`, `session_token!!`, `config_dir` | `AWS_*`; mounts `~/.aws` read-only |
+| `gcloud.setup` | `project`, `region`, `credentials_file`, `access_token!!`, `config_dir` | `CLOUDSDK_*` for gcloud and `GOOGLE_*` for the SDKs; mounts the credentials file read-only and `~/.config/gcloud` |
+| `az.setup` | `subscription_id`, `tenant_id`, `client_id`, `client_secret!!`, `config_dir` | `ARM_*` for Terraform and `AZURE_*` for the SDKs; mounts `~/.azure` |
+| `kube.setup` | `kubeconfig`, `context`, `namespace` | `KUBECONFIG`, `KUBE_CONFIG_PATH`, `HELM_KUBECONTEXT`, `KUBE_CTX`, `HELM_NAMESPACE`; mounts the kubeconfig read-only |
+| `psql.setup` | `host`, `port`, `user`, `password!!`, `database`, `sslmode` | `PG*`, which libpq, psycopg and node-postgres read |
+| `vault.setup` | `addr`, `token!!`, `namespace`, `skip_verify` | `VAULT_*` |
+| `ssh.setup` | `dir`, `agent_socket` | mounts the key directory read-only at `/root/.ssh`, the agent socket at `SSH_AUTH_SOCK` |
+| `git.setup` | `token!!`, `host`, `token_user`, `name`, `email` | trusts the mounted project; with a token, rewrites `https://<host>/` and `git@<host>:` to https with the token; the commit identity |
+| `docker.setup` | `socket` | mounts the host's Docker daemon: root on the host, so ask for it only where it is needed |
+| `registry.setup` | `registry`, `username`, `password!!`, `config_dir` | each scanner's registry credentials, or a Docker configuration read-only (`DOCKER_CONFIG`) |
 
 ```lask
-creds = tools.aws_setup(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
+creds = tools.aws.setup(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
 
-command { "terraform" } on tools.terraform(with = [creds])
-command { "kubectl", "helm" } on tools.helm(kubeconfig = tools.home(".kube/config"), with = [creds])
-build(): String = $[tools.go(with = [tools.git_setup(token = get_env("GITHUB_TOKEN"))])] go build ./...
+command { "terraform" } on tools.terraform.env(with = [creds])
+command { "kubectl", "helm" } on tools.helm.env(kubeconfig = tools.home(".kube/config"), with = [creds])
+build(): String = $[tools.go.env(with = [tools.git.setup(token = get_env("GITHUB_TOKEN"))])] go build ./...
 ```
 
-A setup carries none of its tool's defaults. Two setups that set the same variable follow the order of `--with`; `git_setup` sets Git's configuration as a whole, so give one.
+A setup carries none of its tool's defaults. Two setups that set the same variable follow the order of `--with`; `git.setup` sets Git's configuration as a whole, so give one.
 
 ## Parameters
 
@@ -195,14 +197,14 @@ Every function also takes `--with` and `--extra_env`; a function on a registry i
 
 - **Cloud CLIs.** `gcloud` and `az` take the parameters of their setup. `gcloud` never prompts (`CLOUDSDK_CORE_DISABLE_PROMPTS=1`); `az` sends no telemetry, and logs in from a service principal only when told to: `az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID"`.
 - **Languages.** Each takes `--cache_dir`, mounted at `/cache`, where its package cache lives: `GOMODCACHE`/`GOCACHE`, `-Dmaven.repo.local`, `GRADLE_USER_HOME`, `CARGO_HOME`, `BUNDLE_PATH`, `NUGET_PACKAGES`, `DENO_DIR`, `BUN_INSTALL_CACHE_DIR`, `CABAL_DIR`/`STACK_ROOT`. Beyond it: `go` — `goproxy`, `goprivate`, `goflags`, `cgo_enabled`, `goos`, `goarch`, and `GOTOOLCHAIN=local` so Go stays at the release its image holds; `java`, `maven`, `gradle` — `java_tool_options`, `maven_opts`, `gradle_opts`, and Maven in batch mode; `rust` — `rustflags`; `cc` — `cc`, `cxx`, `cflags`, `cxxflags`, `ldflags`, `makeflags`; `deno` — `auth_tokens!!`; `bun` — `npm_token!!`. Stack in the `haskell` image does not use the GHC beside it unless given `--system-ghc`.
-- **Container orchestration.** `kubectl` and `helm` take the parameters of `kube_setup` and `network`; `helm` also `cache_dir`. kubectl reads no variable for a context or a namespace: give `--context` and `-n` on its command line. A cluster at 127.0.0.1 (kind, minikube) takes `network = "host"`. The image carries the AWS CLI for an EKS kubeconfig, not the GKE auth plugin.
+- **Container orchestration.** `kubectl` and `helm` take the parameters of `kube.setup` and `network`; `helm` also `cache_dir`. kubectl reads no variable for a context or a namespace: give `--context` and `-n` on its command line. A cluster at 127.0.0.1 (kind, minikube) takes `network = "host"`. The image carries the AWS CLI for an EKS kubeconfig, not the GKE auth plugin.
 - **IaC.** `tofu` takes the parameters of `terraform`. `packer` — `log`, `variables` (as `PKR_VAR_*`), `cache_dir`. `pulumi` — another runtime as another image (`image = #pulumi/pulumi-python:3.265.0`; `go`, `dotnet` and `java` likewise), `access_token!!`, `backend_url`, `config_passphrase!!`, `cache_dir`. `ansible` — `config`, `inventory`, `host_key_checking`, `vault_password_file`, `ssh_dir`, `ssh_agent_socket`, `cache_dir`.
-- **Database clients.** Each takes `network`, to join a Compose network. `psql` takes the parameters of `pg_setup`. `mysql` — `host`, `port`, `user`, `password!!`, `database`; the client reads no user and no database from its environment, so they are set as `MYSQL_USER` and `MYSQL_DATABASE` for the command line: `mysql -u "$MYSQL_USER" "$MYSQL_DATABASE"`. `redis_cli` — `password!!`; the host goes on the command line. `migrate` — `database_url!!`, as `DATABASE_URL` for `-database "$DATABASE_URL"`. `flyway` — `url`, `user`, `password!!`, `locations`.
-- **Git and code hosts.** `git` takes the parameters of `git_setup` and of `ssh_setup` (`ssh_dir`, `ssh_agent_socket`). `gh` — `token!!`, `host`, `repo`; `glab` — `token!!`, `host`. A `gh` or `glab` command that runs git over https takes `with = [tools.git_setup(token = ...)]` too.
+- **Database clients.** Each takes `network`, to join a Compose network. `psql` takes the parameters of `psql.setup`. `mysql` — `host`, `port`, `user`, `password!!`, `database`; the client reads no user and no database from its environment, so they are set as `MYSQL_USER` and `MYSQL_DATABASE` for the command line: `mysql -u "$MYSQL_USER" "$MYSQL_DATABASE"`. `redis_cli` — `password!!`; the host goes on the command line. `migrate` — `database_url!!`, as `DATABASE_URL` for `-database "$DATABASE_URL"`. `flyway` — `url`, `user`, `password!!`, `locations`.
+- **Git and code hosts.** `git` takes the parameters of `git.setup` and of `ssh.setup` (`ssh_dir`, `ssh_agent_socket`). `gh` — `token!!`, `host`, `repo`; `glab` — `token!!`, `host`. A `gh` or `glab` command that runs git over https takes `with = [tools.git.setup(token = ...)]` too.
 - **Build.** `buf` — `token!!`, `cache_dir`. `bazel` — `cache_dir`, which keeps both the Bazel releases Bazelisk downloads and Bazel's output root, so a build is incremental across runs.
 - **Linters.** `shellcheck` — `opts`; `tflint` — `github_token!!`, `cache_dir`; `golangci_lint`, `ruff` — `cache_dir`.
-- **Security scanners.** `trivy` — `severity`, `exit_code`, `cache_dir`; `grype` — `cache_dir`; `checkov` — `api_key!!`; `semgrep` — `app_token!!`. Without a cache, trivy and grype download their database on every run. A container image is reached through `registry_setup` or `docker_setup`.
-- **Secret managers.** `vault` takes the parameters of `vault_setup`. `sops` — `age_key!!`, `age_key_file`, and a cloud KMS through `--with`. `op` — `service_account_token!!`, `connect_host`, `connect_token!!`. A value read out of one of them is not masked by Lask: bind it to a `!!` parameter where it is used.
+- **Security scanners.** `trivy` — `severity`, `exit_code`, `cache_dir`; `grype` — `cache_dir`; `checkov` — `api_key!!`; `semgrep` — `app_token!!`. Without a cache, trivy and grype download their database on every run. A container image is reached through `registry.setup` or `docker.setup`.
+- **Secret managers.** `vault` takes the parameters of `vault.setup`. `sops` — `age_key!!`, `age_key_file`, and a cloud KMS through `--with`. `op` — `service_account_token!!`, `connect_host`, `connect_token!!`. A value read out of one of them is not masked by Lask: bind it to a `!!` parameter where it is used.
 - **Testing.** Each takes `network`. `k6` — `cloud_token!!`; `robot` — `options` (`ROBOT_OPTIONS`).
 
 Tools that run Git in the mounted project — `go`, `rust`, `haskell`, `pulumi`, `buf`, `bazel`, `golangci_lint`, `trivy`, `gitleaks`, `checkov`, `semgrep`, `git`, `gh`, `glab` — trust it (`safe.directory`): it belongs to the host's user, the container runs as root, and Git would otherwise refuse it.
@@ -214,7 +216,7 @@ Tools that run Git in the mounted project — `go`, `rust`, `haskell`, `pulumi`,
 Image `#amazon/aws-cli:2.36.41` unless `--image` names another. Declare the command word in your module:
 
 ```lask
-command { "aws" } on tools.aws(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
+command { "aws" } on tools.aws.env(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
 ```
 
 | Parameter | Sets |
@@ -231,7 +233,7 @@ command { "aws" } on tools.aws(profile = "dev", region = "ap-northeast-1", confi
 
 Default: `AWS_PAGER=""`, so output is never held behind `less`.
 
-`aws_setup(...)` takes the same parameters except `--with` and `--extra_env`, and returns them as a `ToolSetup` for another tool.
+`aws.setup(...)` takes the same parameters except `--with` and `--extra_env`, and returns them as a `ToolSetup` for another tool.
 
 **Locally**, log in on the host (`aws sso login`) and pass `config_dir = tools.home(".aws")`. The mount is read-only, so an expired token fails instead of being refreshed; log in again on the host. A container cannot usefully run the login itself: it cannot open the host's browser, and its token cache would be discarded with it.
 
@@ -243,7 +245,7 @@ whoami(
   --secret_access_key!!: String | Null = find_env("AWS_SECRET_ACCESS_KEY"),
   --session_token!!: String | Null = find_env("AWS_SESSION_TOKEN")
 ): String = do {
-  box = tools.aws(access_key_id = access_key_id, secret_access_key = secret_access_key, session_token = session_token)
+  box = tools.aws.env(access_key_id = access_key_id, secret_access_key = secret_access_key, session_token = session_token)
   $[box] aws sts get-caller-identity
 }
 ```
@@ -272,7 +274,7 @@ test(): String = $ pip install -q -r requirements.txt && python -m unittest
 
 Defaults: `PYTHONUNBUFFERED=1`, so output reaches the command log as it happens; `PYTHONDONTWRITEBYTECODE=1`, so no root-owned `__pycache__` is left in the project; `PIP_DISABLE_PIP_VERSION_CHECK=1`.
 
-Exported words: `python`, `python3`, `pip`, `pip3`, on `python()` at its defaults. For another release or a cache, declare the words yourself: `command { "python", "pip" } on tools.python(image = #python:3.13.5-alpine3.22)`.
+Exported words: `python`, `python3`, `pip`, `pip3`, on `python.env()` at its defaults. For another release or a cache, declare the words yourself: `command { "python", "pip" } on tools.python.env(image = #python:3.13.5-alpine3.22)`.
 
 ### `node` — Node.js, with npm and npx
 
@@ -296,7 +298,7 @@ build(): String = $ cd web && npm ci && npm run build
 
 Default: `npm_config_update_notifier=false`, so npm prints no update notice into the command log.
 
-Exported words: `node`, `npm`, `npx`, `corepack`, on `node()` at its defaults. Declare them yourself for another release: `command { "node", "npm", "npx" } on tools.node(image = #node:22.23.4-alpine3.24)`.
+Exported words: `node`, `npm`, `npx`, `corepack`, on `node.env()` at its defaults. Declare them yourself for another release: `command { "node", "npm", "npx" } on tools.node.env(image = #node:22.23.4-alpine3.24)`.
 
 A command string runs in one environment, so `$ python … && node …` is a conflict: split it, or give the environment with `$[...]`.
 
@@ -305,10 +307,10 @@ A command string runs in one environment, so `$ python … && node …` is a con
 Image `#hashicorp/terraform:1.16.4` unless `--image` names another. A provider's credentials come in through `--with`:
 
 ```lask
-command { "terraform" } on tools.terraform(
+command { "terraform" } on tools.terraform.env(
   workspace = "dev",
   cache_dir = tools.home(".terraform.d/plugin-cache"),
-  with = [tools.aws_setup(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))]
+  with = [tools.aws.setup(profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))]
 )
 
 plan(): String = $ terraform -chdir=infra plan
@@ -331,7 +333,7 @@ Secret input variables go in `--variables`, never on the command line. Bind the 
 
 ```lask
 apply(--db_password!!: String = get_env("DB_PASSWORD")): String = do {
-  tf = tools.terraform(variables = {"db_password": db_password}, with = [tools.aws_setup(profile = "dev")])
+  tf = tools.terraform.env(variables = {"db_password": db_password}, with = [tools.aws.setup(profile = "dev")])
   $[tf] terraform -chdir=infra apply -auto-approve
 }
 ```
@@ -344,7 +346,7 @@ Image `#mcr.microsoft.com/playwright:v1.63.0-noble` unless `--image` names anoth
 
 ```lask
 e2e(--base_url: String = "http://host.docker.internal:3000"): String =
-  $[tools.playwright(extra_env = {"E2E_BASE_URL": base_url})] cd e2e && npm ci && npx playwright test
+  $[tools.playwright.env(extra_env = {"E2E_BASE_URL": base_url})] cd e2e && npm ci && npx playwright test
 ```
 
 | Parameter | Sets |
@@ -372,11 +374,11 @@ latest(): String = $ curl -fsSL https://api.github.com/repos/hashicorp/terraform
 
 It is built from a recipe in this module, `lib/images/unix/Dockerfile` (Alpine 3.24, pinned by its digest), so it takes no `--image`, and `lask sync` builds it once per machine. Its parameters are `--with` and `--extra_env` — `extra_env = {"HTTPS_PROXY": "..."}` behind a proxy.
 
-Exported words: `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`, `xz`, `bzip2`, `zip`, `unzip`, `rsync`, on `unix()`. The shell's own words (`grep`, `sed`, `awk`, `sort`, …) are in the image but not exported: every image has them, and importing them would make a string such as `npm test | grep ok` conflict. They run here whenever an exported word selects this environment. Nor are `git`, `gh`, `glab` and `ssh`, which need an identity, or `make`, which is `cc`'s.
+Exported words: `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`, `xz`, `bzip2`, `zip`, `unzip`, `rsync`, on `unix.env()`. The shell's own words (`grep`, `sed`, `awk`, `sort`, …) are in the image but not exported: every image has them, and importing them would make a string such as `npm test | grep ok` conflict. They run here whenever an exported word selects this environment. Nor are `git`, `gh`, `glab` and `ssh`, which need an identity, or `make`, which is `cc`'s.
 
 ## Layout
 
-Each tool, or each family of tools, lives in `lib/<name>.lask`, built from `lib/common.lask`, and `main.lask` re-exports its public functions. A recipe lives in `lib/images/<name>/`, since a Dockerfile must be inside the tree of the module that names it. Only what `main.lask` lists reaches a project, and the command line of this repository reaches each of them as well: `lask eval aws --profile dev`, `lask run aws --help`.
+Each tool, or each family of tools, lives in `lib/<name>.lask`, built from `lib/common.lask`, and `main.lask` re-exports its public functions. A recipe lives in `lib/images/<name>/`, since a Dockerfile must be inside the tree of the module that names it. Only what `main.lask` lists reaches a project, and the command line of this repository reaches each of them as well: `lask eval aws.env --profile dev`, `lask run aws.env --help`.
 
 ## Testing
 

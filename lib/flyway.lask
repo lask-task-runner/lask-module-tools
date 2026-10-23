@@ -1,0 +1,45 @@
+// Flyway.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// Flyway.
+//
+// The image is #flyway/flyway:13.8.0-alpine unless --image names
+// another. Flyway reads its connection from
+// the environment, and sends no telemetry
+// (REDGATE_DISABLE_TELEMETRY=true).
+//
+// @param image      The image to run; another release is passed as image = #flyway/flyway:<tag>.
+// @param url        FLYWAY_URL, a JDBC URL.
+// @param user       FLYWAY_USER.
+// @param password   FLYWAY_PASSWORD; masked in the command log.
+// @param locations  FLYWAY_LOCATIONS, e.g. "filesystem:db/migration".
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "flyway" } on ...` or `$[...]`.
+// @example lask eval flyway.env --url jdbc:postgresql://host.docker.internal:5432/app --user app
+env(
+  --image: Environment = #flyway/flyway:13.8.0-alpine,
+  --url: String | Null = null,
+  --user: String | Null = null,
+  --password!!: String | Null = null,
+  --locations: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(
+    {"REDGATE_DISABLE_TELEMETRY": "true"},
+    extra_env,
+    with,
+    vars({
+      "FLYWAY_URL": url,
+      "FLYWAY_USER": user,
+      "FLYWAY_PASSWORD": password,
+      "FLYWAY_LOCATIONS": locations
+    })
+  ),
+  volumes = layered_volumes(with, []),
+  network = network
+)

@@ -88,3 +88,12 @@ git_trust(): Map<String> = {
 // TF_VAR_<name>, Packer's PKR_VAR_<name>.
 prefixed(prefix: String, m: Map<String>): Map<String> =
   from_entries(map(entries(m), \(e: Record<key: String, value: String>) -> {key: "#{prefix}#{e.key}", value: e.value}))
+
+// The variables Terraform and OpenTofu read, from the parameters they
+// share.
+tf_env(workspace: String | Null, log: String | Null, variables: Map<String>, cache_dir: String | Null): Map<String> =
+  merge(prefixed("TF_VAR_", variables), vars({
+    "TF_WORKSPACE": workspace,
+    "TF_LOG": log,
+    "TF_PLUGIN_CACHE_DIR": if (cache_dir == null) { null } else { "/cache" }
+  }))

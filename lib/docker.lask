@@ -1,0 +1,16 @@
+// The host's Docker daemon, for a tool that starts or inspects containers.
+
+import { ToolSetup } from "./common.lask"
+
+// The host's Docker daemon, for a tool that starts or inspects
+// containers itself: an image scan of a local image, Testcontainers.
+//
+// This hands the container the host's daemon, and with it root on the
+// host: ask for it only where it is needed (lask spec 10.7).
+//
+// @param socket  Host path of the daemon's socket.
+// @return The variables and mounts, for a tool's --with.
+setup(--socket: String = "/var/run/docker.sock"): ToolSetup = {
+  env: {"DOCKER_HOST": "unix:///var/run/docker.sock"},
+  volumes: ["#{socket}:/var/run/docker.sock"]
+}

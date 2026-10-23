@@ -1,0 +1,27 @@
+// Kustomize, in the image of kubectl.
+
+import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
+
+// Kustomize, in the image of kubectl.
+//
+// The image is alpine/k8s, as for kubectl; the Kustomize image of
+// registry.k8s.io is published for amd64 only. `kustomize build`
+// renders manifests and reaches no cluster, so its command word is
+// exported.
+//
+// @param image      The image to run; another release is passed as image = #alpine/k8s:<tag>.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "kustomize" } on ...` or `$[...]`.
+// @example lask eval kustomize.env
+env(
+  --image: Environment = #alpine/k8s:1.37.0,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({}, extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+// Kustomize needs no cluster, so its command word is exported.
+command { "kustomize" } on env()

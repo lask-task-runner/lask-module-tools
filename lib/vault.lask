@@ -1,0 +1,53 @@
+// The Vault CLI, and what Vault clients read to reach a server.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// What Vault clients read to reach a server: the vault CLI, the
+// Terraform vault provider, most SDKs. Give it to another tool's --with.
+//
+// @param addr         VAULT_ADDR.
+// @param token        VAULT_TOKEN; masked in the command log.
+// @param namespace    VAULT_NAMESPACE, for Vault Enterprise or HCP.
+// @param skip_verify  VAULT_SKIP_VERIFY: "true" to accept a certificate the container cannot verify.
+// @return The variables, for a tool's --with.
+setup(
+  --addr: String | Null = null,
+  --token!!: String | Null = null,
+  --namespace: String | Null = null,
+  --skip_verify: String | Null = null
+): ToolSetup = {
+  env: vars({
+    "VAULT_ADDR": addr,
+    "VAULT_TOKEN": token,
+    "VAULT_NAMESPACE": namespace,
+    "VAULT_SKIP_VERIFY": skip_verify
+  }),
+  volumes: []
+}
+
+// The Vault CLI, hashicorp/vault:1.21.4 by default.
+//
+// @param image        The image to run; another release is passed as image = #hashicorp/vault:<tag>.
+// @param addr         VAULT_ADDR.
+// @param token        VAULT_TOKEN; masked in the command log.
+// @param namespace    VAULT_NAMESPACE.
+// @param skip_verify  VAULT_SKIP_VERIFY.
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "vault" } on ...` or `$[...]`.
+// @example lask eval vault.env --addr https://vault.example.com:8200
+env(
+  --image: Environment = #hashicorp/vault:1.21.4,
+  --addr: String | Null = null,
+  --token!!: String | Null = null,
+  --namespace: String | Null = null,
+  --skip_verify: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = do {
+  own = setup(addr = addr, token = token, namespace = namespace, skip_verify = skip_verify)
+  runnable(image,
+    env = layered_env({}, extra_env, with, own.env),
+    volumes = layered_volumes(with, [])
+  )
+}

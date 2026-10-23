@@ -1,0 +1,32 @@
+// Semgrep, static analysis by rules.
+
+import { ToolSetup, git_trust, layered_env, layered_volumes, vars } from "./common.lask"
+
+// Semgrep, semgrep/semgrep:1.178.0 by default. It sends no metrics and
+// checks for no update (SEMGREP_SEND_METRICS=off,
+// SEMGREP_ENABLE_VERSION_CHECK=0). The mounted project is trusted by
+// Git (safe.directory), since Semgrep lists the files to scan through
+// it.
+//
+// @param image      The image to run; another release is passed as image = #semgrep/semgrep:<tag>.
+// @param app_token  SEMGREP_APP_TOKEN, for Semgrep AppSec Platform; masked in the command log.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "semgrep" } on ...` or `$[...]`.
+// @example lask eval semgrep.env
+env(
+  --image: Environment = #semgrep/semgrep:1.178.0,
+  --app_token!!: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(
+    merge({"SEMGREP_SEND_METRICS": "off", "SEMGREP_ENABLE_VERSION_CHECK": "0"}, git_trust()),
+    extra_env,
+    with,
+    vars({"SEMGREP_APP_TOKEN": app_token})
+  ),
+  volumes = layered_volumes(with, [])
+)
+
+command { "semgrep" } on env()

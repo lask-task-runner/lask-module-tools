@@ -1,0 +1,23 @@
+// Gitleaks, secrets in a Git history or a tree.
+
+import { ToolSetup, git_trust, layered_env, layered_volumes } from "./common.lask"
+
+// Gitleaks, zricethezav/gitleaks:v8.30.1 by default: secrets in the
+// project's files and Git history. The mounted project is trusted by
+// Git (safe.directory), so its history can be read.
+//
+// @param image      The image to run; another release is passed as image = #zricethezav/gitleaks:<tag>.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "gitleaks" } on ...` or `$[...]`.
+// @example lask eval gitleaks.env
+env(
+  --image: Environment = #zricethezav/gitleaks:v8.30.1,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(git_trust(), extra_env, with, {}),
+  volumes = layered_volumes(with, [])
+)
+
+command { "gitleaks" } on env()

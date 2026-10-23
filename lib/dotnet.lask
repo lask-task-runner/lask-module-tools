@@ -1,6 +1,6 @@
 // .NET.
 
-import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // The .NET SDK, configured by its parameters.
 //
@@ -16,8 +16,8 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "dotnet" } on ...` or `$[...]`.
-// @example lask eval dotnet --cache_dir /tmp/cache
-dotnet(
+// @example lask eval dotnet.env --cache_dir /tmp/cache
+env(
   --image: Environment = #mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
@@ -33,4 +33,4 @@ dotnet(
 )
 
 // .NET works as it is, so its command word is exported.
-command { "dotnet" } on dotnet()
+command { "dotnet" } on env()

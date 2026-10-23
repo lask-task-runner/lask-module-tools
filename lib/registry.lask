@@ -1,0 +1,37 @@
+// Credentials for a container registry, for a tool that pulls from or pushes to it.
+
+import { ToolSetup, given, mount, vars } from "./common.lask"
+
+// Credentials for a container registry, for a tool that pulls from it
+// itself: trivy, grype, syft.
+//
+// Either a Docker configuration directory, mounted read-only
+// (DOCKER_CONFIG), or a user name and password, set under the names
+// each scanner reads. A configuration that keeps its credentials in a
+// credential helper — Docker Desktop's "desktop" — holds none the
+// container can use: pass the user name and password instead.
+//
+// @param registry    The registry the user name and password are for, e.g. "ghcr.io".
+// @param username    TRIVY_USERNAME, GRYPE_REGISTRY_AUTH_USERNAME and SYFT_REGISTRY_AUTH_USERNAME.
+// @param password    TRIVY_PASSWORD, GRYPE_REGISTRY_AUTH_PASSWORD and SYFT_REGISTRY_AUTH_PASSWORD; masked in the command log.
+// @param config_dir  Host directory mounted read-only at /run/docker (DOCKER_CONFIG), usually home(".docker").
+// @return The variables and mounts, for a tool's --with.
+setup(
+  --registry: String | Null = null,
+  --username: String | Null = null,
+  --password!!: String | Null = null,
+  --config_dir: String | Null = null
+): ToolSetup = {
+  env: vars({
+    "DOCKER_CONFIG": given(config_dir, "/run/docker"),
+    "TRIVY_USERNAME": username,
+    "TRIVY_PASSWORD": password,
+    "GRYPE_REGISTRY_AUTH_AUTHORITY": registry,
+    "GRYPE_REGISTRY_AUTH_USERNAME": username,
+    "GRYPE_REGISTRY_AUTH_PASSWORD": password,
+    "SYFT_REGISTRY_AUTH_AUTHORITY": registry,
+    "SYFT_REGISTRY_AUTH_USERNAME": username,
+    "SYFT_REGISTRY_AUTH_PASSWORD": password
+  }),
+  volumes: mount(config_dir, "/run/docker:ro")
+}

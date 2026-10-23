@@ -1,6 +1,6 @@
 // Packer.
 
-import { vars, mount, in_cache, prefixed, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, prefixed, vars } from "./common.lask"
 
 // Packer, configured by its parameters.
 //
@@ -19,8 +19,8 @@ import { vars, mount, in_cache, prefixed, layered_env, layered_volumes, ToolSetu
 // @param with       Setups of other tools this environment should also carry: a builder's credentials.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "packer" } on ...` or `$[...]`.
-// @example lask eval packer --variables '{"region": "ap-northeast-1"}'
-packer(
+// @example lask eval packer.env --variables '{"region": "ap-northeast-1"}'
+env(
   --image: Environment = #hashicorp/packer:1.16.1,
   --log: String | Null = null,
   --variables: Map<String> = {},

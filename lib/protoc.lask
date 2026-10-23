@@ -1,0 +1,25 @@
+// protoc, the Protocol Buffers compiler.
+
+import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
+
+// protoc, the Protocol Buffers compiler, with the well-known types and
+// the gRPC plugins.
+//
+// The image is built from lib/images/protoc/Dockerfile (Alpine 3.24), so
+// it takes no --image, and `lask sync` builds it. A language's own plugin
+// — protoc-gen-go, ts-proto — lives with that language's toolchain; buf,
+// which fetches plugins itself, is often the simpler way.
+//
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "protoc" } on ...` or `$[...]`.
+// @example lask eval protoc.env
+env(
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = #./images/protoc/Dockerfile{
+  env: layered_env({}, extra_env, with, {}),
+  volumes: layered_volumes(with, [])
+}
+
+command { "protoc" } on env()

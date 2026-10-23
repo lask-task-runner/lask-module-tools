@@ -1,0 +1,23 @@
+// An SSH identity, for a tool's --with.
+
+import { ToolSetup, given, mount, vars } from "./common.lask"
+
+// An SSH identity: a key directory, an agent, or both.
+//
+// A key directory is mounted read-only at /root/.ssh. On a Linux host
+// its files belong to the host's user, and ssh refuses a config file
+// that neither root nor the running user owns; an agent socket has no
+// such problem, and keeps the keys out of the container. With Docker
+// Desktop the host's agent is at "/run/host-services/ssh-auth.sock"; on
+// Linux it is the host's $SSH_AUTH_SOCK.
+//
+// @param dir           Host directory mounted read-only at /root/.ssh, usually home(".ssh").
+// @param agent_socket  Host path of an SSH agent socket, mounted at /run/ssh-agent.sock (SSH_AUTH_SOCK).
+// @return The variables and mounts, for a tool's --with.
+setup(
+  --dir: String | Null = null,
+  --agent_socket: String | Null = null
+): ToolSetup = {
+  env: vars({"SSH_AUTH_SOCK": given(agent_socket, "/run/ssh-agent.sock")}),
+  volumes: concat_array(mount(dir, "/root/.ssh:ro"), mount(agent_socket, "/run/ssh-agent.sock"))
+}
