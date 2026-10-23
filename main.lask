@@ -1,103 +1,149 @@
 // lask-module-tools — ready-made execution environments for the tools
 // a Lask task runs.
 //
-// Each tool is a function returning a Runnable. `--image` picks the
-// release of its image, as a head such as #python:3.13.5-alpine3.22; its
-// other keyword parameters are what the tool
+// Each tool is a namespace: env(...) returns its Runnable, and a tool
+// whose words have command schemas has schema, the schemas of the
+// release of its default image, and schema_<version>, the same by its
+// version. `--image` picks the release of the image, as a head such as
+// #python:3.13.5-alpine3.22; env's other keyword parameters are what the tool
 // needs from the environment it runs in: the variables it reads, its
 // credentials, and the host directories it has to see. A parameter left
 // null sets nothing. Design: doc/design.md.
 //
 // This file is the public API: each tool lives in lib/<tool>.lask and
-// is re-exported here. Anything in lib/ that is not listed below stays
+// is re-exported here as a namespace. Anything in lib/ that is not listed below stays
 // out of reach of a consumer.
 
 export { ToolSetup, home } from "./lib/common.lask"
 
 // ---- Setups for --with, which no one tool owns ----------------------
 
-export { ssh_setup, git_setup, docker_setup, registry_setup } from "./lib/setups.lask"
+export * as ssh from "./lib/ssh.lask"
+export * as docker from "./lib/docker.lask"
+export * as registry from "./lib/registry.lask"
 
 // ---- Cloud CLIs: each needs an account, so none exports a word ------
 
-export { aws, aws_setup } from "./lib/aws.lask"
-export { gcloud, gcloud_setup } from "./lib/gcloud.lask"
-export { az, azure_setup } from "./lib/azure.lask"
+export * as aws from "./lib/aws.lask"
+export * as gcloud from "./lib/gcloud.lask"
+export * as az from "./lib/az.lask"
 
 // ---- Languages: each works as it is, so each exports its words ------
 
-export { python, python_schema, pip_schema } from "./lib/python.lask"
+export * as python from "./lib/python.lask"
 export command { "python", "python3", "pip", "pip3" } from "./lib/python.lask"
 
-export { node } from "./lib/node.lask"
+export * as node from "./lib/node.lask"
 export command { "node", "npm", "npx", "corepack" } from "./lib/node.lask"
 
-export { go, go_schema, gofmt_schema } from "./lib/go.lask"
+export * as go from "./lib/go.lask"
 export command { "go", "gofmt" } from "./lib/go.lask"
 
-export { java, maven, gradle } from "./lib/java.lask"
-export command { "java", "javac", "jar", "mvn", "gradle" } from "./lib/java.lask"
+export * as java from "./lib/java.lask"
+export * as maven from "./lib/maven.lask"
+export * as gradle from "./lib/gradle.lask"
+export command { "java", "javac", "jar" } from "./lib/java.lask"
+export command { "mvn" } from "./lib/maven.lask"
+export command { "gradle" } from "./lib/gradle.lask"
 
-export { rust, cargo_schema } from "./lib/rust.lask"
+export * as rust from "./lib/rust.lask"
 export command { "cargo", "rustc", "rustup" } from "./lib/rust.lask"
 
-export { cc, make_schema } from "./lib/cc.lask"
+export * as cc from "./lib/cc.lask"
 export command { "gcc", "g++", "cc", "c++", "make" } from "./lib/cc.lask"
 
-export { ruby } from "./lib/ruby.lask"
+export * as ruby from "./lib/ruby.lask"
 export command { "ruby", "gem", "bundle", "rake" } from "./lib/ruby.lask"
 
-export { dotnet } from "./lib/dotnet.lask"
+export * as dotnet from "./lib/dotnet.lask"
 export command { "dotnet" } from "./lib/dotnet.lask"
 
-export { deno, bun } from "./lib/deno.lask"
-export command { "deno", "bun", "bunx" } from "./lib/deno.lask"
+export * as deno from "./lib/deno.lask"
+export * as bun from "./lib/bun.lask"
+export command { "deno" } from "./lib/deno.lask"
+export command { "bun", "bunx" } from "./lib/bun.lask"
 
-export { haskell } from "./lib/haskell.lask"
+export * as haskell from "./lib/haskell.lask"
 export command { "ghc", "ghci", "runghc", "cabal", "stack" } from "./lib/haskell.lask"
 
 // ---- Container orchestration: a cluster needs a kubeconfig ----------
 
-export { kubectl, helm, kustomize, kube_setup } from "./lib/kube.lask"
-export command { "kustomize" } from "./lib/kube.lask"
+export * as kubectl from "./lib/kubectl.lask"
+export * as helm from "./lib/helm.lask"
+export * as kustomize from "./lib/kustomize.lask"
+export * as kube from "./lib/kube.lask"
+export command { "kustomize" } from "./lib/kustomize.lask"
 
 // ---- IaC: each needs a provider's credentials -----------------------
 
-export { terraform, tofu } from "./lib/terraform.lask"
-export { ansible } from "./lib/ansible.lask"
-export { packer } from "./lib/packer.lask"
-export { pulumi } from "./lib/pulumi.lask"
+export * as terraform from "./lib/terraform.lask"
+export * as tofu from "./lib/tofu.lask"
+export * as ansible from "./lib/ansible.lask"
+export * as packer from "./lib/packer.lask"
+export * as pulumi from "./lib/pulumi.lask"
 
 // ---- Database clients: each needs a server --------------------------
 
-export { psql, pg_setup, mysql, redis_cli, migrate, flyway } from "./lib/db.lask"
+export * as psql from "./lib/psql.lask"
+export * as mysql from "./lib/mysql.lask"
+export * as redis_cli from "./lib/redis_cli.lask"
+export * as migrate from "./lib/migrate.lask"
+export * as flyway from "./lib/flyway.lask"
 
 // ---- Git and code hosts: each needs an identity ---------------------
 
-export { git, gh, glab } from "./lib/git.lask"
+export * as git from "./lib/git.lask"
+export * as gh from "./lib/gh.lask"
+export * as glab from "./lib/glab.lask"
 
 // ---- Build and code generation --------------------------------------
 
-export { buf, protoc, bazel } from "./lib/build.lask"
-export command { "buf", "protoc", "bazel", "bazelisk" } from "./lib/build.lask"
+export * as buf from "./lib/buf.lask"
+export * as protoc from "./lib/protoc.lask"
+export * as bazel from "./lib/bazel.lask"
+export command { "buf" } from "./lib/buf.lask"
+export command { "protoc" } from "./lib/protoc.lask"
+export command { "bazel", "bazelisk" } from "./lib/bazel.lask"
 
 // ---- Linters and formatters -----------------------------------------
 
-export { shellcheck, hadolint, tflint, golangci_lint, ruff, actionlint } from "./lib/lint.lask"
-export command { "shellcheck", "hadolint", "tflint", "golangci-lint", "ruff", "actionlint" } from "./lib/lint.lask"
+export * as shellcheck from "./lib/shellcheck.lask"
+export * as hadolint from "./lib/hadolint.lask"
+export * as tflint from "./lib/tflint.lask"
+export * as golangci_lint from "./lib/golangci_lint.lask"
+export * as ruff from "./lib/ruff.lask"
+export * as actionlint from "./lib/actionlint.lask"
+export command { "shellcheck" } from "./lib/shellcheck.lask"
+export command { "hadolint" } from "./lib/hadolint.lask"
+export command { "tflint" } from "./lib/tflint.lask"
+export command { "golangci-lint" } from "./lib/golangci_lint.lask"
+export command { "ruff" } from "./lib/ruff.lask"
+export command { "actionlint" } from "./lib/actionlint.lask"
 
 // ---- Security scanners ----------------------------------------------
 
-export { trivy, gitleaks, checkov, grype, syft, semgrep } from "./lib/security.lask"
-export command { "trivy", "gitleaks", "checkov", "grype", "syft", "semgrep" } from "./lib/security.lask"
+export * as trivy from "./lib/trivy.lask"
+export * as gitleaks from "./lib/gitleaks.lask"
+export * as checkov from "./lib/checkov.lask"
+export * as grype from "./lib/grype.lask"
+export * as syft from "./lib/syft.lask"
+export * as semgrep from "./lib/semgrep.lask"
+export command { "trivy" } from "./lib/trivy.lask"
+export command { "gitleaks" } from "./lib/gitleaks.lask"
+export command { "checkov" } from "./lib/checkov.lask"
+export command { "grype" } from "./lib/grype.lask"
+export command { "syft" } from "./lib/syft.lask"
+export command { "semgrep" } from "./lib/semgrep.lask"
 
 // ---- Secret managers: each needs a credential -----------------------
 
-export { vault, vault_setup, sops, op } from "./lib/secrets.lask"
+export * as vault from "./lib/vault.lask"
+export * as sops from "./lib/sops.lask"
+export * as op from "./lib/op.lask"
 
 // ---- Everyday tools: curl, jq and the rest, in one image ------------
 
-export { unix } from "./lib/unix.lask"
+export * as unix from "./lib/unix.lask"
 export command {
   "curl", "wget", "openssl",
   "jq", "yq", "envsubst",
@@ -108,8 +154,16 @@ export command {
 // ---- API, HTTP, E2E and load testing --------------------------------
 
 // Playwright's tests run through npx, which is node's word, so it
-// exports none: give it with `$[tools.playwright()]`.
-export { playwright } from "./lib/playwright.lask"
+// exports none: give it with `$[tools.playwright.env()]`.
+export * as playwright from "./lib/playwright.lask"
 
-export { k6, grpcurl, newman, robot, ab } from "./lib/testing.lask"
-export command { "k6", "grpcurl", "newman", "robot", "rebot", "libdoc", "ab" } from "./lib/testing.lask"
+export * as k6 from "./lib/k6.lask"
+export * as grpcurl from "./lib/grpcurl.lask"
+export * as newman from "./lib/newman.lask"
+export * as robot from "./lib/robot.lask"
+export * as ab from "./lib/ab.lask"
+export command { "k6" } from "./lib/k6.lask"
+export command { "grpcurl" } from "./lib/grpcurl.lask"
+export command { "newman" } from "./lib/newman.lask"
+export command { "robot", "rebot", "libdoc" } from "./lib/robot.lask"
+export command { "ab" } from "./lib/ab.lask"

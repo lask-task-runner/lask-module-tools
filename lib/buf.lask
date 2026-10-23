@@ -1,0 +1,31 @@
+// buf, the Protocol Buffers toolchain.
+
+import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
+
+// buf, the Protocol Buffers toolchain.
+//
+// The image is #bufbuild/buf:1.73.0 unless --image names another.
+// `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
+// run never pulls.
+//
+// @param image      The image to run; another release is passed as image = #bufbuild/buf:<tag>.
+// @param token      BUF_TOKEN, for the Buf Schema Registry; masked in the command log.
+// @param cache_dir  Host directory mounted at /cache; buf's cache is /cache/buf (BUF_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "buf" } on ...` or `$[...]`.
+// @example lask eval buf.env --cache_dir /tmp/cache
+env(
+  --image: Environment = #bufbuild/buf:1.73.0,
+  --token!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(git_trust(), extra_env, with, vars({"BUF_TOKEN": token, "BUF_CACHE_DIR": in_cache(cache_dir, "buf")})),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+// These tools need nothing from the caller, so their command words are
+// exported.
+command { "buf" } on env()

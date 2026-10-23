@@ -9,7 +9,7 @@ Section numbers refer to the Lask specification (`lask/doc/spec.md`).
 ## 1. Goals
 
 - One place where the image for each tool is chosen, so a project never has to find a working image or tag on its own — and can still run another release of it with `--image`.
-- Every environment is configured by named arguments, not by knowing which variables a tool reads: `aws(profile = "dev")`, not `env = {"AWS_PROFILE": "dev"}`.
+- Every environment is configured by named arguments, not by knowing which variables a tool reads: `aws.env(profile = "dev")`, not `env = {"AWS_PROFILE": "dev"}`.
 - Environments compose. A tool that needs another tool's credentials — the Terraform AWS provider, an Ansible dynamic inventory — takes them as a value, without the caller restating them.
 
 ## 2. Non-Goals
@@ -23,15 +23,15 @@ Section numbers refer to the Lask specification (`lask/doc/spec.md`).
 Every tool is a function returning a `Runnable`, the image and the run options it runs with:
 
 ```lask
-aws(--image: Environment = #amazon/aws-cli:2.36.41, --profile: String | Null = null, ...): Runnable =
+aws.env(--image: Environment = #amazon/aws-cli:2.36.41, --profile: String | Null = null, ...): Runnable =
   runnable(image, env = ..., volumes = ...)
 ```
 
 It serves both ways of running a command, because the environment of a command declaration is an ordinary expression (ch. 5, since lask#44):
 
 ```lask
-command { "aws" } on tools.aws(profile = "dev")        // then `$ aws s3 ls`
-check(): String = $[tools.aws(profile = "ci")] aws sts get-caller-identity
+command { "aws" } on tools.aws.env(profile = "dev")        // then `$ aws s3 ls`
+check(): String = $[tools.aws.env(profile = "ci")] aws sts get-caller-identity
 ```
 
 The declaration's environment is evaluated when a command runs, and may not have an effect. Every function here satisfies that: it builds a value from its arguments and from `get_env`, and runs nothing.
@@ -52,7 +52,7 @@ A tool **does not export them when it needs configuring first**. `aws` with no p
 
 An exported command word comes with a command schema (lask spec ch. 5) when its options are fixed by the program rather than by what a project installs: `go`, `gofmt`, `python`, `pip`, `cargo` and `make`. `node`, `npm` and the rest have none yet, because they take flags from plugins and configuration as well as their own.
 
-Each schema describes the release in the tool's default image, and is read from that release rather than from documentation: the program's help, and, where it has one, the source that defines its flags. It is then checked against the program in both directions: every option it lists is one the program accepts, and every option name the program uses anywhere is one it lists wherever the program accepts it. A command is `closed` only where that holds; one whose options another program also defines — `go test` and `go vet`, `cargo clippy` — is left open, so an option it does not know is advised rather than rejected. A program that takes a long option shortened to a unique prefix (pip, make) says so with `abbreviations`.
+Each schema describes the release in the tool's default image, and is read from that release rather than from documentation. A tool's `schema` is a map from each of its words to its schema, and `schema_<version>` the same under the release's number; `schema` refers to the `schema_<version>` of the default image, and both are updated with it: the program's help, and, where it has one, the source that defines its flags. It is then checked against the program in both directions: every option it lists is one the program accepts, and every option name the program uses anywhere is one it lists wherever the program accepts it. A command is `closed` only where that holds; one whose options another program also defines — `go test` and `go vet`, `cargo clippy` — is left open, so an option it does not know is advised rather than rejected. A program that takes a long option shortened to a unique prefix (pip, make) says so with `abbreviations`.
 
 A project that runs another release with `--image` may find an option the schema does not list. It then declares the word itself, with or without the exported schema.
 
@@ -97,33 +97,33 @@ type ToolSetup = Record<env: Map<String>, volumes: Array<String>>
 A tool whose credentials other tools need publishes a second form, `<tool>_setup(...)`, taking the same parameters as its function and returning the variables and mounts instead of an environment. The function is defined over its own setup, so the two cannot drift. A setup carries none of its tool's defaults: `AWS_PAGER` concerns the AWS CLI, not the Terraform provider.
 
 ```lask
-creds = tools.aws_setup(profile = "dev", config_dir = tools.home(".aws"))
+creds = tools.aws.setup(profile = "dev", config_dir = tools.home(".aws"))
 
 // The Terraform image, with the AWS provider's credentials.
-tf = tools.terraform(variables = {"app_version": "1.2.3"}, with = [creds])
+tf = tools.terraform.env(variables = {"app_version": "1.2.3"}, with = [creds])
 ```
 
-The same `creds` value can be handed to `ansible(with = [...])` for an AWS dynamic inventory, and a future `gcloud_setup` slots into the same list.
+The same `creds` value can be handed to `ansible.env(with = [...])` for an AWS dynamic inventory, and a future `gcloud.setup` slots into the same list.
 
 ### 4.4 The Image Release Is `--image`
 
 Each tool takes its image as `--image`, an `Environment` whose default is the image of the release this module was written and tested against, and says how to run whichever it gets by giving it to `runnable` with its options (lask 15.5):
 
 ```lask
-aws(--image: Environment = #amazon/aws-cli:2.36.41, ...): Runnable = runnable(image, env = ..., volumes = ...)
+aws.env(--image: Environment = #amazon/aws-cli:2.36.41, ...): Runnable = runnable(image, env = ..., volumes = ...)
 ```
 
-A project that needs another release says so at the call, as an image head, and nothing else changes: `tools.aws(image = #amazon/aws-cli:2.37.0, profile = "dev")`.
+A project that needs another release says so at the call, as an image head, and nothing else changes: `tools.aws.env(image = #amazon/aws-cli:2.37.0, profile = "dev")`.
 
 An image is named only by the head of an environment expression (lask 6.7), so either way it is a head someone wrote — the default here, or the caller's in their module — and is known without running anything:
 
 - `lask envs list` reports it, and `lask sync` pulls it and pins its digest in the lock (10.3). The images required are the heads reachable from the project's entry module: a tool the project does not reach is not pulled, and a tool it reaches has its default image pulled even where the caller passes another.
 - A run uses the pinned image, and never pulls it: an image that is not there is `E-IO-IMAGE-MISSING`, whose diagnostic names `lask sync`.
-- `--image` cannot be given on the command line: no CLI argument can name an image (lask 11.2). `lask eval aws` runs the default.
+- `--image` cannot be given on the command line: no CLI argument can name an image (lask 11.2). `lask eval aws.env` runs the default.
 
-`--image` is an `Environment`, never a `Runnable`: it carries the image and its image options (`platform`), and no run option. The run options are the tool's, given once in its `runnable` call (lask 8.8), so a caller's value for one of them goes in through the tool's parameters — `--extra_env`, `--with`, `--network` and the rest — and `aws(image = #amazon/aws-cli:2.37.0{memory: "1g"})` is a type error.
+`--image` is an `Environment`, never a `Runnable`: it carries the image and its image options (`platform`), and no run option. The run options are the tool's, given once in its `runnable` call (lask 8.8), so a caller's value for one of them goes in through the tool's parameters — `--extra_env`, `--with`, `--network` and the rest — and `aws.env(image = #amazon/aws-cli:2.37.0{memory: "1g"})` is a type error.
 
-Nothing checks that the image passed is the tool's: `aws(image = #node:24)` builds an environment that runs node with the AWS variables. It is the caller's choice, written where they make it.
+Nothing checks that the image passed is the tool's: `aws.env(image = #node:24)` builds an environment that runs node with the AWS variables. It is the caller's choice, written where they make it.
 
 A tool built from a recipe (§5.3, §5.10, §5.11) takes no `--image`. Its version is a build argument, and build arguments are literals (10.2), since they decide which image is built before anything runs. Its recipe is pinned the way every recipe is.
 
@@ -137,16 +137,16 @@ Every function below is implemented. The README lists each one's default image a
 
 | Genre | Functions | Setups |
 | --- | --- | --- |
-| Cloud CLIs | `aws`, `gcloud`, `az` | `aws_setup`, `gcloud_setup`, `azure_setup` |
+| Cloud CLIs | `aws`, `gcloud`, `az` | `aws.setup`, `gcloud.setup`, `az.setup` |
 | Languages | `python`, `node`, `go`, `java`, `maven`, `gradle`, `rust`, `cc`, `ruby`, `dotnet`, `deno`, `bun`, `haskell` | |
-| Container orchestration | `kubectl`, `helm`, `kustomize` | `kube_setup` |
+| Container orchestration | `kubectl`, `helm`, `kustomize` | `kube.setup` |
 | IaC | `terraform`, `tofu`, `ansible`, `packer`, `pulumi` | |
-| Database clients | `psql`, `mysql`, `redis_cli`, `migrate`, `flyway` | `pg_setup` |
-| Git and code hosts | `git`, `gh`, `glab` | `git_setup`, `ssh_setup` |
+| Database clients | `psql`, `mysql`, `redis_cli`, `migrate`, `flyway` | `psql.setup` |
+| Git and code hosts | `git`, `gh`, `glab` | `git.setup`, `ssh.setup` |
 | Build | `buf`, `protoc`, `bazel` | |
 | Linters | `shellcheck`, `hadolint`, `tflint`, `golangci_lint`, `ruff`, `actionlint` | |
-| Security scanners | `trivy`, `gitleaks`, `checkov`, `grype`, `syft`, `semgrep` | `registry_setup`, `docker_setup` |
-| Secret managers | `vault`, `sops`, `op` | `vault_setup` |
+| Security scanners | `trivy`, `gitleaks`, `checkov`, `grype`, `syft`, `semgrep` | `registry.setup`, `docker.setup` |
+| Secret managers | `vault`, `sops`, `op` | `vault.setup` |
 | Everyday tools | `unix` | |
 | Testing | `playwright`, `k6`, `grpcurl`, `newman`, `robot`, `ab` | |
 
@@ -161,7 +161,7 @@ An image is chosen by these rules, in order:
 5. **A release still in support.** In particular, not Node 20: it reached end of life on 2026-04-30. An LTS release where a tool has them: Java 25, .NET 10, MySQL 8.4.
 6. **Debian rather than Alpine where musl breaks the usual workflow:** `golang` (cgo and `-race` need a C toolchain), `rust`, `haskell`. Alpine elsewhere, for size.
 
-### 5.1 `aws` / `aws_setup` (implemented)
+### 5.1 `aws` / `aws.setup` (implemented)
 
 | Parameter | Sets |
 | --- | --- |
@@ -208,7 +208,7 @@ A recipe, since there is no official image: ansible-core 2.21.4, with the SSH cl
 | `--inventory` | `ANSIBLE_INVENTORY` |
 | `--host_key_checking: Bool \| Null` | `ANSIBLE_HOST_KEY_CHECKING` |
 | `--vault_password_file` | mounts the file read-only at `/run/secrets/vault-password`; `ANSIBLE_VAULT_PASSWORD_FILE` points to it |
-| `--ssh_dir`, `--ssh_agent_socket` | as `ssh_setup` |
+| `--ssh_dir`, `--ssh_agent_socket` | as `ssh.setup` |
 | `--cache_dir` | mounts at `/cache`; `ANSIBLE_COLLECTIONS_PATH=/cache/ansible/collections`, `ANSIBLE_ROLES_PATH=/cache/ansible/roles` |
 
 Defaults: `PYTHONUNBUFFERED=1`, so a playbook's output reaches the command log as it happens (12.3) rather than when the buffer fills.
@@ -225,7 +225,7 @@ Defaults: `PYTHONUNBUFFERED=1`, so a playbook's output reaches the command log a
 | `--goos`, `--goarch` | `GOOS`, `GOARCH` |
 | `--cache_dir` | mounts at `/cache`; `GOMODCACHE=/cache/mod`, `GOCACHE=/cache/build` |
 
-Defaults: `GOTOOLCHAIN=local`, so Go stays at the release its image holds: a `go.mod` asking for a newer one fails rather than downloading it into a container that is thrown away. The project is trusted by Git (§5.11), so `go build` can stamp its revision. A private module over https takes `with = [git_setup(token = ...)]`.
+Defaults: `GOTOOLCHAIN=local`, so Go stays at the release its image holds: a `go.mod` asking for a newer one fails rather than downloading it into a container that is thrown away. The project is trusted by Git (§5.11), so `go build` can stamp its revision. A private module over https takes `with = [git.setup(token = ...)]`.
 
 ### 5.5 `node` (implemented)
 
@@ -291,7 +291,7 @@ Defaults: `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`, `npm_config_update_notifier=fals
 
 The image carries the browsers of one Playwright release, so the tag of `--image` must match the `@playwright/test` version the project installs. The browsers are never downloaded: a mismatch fails at once rather than fetching them into a container that is thrown away. The init process reaps the browsers' child processes. Chromium runs out of Docker's default 64MB of shared memory; Playwright's own advice is `--ipc=host`, which Lask has no option for, and a larger `/dev/shm` does the same job without sharing the host's IPC namespace.
 
-The tests run through `npx`, which is `node`'s command word, and a module exports one declaration per word, so `playwright` exports none. A project gives it where it is used, `$[tools.playwright()] npx playwright test`, or declares `npx` on it in a module that does not import `node`'s.
+The tests run through `npx`, which is `node`'s command word, and a module exports one declaration per word, so `playwright` exports none. A project gives it where it is used, `$[tools.playwright.env()] npx playwright test`, or declares `npx` on it in a module that does not import `node`'s.
 
 ### 5.10 `unix` (implemented)
 
@@ -305,16 +305,16 @@ Exported words: the programs a project comes here for — `curl`, `wget`, `opens
 
 The README gives each function's parameters. What is not visible from them:
 
-- **Git in the mounted project.** The project belongs to the host's user and the container runs as root, so Git refuses it ("dubious ownership"), and so does whatever runs Git: `go build` stamping the revision, gitleaks reading history, semgrep listing files. Every tool that runs Git there trusts it through `GIT_CONFIG_*` (`safe.directory=*`). `git_setup` sets Git's configuration as a whole and always starts with that entry, so a tool given it stays trusted.
-- **`git_setup` and tokens.** A token reaches every tool that clones through Git by rewriting `https://<host>/` and `git@<host>:` to https with the token in the URL (`url.<base>.insteadOf`), carried in `GIT_CONFIG_*`: nothing is written to a file, and the token is masked wherever it appears.
+- **Git in the mounted project.** The project belongs to the host's user and the container runs as root, so Git refuses it ("dubious ownership"), and so does whatever runs Git: `go build` stamping the revision, gitleaks reading history, semgrep listing files. Every tool that runs Git there trusts it through `GIT_CONFIG_*` (`safe.directory=*`). `git.setup` sets Git's configuration as a whole and always starts with that entry, so a tool given it stays trusted.
+- **`git.setup` and tokens.** A token reaches every tool that clones through Git by rewriting `https://<host>/` and `git@<host>:` to https with the token in the URL (`url.<base>.insteadOf`), carried in `GIT_CONFIG_*`: nothing is written to a file, and the token is masked wherever it appears.
 - **`git`, `gh` and `glab`** run in the image of `unix`, which carries them; a second image for Git alone would be built for nothing.
-- **`kubectl`, `helm` and `kustomize`** share `alpine/k8s`, whose tag follows kubectl's release. It carries the AWS CLI, so an EKS kubeconfig's `aws eks get-token` works with `aws_setup` in `--with`; it has no GKE auth plugin. kubectl reads no variable for a context or a namespace; `kube_setup` sets Helm's and Terraform's.
+- **`kubectl`, `helm` and `kustomize`** share `alpine/k8s`, whose tag follows kubectl's release. It carries the AWS CLI, so an EKS kubeconfig's `aws eks get-token` works with `aws.setup` in `--with`; it has no GKE auth plugin. kubectl reads no variable for a context or a namespace; `kube.setup` sets Helm's and Terraform's.
 - **The cloud setups** set each variable under every name the tools read: `CLOUDSDK_*` for gcloud and `GOOGLE_*` for the SDKs and Terraform; `ARM_*` for Terraform and `AZURE_*` for the SDKs. `az` does not log in from them by itself: the command runs `az login --service-principal` first.
 - **The database clients** read what they can from the environment. `mysql` reads no user and no database, and `redis-cli` no host: those are set as variables for the command line (`MYSQL_USER`, `MYSQL_DATABASE`) or given there. `migrate` takes its database only on the command line, so `database_url` is `DATABASE_URL` for `-database "$DATABASE_URL"`.
 - **`pulumi`** runs `pulumi/pulumi-nodejs` unless `--image` names another runtime's image, `#pulumi/pulumi-python:3.265.0` and the like: each holds one runtime, where `pulumi/pulumi` holds all of them at several times the size.
 - **`bazel`** is Bazelisk, which runs the release `.bazelversion` names. Bazel's output root follows `XDG_CACHE_HOME`, so `--cache_dir` keeps it, and a build is incremental across runs.
 - **`robot`** holds Robot Framework and RequestsLibrary; another library is installed in the same command. A browser library is better served by `playwright`.
-- **`docker_setup`** hands a container the host's daemon, and so root on the host. No tool takes it by default; the caller asks for it (10.7).
+- **`docker.setup`** hands a container the host's daemon, and so root on the host. No tool takes it by default; the caller asks for it (10.7).
 
 ## 6. Consumer Usage
 
@@ -326,14 +326,14 @@ lask deps add tools --git https://github.com/lask-task-runner/lask-module-tools 
 import * as tools from "tools"
 import command { "go", "gofmt" } from "tools"        // toolchains: as they are
 
-command { "aws" } on tools.aws(profile = "dev", config_dir = tools.home(".aws"))
+command { "aws" } on tools.aws.env(profile = "dev", config_dir = tools.home(".aws"))
 
 test(): String = $ go test ./...
 deploy(): String = $ aws s3 sync web/dist s3://my-bucket --delete
 
 // Terraform with the same AWS account.
 plan(): String = do {
-  tf = tools.terraform(with = [tools.aws_setup(profile = "dev", config_dir = tools.home(".aws"))])
+  tf = tools.terraform.env(with = [tools.aws.setup(profile = "dev", config_dir = tools.home(".aws"))])
   $[tf] terraform -chdir=infra plan -input=false
 }
 ```
@@ -347,7 +347,7 @@ lask-module-tools/
   main.lask             # the public API: `export { ... } from` lines only
   lib/
     common.lask         # ToolSetup, home, and what every tool is built from
-    setups.lask         # ssh_setup, git_setup, docker_setup, registry_setup
+    setups.lask         # ssh.setup, git.setup, docker.setup, registry.setup
     aws.lask            # one file per tool, or per family of tools
     java.lask           #   (java, maven, gradle), lint.lask, security.lask, ...
     images/
@@ -360,11 +360,11 @@ lask-module-tools/
     design.md
 ```
 
-Each tool lives in `lib/<name>.lask` — one file per tool, or per family that shares an image or a setup — and `main.lask` re-exports its public functions, as chapter 5 says a multi-file API is published. An import of a dependency reaches its `main.lask` and nothing else, so only what `main.lask` lists reaches a project. The helpers in `lib/common.lask` are public within the tree, where each tool's file imports them, and invisible outside it. A tool's exported command words are re-exported the same way, with `export command { ... } from`.
+Each tool lives in `lib/<name>.lask`, one file per tool, and `main.lask` re-exports each file as a namespace, `export * as go from "./lib/go.lask"`, so a project reaches it as `tools.go`. A tool's namespace holds `env(...)`, the function that returns its `Runnable`; `setup(...)`, when another tool can carry its credentials (§4.3); and, when its words have command schemas (§3), `schema` and `schema_<version>`. A setup no one tool owns has a namespace of its own: `ssh`, `docker`, `registry`, `kube`. Within the tree, a tool that uses another's setup imports that file as a namespace (`import * as ssh from "./ssh.lask"`). An import of a dependency reaches its `main.lask` and nothing else, so only what `main.lask` lists reaches a project. The helpers in `lib/common.lask` are public within the tree, where each tool's file imports them, and invisible outside it: `main.lask` exports none of them but `ToolSetup` and `home`. A tool's exported command words are re-exported with `export command { ... } from`.
 
 A recipe lives under `lib/`, because a `dockerfile` path must stay inside the tree of the module that writes it (10.2): `lib/unix.lask` cannot name `images/unix/Dockerfile` at the repository root. For the same reason the selftest cannot write a recipe environment as a literal, and compares a recipe tool with itself.
 
-The command line of this repository reaches a re-exported function as it reaches a declared one: `lask eval aws --profile dev`, `lask run aws --help`.
+The command line of this repository reaches a re-exported function as it reaches a declared one: `lask eval aws.env --profile dev`, `lask run aws.env --help`.
 
 ## 8. Testing
 
@@ -376,8 +376,8 @@ The command line of this repository reaches a re-exported function as it reaches
 ## 9. Adding a Tool
 
 1. Pick the image by the rules of §5 and update the catalog table.
-2. Write `<tool>(...)` in `lib/<tool>.lask` from what `lib/common.lask` provides, with `--image` defaulting to the chosen release's image (§4.4), and `<tool>_setup` only if another tool needs its credentials (§4.3).
-3. Re-export them from `main.lask`. If its default environment is useful as it is (§3), declare its command words in its file and re-export them too, with `export command { ... } from`. Give a word a command schema read from the default image's release (§3), and add commands that run it to `test/schemas.lask`.
+2. Write `env(...)` in `lib/<tool>.lask` from what `lib/common.lask` provides, with `--image` defaulting to the chosen release's image (§4.4), and `setup(...)` only if another tool needs its credentials (§4.3).
+3. Re-export the file from `main.lask` as a namespace, `export * as <tool> from "./lib/<tool>.lask"`. If its default environment is useful as it is (§3), declare its command words in its file and re-export them too, with `export command { ... } from`. Give a word a command schema read from the default image's release (§3), and add commands that run it to `test/schemas.lask`.
 4. Add its cases to `test/selftest.lask`, and its section to the README.
 
 ## 10. Prerequisites in Lask
@@ -398,6 +398,6 @@ Before those: a command declaration takes a call or a namespace member as its en
 ## 11. Open Questions
 
 - **Root-owned files in the working tree.** Every image here runs as root and the project is bind-mounted, so anything a tool writes there is root-owned on a Linux host. Running as the host user takes `user` (§4.5) and the host's uid.
-- **SSH keys in a container.** A read-only mount of `~/.ssh` into a root container may be refused by `ssh` for file ownership. `ssh_setup` takes an agent socket instead, but its host path differs between Linux (`$SSH_AUTH_SOCK`) and Docker Desktop (`/run/host-services/ssh-auth.sock`), so the caller gives it.
+- **SSH keys in a container.** A read-only mount of `~/.ssh` into a root container may be refused by `ssh` for file ownership. `ssh.setup` takes an agent socket instead, but its host path differs between Linux (`$SSH_AUTH_SOCK`) and Docker Desktop (`/run/host-services/ssh-auth.sock`), so the caller gives it.
 - **`home()` on Windows**, where `HOME` is usually unset and `USERPROFILE` is the equivalent.
-- **Next candidates.** `terragrunt`; the container image tools (crane, skopeo, cosign) with `registry_setup`; the Docker CLI and buildx with `docker_setup`; a CMake recipe beside `cc`.
+- **Next candidates.** `terragrunt`; the container image tools (crane, skopeo, cosign) with `registry.setup`; the Docker CLI and buildx with `docker.setup`; a CMake recipe beside `cc`.

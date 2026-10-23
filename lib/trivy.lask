@@ -1,0 +1,36 @@
+// Trivy, vulnerabilities, misconfigurations and secrets.
+
+import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
+
+// Trivy, aquasec/trivy:0.74.0 by default: vulnerabilities,
+// misconfigurations and secrets in a filesystem, a repository or an
+// image. It prints no progress bar (TRIVY_NO_PROGRESS=true).
+//
+// Without --cache_dir, every run downloads the vulnerability database.
+//
+// @param image      The image to run; another release is passed as image = #aquasec/trivy:<tag>.
+// @param severity   TRIVY_SEVERITY, e.g. "HIGH,CRITICAL".
+// @param exit_code  TRIVY_EXIT_CODE: the exit code when something is found, e.g. "1" to fail a build.
+// @param cache_dir  Host directory mounted at /cache; the databases are kept in /cache/trivy (TRIVY_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry: registry_setup, docker_setup.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "trivy" } on ...` or `$[...]`.
+// @example lask eval trivy.env --severity HIGH,CRITICAL --exit_code 1
+env(
+  --image: Environment = #aquasec/trivy:0.74.0,
+  --severity: String | Null = null,
+  --exit_code: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(
+    merge({"TRIVY_NO_PROGRESS": "true"}, git_trust()),
+    extra_env,
+    with,
+    vars({"TRIVY_SEVERITY": severity, "TRIVY_EXIT_CODE": exit_code, "TRIVY_CACHE_DIR": in_cache(cache_dir, "trivy")})
+  ),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+command { "trivy" } on env()

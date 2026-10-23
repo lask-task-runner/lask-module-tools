@@ -1,0 +1,33 @@
+// Grype, Anchore's vulnerability scanner.
+
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
+
+// Grype, Anchore's vulnerability scanner.
+//
+// Anchore's images have no shell, so the image is built from
+// lib/images/anchore/Dockerfile, which copies grype v0.119.0 and syft
+// v1.52.0 onto Alpine: it takes no --image, and `lask sync` builds it.
+// Grype checks for no update (GRYPE_CHECK_FOR_APP_UPDATE=false).
+//
+// Without --cache_dir, every run downloads the vulnerability database.
+//
+// @param cache_dir  Host directory mounted at /cache; the database is kept in /cache/grype (GRYPE_DB_CACHE_DIR).
+// @param with       Setups of other tools this environment should also carry: registry_setup, docker_setup.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "grype" } on ...` or `$[...]`.
+// @example lask eval grype.env --cache_dir /tmp/cache
+env(
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = #./images/anchore/Dockerfile{
+  env: layered_env(
+    {"GRYPE_CHECK_FOR_APP_UPDATE": "false"},
+    extra_env,
+    with,
+    vars({"GRYPE_DB_CACHE_DIR": in_cache(cache_dir, "grype")})
+  ),
+  volumes: layered_volumes(with, mount(cache_dir, "/cache"))
+}
+
+command { "grype" } on env()

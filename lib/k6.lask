@@ -1,0 +1,27 @@
+// k6, Grafana's load testing tool.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// k6, grafana/k6:1.8.1 by default. It sends no usage report
+// (K6_NO_USAGE_REPORT=true). The image runs as the user k6, not root.
+//
+// @param image        The image to run; another release is passed as image = #grafana/k6:<tag>.
+// @param cloud_token  K6_CLOUD_TOKEN, for Grafana Cloud k6; masked in the command log.
+// @param network      The container's network: a Compose network, or "host".
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable, e.g. a value the script reads through __ENV; below --with and the named parameters.
+// @return The environment, for `command { "k6" } on ...` or `$[...]`.
+// @example lask eval k6.env --network host
+env(
+  --image: Environment = #grafana/k6:1.8.1,
+  --cloud_token!!: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({"K6_NO_USAGE_REPORT": "true"}, extra_env, with, vars({"K6_CLOUD_TOKEN": cloud_token})),
+  volumes = layered_volumes(with, []),
+  network = network
+)
+
+command { "k6" } on env()

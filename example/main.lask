@@ -19,7 +19,7 @@ aws_image = #amazon/aws-cli:2.36.41
 // Locally: log in on the host first (`aws sso login --profile dev`), then
 // let the container read the result. The environment is evaluated when a
 // command runs, so HOME is read then, on the machine that runs it.
-command { "aws" } on tools.aws(image = aws_image, profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
+command { "aws" } on tools.aws.env(image = aws_image, profile = "dev", region = "ap-northeast-1", config_dir = tools.home(".aws"))
 
 // Which identity the declared environment runs as.
 //
@@ -39,7 +39,7 @@ ci_whoami(
   --secret_access_key!!: String | Null = find_env("AWS_SECRET_ACCESS_KEY"),
   --session_token!!: String | Null = find_env("AWS_SESSION_TOKEN")
 ): String = do {
-  box = tools.aws(
+  box = tools.aws.env(
     image = aws_image,
     region = region,
     access_key_id = access_key_id,
@@ -54,7 +54,7 @@ ci_whoami(
 // @param endpoint  Where LocalStack listens, as the container sees it.
 // @return The buckets LocalStack holds.
 local_buckets(--endpoint: String = "http://host.docker.internal:4566"): String = do {
-  box = tools.aws(
+  box = tools.aws.env(
     image = aws_image,
     region = "us-east-1",
     endpoint_url = endpoint,

@@ -1,0 +1,37 @@
+// The 1Password CLI.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// The 1Password CLI, 1password/op:2.39.0 by default.
+//
+// A container cannot reach the desktop app's integration: authenticate
+// with a service account token, or with a Connect server.
+//
+// @param image                  The image to run; another release is passed as image = #1password/op:<tag>.
+// @param service_account_token  OP_SERVICE_ACCOUNT_TOKEN; masked in the command log.
+// @param connect_host           OP_CONNECT_HOST.
+// @param connect_token          OP_CONNECT_TOKEN; masked in the command log.
+// @param with                   Setups of other tools this environment should also carry.
+// @param extra_env              Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "op" } on ...` or `$[...]`.
+// @example lask eval op.env
+env(
+  --image: Environment = #1password/op:2.39.0,
+  --service_account_token!!: String | Null = null,
+  --connect_host: String | Null = null,
+  --connect_token!!: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(
+    {},
+    extra_env,
+    with,
+    vars({
+      "OP_SERVICE_ACCOUNT_TOKEN": service_account_token,
+      "OP_CONNECT_HOST": connect_host,
+      "OP_CONNECT_TOKEN": connect_token
+    })
+  ),
+  volumes = layered_volumes(with, [])
+)

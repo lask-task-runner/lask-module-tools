@@ -1,6 +1,6 @@
 // The Google Cloud CLI.
 
-import { ToolSetup, vars, mount, given, layered_env, layered_volumes } from "./common.lask"
+import { ToolSetup, given, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // What gcloud and the Google Cloud SDKs need from an environment: a
 // project, a region, and credentials. Give it to another tool's --with
@@ -13,7 +13,7 @@ import { ToolSetup, vars, mount, given, layered_env, layered_volumes } from "./c
 // @param access_token      CLOUDSDK_AUTH_ACCESS_TOKEN and GOOGLE_OAUTH_ACCESS_TOKEN; masked in the command log.
 // @param config_dir        Host directory mounted as /root/.config/gcloud, usually home(".config/gcloud"); read-write, since gcloud refreshes its tokens there.
 // @return The variables and mounts, for a tool's --with.
-gcloud_setup(
+setup(
   --project: String | Null = null,
   --region: String | Null = null,
   --credentials_file: String | Null = null,
@@ -60,8 +60,8 @@ gcloud_setup(
 // @param with              Setups of other tools this environment should also carry.
 // @param extra_env         Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "gcloud" } on ...` or `$[...]`.
-// @example lask eval gcloud --project my-project --region asia-northeast1
-gcloud(
+// @example lask eval gcloud.env --project my-project --region asia-northeast1
+env(
   --image: Environment = #gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim,
   --project: String | Null = null,
   --region: String | Null = null,
@@ -71,7 +71,7 @@ gcloud(
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = do {
-  own = gcloud_setup(
+  own = setup(
     project = project,
     region = region,
     credentials_file = credentials_file,

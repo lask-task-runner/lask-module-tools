@@ -1,0 +1,23 @@
+// ShellCheck, the shell script linter.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// ShellCheck, koalaman/shellcheck-alpine:v0.11.0 by default.
+//
+// @param image      The image to run; another release is passed as image = #koalaman/shellcheck-alpine:<tag>.
+// @param opts       SHELLCHECK_OPTS, e.g. "-e SC1091".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "shellcheck" } on ...` or `$[...]`.
+// @example lask eval shellcheck.env --opts "-e SC1091"
+env(
+  --image: Environment = #koalaman/shellcheck-alpine:v0.11.0,
+  --opts: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({}, extra_env, with, vars({"SHELLCHECK_OPTS": opts})),
+  volumes = layered_volumes(with, [])
+)
+
+command { "shellcheck" } on env()

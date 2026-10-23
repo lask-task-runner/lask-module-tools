@@ -1,0 +1,26 @@
+// TFLint, the Terraform linter.
+
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
+
+// TFLint, ghcr.io/terraform-linters/tflint:v0.64.0 by default. `tflint
+// --init` downloads the plugins .tflint.hcl names, from GitHub.
+//
+// @param image         The image to run; another release is passed as image = #ghcr.io/terraform-linters/tflint:<tag>.
+// @param github_token  GITHUB_TOKEN, which lifts GitHub's rate limit on plugin downloads; masked in the command log.
+// @param cache_dir     Host directory mounted at /cache; plugins are kept in /cache/tflint (TFLINT_PLUGIN_DIR).
+// @param with          Setups of other tools this environment should also carry.
+// @param extra_env     Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "tflint" } on ...` or `$[...]`.
+// @example lask eval tflint.env --cache_dir /tmp/cache
+env(
+  --image: Environment = #ghcr.io/terraform-linters/tflint:v0.64.0,
+  --github_token!!: String | Null = null,
+  --cache_dir: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env({}, extra_env, with, vars({"GITHUB_TOKEN": github_token, "TFLINT_PLUGIN_DIR": in_cache(cache_dir, "tflint")})),
+  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+)
+
+command { "tflint" } on env()

@@ -1,0 +1,20 @@
+// Syft, Anchore's SBOM generator, in the image of grype.
+
+import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
+
+// Syft, Anchore's SBOM generator, in the image of grype.
+// It checks for no update (SYFT_CHECK_FOR_APP_UPDATE=false).
+//
+// @param with       Setups of other tools this environment should also carry: registry_setup, docker_setup.
+// @param extra_env  Any other variable; below --with.
+// @return The environment, for `command { "syft" } on ...` or `$[...]`.
+// @example lask eval syft.env
+env(
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = #./images/anchore/Dockerfile{
+  env: layered_env({"SYFT_CHECK_FOR_APP_UPDATE": "false"}, extra_env, with, {}),
+  volumes: layered_volumes(with, [])
+}
+
+command { "syft" } on env()

@@ -1,6 +1,6 @@
 // Playwright, with the browsers it drives.
 
-import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // Playwright: Node.js with Chromium, Firefox and WebKit and
 // the libraries they need, configured by its parameters.
@@ -31,7 +31,7 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable, e.g. the base URL the tests read; below --with and the named parameters.
 // @return The environment, for `$[...]` or `command { "npx" } on ...`.
-playwright(
+env(
   --image: Environment = #mcr.microsoft.com/playwright:v1.63.0-noble,
   --shm_size: String | Null = "1g",
   --registry: String | Null = null,

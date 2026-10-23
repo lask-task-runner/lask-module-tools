@@ -1,0 +1,50 @@
+// The MySQL client.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// The MySQL client.
+//
+// The image is #mysql:8.4.11 (an LTS release) unless --image names
+// another. The client reads the host, the
+// port and the password from its environment (MYSQL_HOST,
+// MYSQL_TCP_PORT, MYSQL_PWD), but no user and no database: those go on
+// its command line. They are set as MYSQL_USER and MYSQL_DATABASE for
+// that, `mysql -u "$MYSQL_USER" "$MYSQL_DATABASE"`.
+//
+// @param image      The image to run; another release is passed as image = #mysql:<tag>.
+// @param host       MYSQL_HOST.
+// @param port       MYSQL_TCP_PORT.
+// @param user       MYSQL_USER, for the command line.
+// @param password   MYSQL_PWD; masked in the command log.
+// @param database   MYSQL_DATABASE, for the command line.
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "mysql" } on ...` or `$[...]`.
+// @example lask eval mysql.env --host host.docker.internal --user app
+env(
+  --image: Environment = #mysql:8.4.11,
+  --host: String | Null = null,
+  --port: String | Null = null,
+  --user: String | Null = null,
+  --password!!: String | Null = null,
+  --database: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = runnable(image,
+  env = layered_env(
+    {},
+    extra_env,
+    with,
+    vars({
+      "MYSQL_HOST": host,
+      "MYSQL_TCP_PORT": port,
+      "MYSQL_USER": user,
+      "MYSQL_PWD": password,
+      "MYSQL_DATABASE": database
+    })
+  ),
+  volumes = layered_volumes(with, []),
+  network = network
+)

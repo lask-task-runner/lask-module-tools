@@ -1,6 +1,6 @@
 // C and C++, with GCC and Make.
 
-import { vars, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
 
 // GCC, with Make, configured by its parameters.
 //
@@ -18,8 +18,8 @@ import { vars, layered_env, layered_volumes, ToolSetup } from "./common.lask"
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "make" } on ...` or `$[...]`.
-// @example lask eval cc --cflags "-O2 -Wall"
-cc(
+// @example lask eval cc.env --cflags "-O2 -Wall"
+env(
   --image: Environment = #gcc:16.2.0,
   --cc: String | Null = null,
   --cxx: String | Null = null,
@@ -49,14 +49,14 @@ cc(
 // The compilers and Make work as they are, so their command words are
 // exported, make with the schema a command string that runs it is checked
 // against (lask spec ch. 5).
-command { "gcc", "g++", "cc", "c++", "make" } on cc() schema { "make": make_schema }
+command { "gcc", "g++", "cc", "c++", "make" } on env() schema schema
 
 // The command schema of GNU make 4.4.1 (lask spec ch. 5), from
 // `make --help` in #gcc:16.2.0, with the options it keeps for itself
 // (--jobserver-auth, --jobserver-fds, --temp-stdin). It reads long
 // options with getopt_long, which takes a unique prefix of one. Targets
 // and VAR=value assignments may come among the options.
-make_schema: CommandSchema = {
+internal make_command: CommandSchema = {
   root: {
     closed: true,
     abbreviations: true,
@@ -103,3 +103,10 @@ make_schema: CommandSchema = {
   }
 }
 
+// The command schemas of make (lask spec ch. 5) for GCC 16.2.0 and its GNU make 4.4.1,
+// the release in env()'s default image.
+schema_16_2_0: Map<CommandSchema> = { "make": make_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_16_2_0

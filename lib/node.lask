@@ -1,6 +1,6 @@
 // Node.js, with npm and npx.
 
-import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // Node.js, configured by its parameters.
 //
@@ -21,8 +21,8 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // @param with          Setups of other tools this environment should also carry.
 // @param extra_env     Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "npm" } on ...` or `$[...]`.
-// @example lask eval node --node_env production
-node(
+// @example lask eval node.env --node_env production
+env(
   --image: Environment = #node:24.22.1-alpine3.24,
   --node_env: String | Null = null,
   --node_options: String | Null = null,
@@ -50,4 +50,4 @@ node(
 // Node.js works as it is, so its command words are exported, declared
 // on the default environment. A project imports the ones it runs:
 // `import command { "node", "npm", "npx" } from "tools"`.
-command { "node", "npm", "npx", "corepack" } on node()
+command { "node", "npm", "npx", "corepack" } on env()

@@ -1,6 +1,6 @@
 // Ruby, with RubyGems and Bundler.
 
-import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // Ruby, configured by its parameters.
 //
@@ -17,8 +17,8 @@ import { vars, mount, in_cache, layered_env, layered_volumes, ToolSetup } from "
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable, e.g. a BUNDLE_<HOST>__<DOMAIN> credential; below --with and the named parameters.
 // @return The environment, for `command { "bundle" } on ...` or `$[...]`.
-// @example lask eval ruby --cache_dir /tmp/cache
-ruby(
+// @example lask eval ruby.env --cache_dir /tmp/cache
+env(
   --image: Environment = #ruby:4.0.7-alpine3.24,
   --cache_dir: String | Null = null,
   --with: Array<ToolSetup> = [],
@@ -34,4 +34,4 @@ ruby(
 )
 
 // Ruby works as it is, so its command words are exported.
-command { "ruby", "gem", "bundle", "rake" } on ruby()
+command { "ruby", "gem", "bundle", "rake" } on env()

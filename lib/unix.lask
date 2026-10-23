@@ -1,7 +1,7 @@
 // The everyday command-line tools: curl and wget, jq and yq, and the
 // GNU tools around them.
 
-import { layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
 
 // A shell with the everyday command-line tools, in one image.
 //
@@ -9,8 +9,8 @@ import { layered_env, layered_volumes, ToolSetup } from "./common.lask"
 // needs curl and jq in the same image; this is that image. It holds
 // bash, curl, wget, openssl, jq, yq, envsubst, GNU coreutils, findutils,
 // grep, sed and awk, diff, file, tar, gzip, xz, bzip2, zip and unzip,
-// rsync, make, and the SSH client; and git, gh and glab, which git(),
-// gh() and glab() configure.
+// rsync, make, and the SSH client; and git, gh and glab, which git.env(),
+// gh.env() and glab.env() configure.
 //
 // The image is built from lib/images/unix/Dockerfile, Alpine 3.24 pinned
 // by its digest, so it takes no --image: the recipe is what fixes it, and
@@ -20,8 +20,8 @@ import { layered_env, layered_volumes, ToolSetup } from "./common.lask"
 // @param with       Setups of other tools this environment should also carry.
 // @param extra_env  Any other variable, e.g. HTTPS_PROXY; below --with.
 // @return The environment, for `command { "curl" } on ...` or `$[...]`.
-// @example lask eval unix
-unix(
+// @example lask eval unix.env
+env(
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = #./images/unix/Dockerfile{
@@ -35,11 +35,11 @@ unix(
 // shell's own words — grep, sed, awk and the rest — are in every image,
 // and are not exported: importing them would pull a command string that
 // also runs npm or python into this environment, and conflict. Nor are
-// git, gh, glab and ssh, which need an identity: git() and the others
+// git, gh, glab and ssh, which need an identity: git.env() and the others
 // configure them. make is cc's.
 command {
   "curl", "wget", "openssl",
   "jq", "yq", "envsubst",
   "tar", "gzip", "xz", "bzip2", "zip", "unzip",
   "rsync"
-} on unix()
+} on env()

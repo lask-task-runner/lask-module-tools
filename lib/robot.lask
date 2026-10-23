@@ -1,0 +1,31 @@
+// Robot Framework, with RequestsLibrary for API tests.
+
+import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+
+// Robot Framework, with RequestsLibrary for API tests.
+//
+// There is no official image, so the image is built from
+// lib/images/robot/Dockerfile: Robot Framework 7.5 and RequestsLibrary
+// 0.9.7 on the Python image of python.env(). It takes no --image, and
+// `lask sync` builds it. Another library is installed in the same command,
+// `pip install -r requirements.txt && robot tests`; a browser library is
+// better served by playwright.env().
+//
+// @param options    ROBOT_OPTIONS, which robot reads before its command line, e.g. "--outputdir results".
+// @param network    The container's network: a Compose network, or "host".
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "robot" } on ...` or `$[...]`.
+// @example lask eval robot.env --options "--outputdir results"
+env(
+  --options: String | Null = null,
+  --network: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = #./images/robot/Dockerfile{
+  env: layered_env({"PYTHONUNBUFFERED": "1"}, extra_env, with, vars({"ROBOT_OPTIONS": options})),
+  volumes: layered_volumes(with, []),
+  network: network
+}
+
+command { "robot", "rebot", "libdoc" } on env()

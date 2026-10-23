@@ -1,6 +1,6 @@
 // Pulumi.
 
-import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // Pulumi, with the runtime of one language, configured by its
 // parameters.
@@ -23,8 +23,8 @@ import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSet
 // @param with               Setups of other tools this environment should also carry: a provider's credentials.
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "pulumi" } on ...` or `$[...]`.
-// @example lask eval pulumi --backend_url file:///work/.pulumi
-pulumi(
+// @example lask eval pulumi.env --backend_url file:///work/.pulumi
+env(
   --image: Environment = #pulumi/pulumi-nodejs:3.265.0,
   --access_token!!: String | Null = null,
   --backend_url: String | Null = null,

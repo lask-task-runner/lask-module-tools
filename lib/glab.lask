@@ -1,0 +1,31 @@
+// The GitLab CLI.
+
+import { ToolSetup, git_trust, layered_env, layered_volumes, vars } from "./common.lask"
+
+// The GitLab CLI, configured by its parameters.
+//
+// The image is that of unix.env(), as for git. glab checks for no update
+// and never prompts (GLAB_CHECK_UPDATE=false, GLAB_NO_PROMPT=true). As with
+// gh, a command that runs git over https takes git_setup as well, with
+// token_user = "oauth2".
+//
+// @param token      GITLAB_TOKEN; masked in the command log.
+// @param host       GITLAB_HOST, for a self-managed instance.
+// @param with       Setups of other tools this environment should also carry.
+// @param extra_env  Any other variable; below --with and the named parameters.
+// @return The environment, for `command { "glab" } on ...` or `$[...]`.
+// @example lask eval glab.env --host gitlab.example.com
+env(
+  --token!!: String | Null = null,
+  --host: String | Null = null,
+  --with: Array<ToolSetup> = [],
+  --extra_env: Map<String> = {}
+): Runnable = #./images/unix/Dockerfile{
+  env: layered_env(
+    merge({"GLAB_CHECK_UPDATE": "false", "GLAB_NO_PROMPT": "true"}, git_trust()),
+    extra_env,
+    with,
+    vars({"GITLAB_TOKEN": token, "GITLAB_HOST": host})
+  ),
+  volumes: layered_volumes(with, [])
+}

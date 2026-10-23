@@ -1,6 +1,6 @@
 // Rust, with Cargo.
 
-import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSetup } from "./common.lask"
+import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // Rust, configured by its parameters.
 //
@@ -14,8 +14,8 @@ import { vars, mount, in_cache, git_trust, layered_env, layered_volumes, ToolSet
 // @param with       Setups of other tools this environment should also carry; git_setup for a private git dependency.
 // @param extra_env  Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "cargo" } on ...` or `$[...]`.
-// @example lask eval rust --cache_dir /tmp/cache
-rust(
+// @example lask eval rust.env --cache_dir /tmp/cache
+env(
   --image: Environment = #rust:1.98.1-slim-trixie,
   --rustflags: String | Null = null,
   --cache_dir: String | Null = null,
@@ -34,7 +34,7 @@ rust(
 // Rust works as it is, so its command words are exported, cargo with the
 // schema a command string that runs it is checked against (lask spec ch.
 // 5).
-command { "cargo", "rustc", "rustup" } on rust() schema { "cargo": cargo_schema }
+command { "cargo", "rustc", "rustup" } on env() schema schema
 
 // The command schema of cargo (lask spec ch. 5), read from `cargo --list` and
 // `cargo <command> --help` in #rust:1.98.1-slim-trixie. cargo itself is not
@@ -43,7 +43,7 @@ command { "cargo", "rustc", "rustup" } on rust() schema { "cargo": cargo_schema 
 // takes [ARGS]... passes everything from its first argument on. A
 // toolchain written first, as in `cargo +nightly build`, is advised as an
 // unknown command: the image holds only its own toolchain.
-cargo_schema: CommandSchema = {
+internal cargo_command: CommandSchema = {
   root: { abbreviations: false, options: [{ names: ["-V", "--version"], description: "Print version info and exit" }, { names: ["--list"], description: "List installed commands" }, { names: ["--explain"], value: "required", description: "Provide a detailed explanation of a rustc error message" }, { names: ["-v", "--verbose"], description: "Use verbose output (-vv very verbose/build.rs output)" }, { names: ["-q", "--quiet"], description: "Do not print cargo log messages" }, { names: ["--color"], value: "required", values: ["auto", "always", "never"], description: "Coloring" }, { names: ["-C"], value: "required", description: "Change to DIRECTORY before doing anything (nightly-only)" }, { names: ["--locked"], description: "Assert that `Cargo.lock` will remain unchanged" }, { names: ["--offline"], description: "Run without accessing the network" }, { names: ["--frozen"], description: "Equivalent to specifying both --locked and --offline" }, { names: ["--config"], value: "required", description: "Override a configuration value" }, { names: ["-Z"], value: "required", description: "Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details" }, { names: ["-h", "--help"], description: "Print help" }], description: "the Rust package manager" },
   subcommands: {
     "add": { closed: true, options: [{ names: ["--no-default-features"], description: "Disable the default features" }, { names: ["--default-features"], description: "Re-enable the default features" }, { names: ["-F", "--features"], value: "required", description: "Space or comma separated list of features to activate" }, { names: ["--optional"], description: "Mark the dependency as optional" }, { names: ["--no-optional"], description: "Mark the dependency as required" }, { names: ["--public"], description: "Mark the dependency as public (unstable)" }, { names: ["--no-public"], description: "Mark the dependency as private (unstable)" }, { names: ["--rename"], value: "required", description: "Rename the dependency" }, { names: ["-n", "--dry-run"], description: "Don't actually write the manifest" }, { names: ["-v", "--verbose"], description: "Use verbose output (-vv very verbose/build.rs output)" }, { names: ["-q", "--quiet"], description: "Do not print cargo log messages" }, { names: ["--color"], value: "required", description: "Coloring" }, { names: ["--config"], value: "required", description: "Override a configuration value" }, { names: ["-Z"], value: "required", description: "Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details" }, { names: ["-h", "--help"], description: "Print help (see a summary with '-h')" }, { names: ["-m", "--manifest-path"], value: "required", description: "Path to Cargo.toml" }, { names: ["--ignore-rust-version"], description: "Ignore `rust-version` specification in packages" }, { names: ["--locked"], description: "Assert that `Cargo.lock` will remain unchanged" }, { names: ["--offline"], description: "Run without accessing the network" }, { names: ["--frozen"], description: "Equivalent to specifying both --locked and --offline" }, { names: ["-p", "--package"], value: "optional", description: "Package to modify" }, { names: ["--path"], value: "required", description: "Filesystem path to local crate to add" }, { names: ["--base"], value: "required", description: "The path base to use when adding from a local crate (unstable)." }, { names: ["--git"], value: "required", description: "Git repository location" }, { names: ["--branch"], value: "required", description: "Git branch to download the crate from" }, { names: ["--tag"], value: "required", description: "Git tag to download the crate from" }, { names: ["--rev"], value: "required", description: "Git reference to download the crate from" }, { names: ["--registry"], value: "required", description: "Package registry for this dependency" }, { names: ["--dev"], description: "Add as development dependency" }, { names: ["--build"], description: "Add as build dependency" }, { names: ["--target"], value: "required", description: "Add as dependency to the given target platform" }], description: "Add dependencies to a Cargo.toml manifest file" },
@@ -95,3 +95,11 @@ cargo_schema: CommandSchema = {
     "yank": { closed: true, options: [{ names: ["--version"], value: "required", description: "The version to yank or un-yank" }, { names: ["--undo"], description: "Undo a yank, putting a version back into the index" }, { names: ["--index"], value: "required", description: "Registry index URL to yank from" }, { names: ["--registry"], value: "required", description: "Registry to yank from" }, { names: ["--token"], value: "required", description: "API token to use when authenticating" }, { names: ["-v", "--verbose"], description: "Use verbose output (-vv very verbose/build.rs output)" }, { names: ["-q", "--quiet"], description: "Do not print cargo log messages" }, { names: ["--color"], value: "required", values: ["auto", "always", "never"], description: "Coloring" }, { names: ["--config"], value: "required", description: "Override a configuration value" }, { names: ["-Z"], value: "required", description: "Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details" }, { names: ["-h", "--help"], description: "Print help" }, { names: ["--locked"], description: "Assert that `Cargo.lock` will remain unchanged" }, { names: ["--offline"], description: "Run without accessing the network" }, { names: ["--frozen"], description: "Equivalent to specifying both --locked and --offline" }], description: "Remove a pushed crate from the index" }
   }
 }
+
+// The command schemas of cargo (lask spec ch. 5) for Rust 1.98.1,
+// the release in env()'s default image.
+schema_1_98_1: Map<CommandSchema> = { "cargo": cargo_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_1_98_1
