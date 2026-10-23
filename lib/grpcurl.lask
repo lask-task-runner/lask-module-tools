@@ -21,4 +21,62 @@ env(
   network = network
 )
 
-command { "grpcurl" } on env()
+command { "grpcurl" } on env() schema schema
+
+// The command schema of grpcurl 1.9.3, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal grpcurl_command: CommandSchema = {
+  root: {
+    closed: true,
+    style: "single-dash",
+    intermixed: false,
+    options: [
+      { names: ["-H"], value: "required", description: "Additional headers in 'name: value' format" },
+      { names: ["-allow-unknown-fields"], value: "optional", description: "When true, the request contents, if 'json' format is used, allows unknown fields to be present" },
+      { names: ["-alts"], value: "optional", description: "Use Application Layer Transport Security (ALTS) when connecting to server" },
+      { names: ["-alts-handshaker-service"], value: "required", description: "If set, this server will be used to do the ATLS handshaking" },
+      { names: ["-alts-target-service-account"], value: "required", description: "The full email address of the service account that the server is expected to be using when ALTS is used" },
+      { names: ["-authority"], value: "required", description: "The authoritative name of the remote server" },
+      { names: ["-cacert"], value: "required", description: "File containing trusted root certificates for verifying the server" },
+      { names: ["-cert"], value: "required", description: "File containing client certificate (public key), to present to the server" },
+      { names: ["-connect-timeout"], value: "required", description: "The maximum time, in seconds, to wait for connection to be established" },
+      { names: ["-d"], value: "required", description: "Data for request contents" },
+      { names: ["-emit-defaults"], value: "optional", description: "Emit default values for JSON-encoded responses" },
+      { names: ["-expand-headers"], value: "optional", description: "If set, headers may use '${NAME}' syntax to reference environment variables" },
+      { names: ["-rpc-header", "-reflect-header"], value: "required", description: "performed" },
+      { names: ["-format"], value: "required", description: "The format of request data" },
+      { names: ["-format-error"], value: "optional", description: "When a non-zero status is returned, format the response using the value set by the -format flag" },
+      { names: ["-help"], value: "optional", description: "Print usage instructions and exit" },
+      { names: ["-import-path"], value: "required", description: "The path to a directory from which proto sources can be imported, for use with -proto flags" },
+      { names: ["-insecure"], value: "optional", description: "Skip server certificate and domain verification" },
+      { names: ["-keepalive-time"], value: "required", description: "If present, the maximum idle time in seconds, after which a keepalive probe is sent" },
+      { names: ["-key"], value: "required", description: "File containing client private key, to present to the server" },
+      { names: ["-max-msg-sz"], value: "required", description: "The maximum encoded size of a response message, in bytes, that grpcurl will accept" },
+      { names: ["-max-time"], value: "required", description: "The maximum total time the operation can take, in seconds" },
+      { names: ["-msg-template"], value: "optional", description: "When describing messages, show a template of input data" },
+      { names: ["-plaintext"], value: "optional", description: "Use plain-text HTTP/2 when connecting to server (no TLS)" },
+      { names: ["-proto"], value: "required", description: "The name of a proto source file" },
+      { names: ["-protoset"], value: "required" },
+      { names: ["-proto-out-dir"], value: "required", description: "The name of a directory where the generated .proto files will be written" },
+      { names: ["-protoset-out"], value: "required", description: "The name of a file to be written that will contain a FileDescriptorSet proto" },
+      { names: ["-servername"], value: "required", description: "Override server name when validating TLS certificate" },
+      { names: ["-unix"], value: "optional", description: "Indicates that the server address is the path to a Unix domain socket" },
+      { names: ["-use-reflection"], value: "optional", description: "When true, server reflection will be used to determine the RPC schema" },
+      { names: ["-user-agent"], value: "required", description: "If set, the specified value will be added to the User-Agent header set by the grpc-go library" },
+      { names: ["-v"], description: "Enable verbose output" },
+      { names: ["-version"], value: "optional", description: "Print version" },
+      { names: ["-vv"], value: "optional", description: "Enable very verbose output (includes timing data)" },
+      { names: ["--help"], value: "optional" },
+      { names: ["--version"], value: "optional" },
+      { names: ["-h"], value: "optional" }
+    ]
+  }
+}
+
+// The command schemas of grpcurl (lask spec ch. 5) for grpcurl 1.9.3,
+// the release in env()'s default image.
+schema_1_9_3: Map<CommandSchema> = { "grpcurl": grpcurl_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_1_9_3

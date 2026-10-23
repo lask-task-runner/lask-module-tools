@@ -20,4 +20,37 @@ env(
   volumes = layered_volumes(with, [])
 )
 
-command { "shellcheck" } on env()
+command { "shellcheck" } on env() schema schema
+
+// The command schema of shellcheck 0.11.0, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal shellcheck_command: CommandSchema = {
+  root: {
+    closed: true,
+    abbreviations: true,
+    intermixed: true,
+    options: [
+      { names: ["-a", "--check-sourced"], description: "Include warnings from sourced files" },
+      { names: ["-C", "--color"], value: "optional", description: "Use color (auto, always, never)" },
+      { names: ["-i", "--include"], value: "required", description: "Consider only given types of warnings" },
+      { names: ["-e", "--exclude"], value: "required", description: "Exclude types of warnings --extended-analysis=bool Perform dataflow analysis (default true)" },
+      { names: ["-f", "--format"], value: "required", description: "Output format (checkstyle, diff, gcc, json, json1, quiet, tty) --list-optional List checks disabled by default --norc Don't look for .shellc" },
+      { names: ["-o", "--enable"], value: "required", description: "List of optional checks to enable (or 'all')" },
+      { names: ["-P", "--source-path"], value: "required", description: "Specify path when looking for sourced files (\"SCRIPTDIR\" for script's dir)" },
+      { names: ["-s", "--shell"], value: "required", description: "Specify dialect (sh, bash, dash, ksh, busybox)" },
+      { names: ["-S", "--severity"], value: "required", description: "Minimum severity of errors to consider (error, warning, info, style)" },
+      { names: ["-V", "--version"], description: "Print version information" },
+      { names: ["-W", "--wiki-link-count"], value: "required", description: "The number of wiki links to show, when applicable" },
+      { names: ["-x", "--external-sources"], description: "Allow 'source' outside of FILES --help Show this usage summary and exit" },
+      { names: ["--help"], value: "optional" }
+    ]
+  }
+}
+
+// The command schemas of shellcheck (lask spec ch. 5) for ShellCheck 0.11.0,
+// the release in env()'s default image.
+schema_0_11_0: Map<CommandSchema> = { "shellcheck": shellcheck_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_0_11_0

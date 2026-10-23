@@ -26,4 +26,208 @@ env(
 
 // The JDK, Maven and Gradle work as they are, so their command words
 // are exported, each declared on its tool's default environment.
-command { "java", "javac", "jar" } on env()
+command { "java", "javac", "jar" } on env() schema schema
+
+// The command schema of java 25.0.4, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal java_command: CommandSchema = {
+  root: {
+    style: "single-dash",
+    intermixed: false,
+    stop_at_first_positional: true,
+    options: [
+      { names: ["-m", "--module"], value: "required", stops: true },
+      { names: ["-cp"], value: "required" },
+      { names: ["-classpath"], value: "required" },
+      { names: ["--class-path"], value: "required", description: "A \":\"-separated list of directories, JAR archives, and ZIP archives to search for class files" },
+      { names: ["-p"], value: "required" },
+      { names: ["--module-path"], value: "required", description: "A \":\"-separated list of elements, each element is a file path to a module or a directory containing modules" },
+      { names: ["--upgrade-module-path"], value: "required", description: "A \":\"-separated list of elements, each element is a file path to a module or a directory containing modules to replace upgradeable modules i" },
+      { names: ["--add-modules"], value: "required", description: "root modules to resolve in addition to the initial module" },
+      { names: ["--enable-native-access"], value: "required", description: "allow code in modules to access code and data outside the Java runtime" },
+      { names: ["--list-modules"], description: "list observable modules and exit" },
+      { names: ["-d"], value: "required" },
+      { names: ["--describe-module"], value: "required", description: "describe a module and exit" },
+      { names: ["--dry-run"], description: "create VM and load main class but do not execute main method" },
+      { names: ["--validate-modules"], description: "validate all modules and exit The --validate-modules option may be useful for finding conflicts and other errors with modules on the module " },
+      { names: ["-verbose"], description: "enable verbose output for the given subsystem" },
+      { names: ["-version"], description: "print product version to the error stream and exit" },
+      { names: ["--version"], description: "print product version to the output stream and exit" },
+      { names: ["-showversion"], description: "print product version to the error stream and continue" },
+      { names: ["--show-version"], description: "print product version to the output stream and continue" },
+      { names: ["--show-module-resolution"], description: "show module resolution output during startup" },
+      { names: ["-?", "-h", "-help"], description: "print this help message to the error stream" },
+      { names: ["--help"], description: "print this help message to the output stream" },
+      { names: ["-X"], value: "optional", prefix: true, description: "print help on extra options to the error stream" },
+      { names: ["--help-extra"], description: "print help on extra options to the output stream" },
+      { names: ["-ea"] },
+      { names: ["-enableassertions"], description: "enable assertions with specified granularity" },
+      { names: ["-da"] },
+      { names: ["-disableassertions"], description: "disable assertions with specified granularity" },
+      { names: ["-esa", "-enablesystemassertions"], description: "enable system assertions" },
+      { names: ["-dsa", "-disablesystemassertions"], description: "disable system assertions load native agent library <libname>, e.g" },
+      { names: ["--disable-@files"], description: "prevent further argument file expansion" },
+      { names: ["--enable-preview"], description: "allow classes to depend on preview features of this release" },
+      { names: ["-Xbatch"], description: "disable background compilation append to end of bootstrap class path" },
+      { names: ["-Xcheck:jni"], value: "optional", description: "perform additional checks for JNI functions" },
+      { names: ["-Xcomp"], description: "forces compilation of methods on first invocation" },
+      { names: ["-Xdebug"], description: "does nothing; deprecated for removal in a future release" },
+      { names: ["-Xdiag"], description: "show additional diagnostic messages" },
+      { names: ["-Xint"], description: "interpreted mode execution only" },
+      { names: ["-Xinternalversion"], description: "displays more detailed JVM version information than the -version option" },
+      { names: ["-Xlog"], value: "required", description: "Configure or enable logging with the Java Virtual Machine (JVM) unified logging framework" },
+      { names: ["-Xloggc"], value: "required", description: "log GC status to a file with time stamps" },
+      { names: ["-Xmixed"], description: "mixed mode execution (default)" },
+      { names: ["-Xmn"], value: "required", description: "sets the initial and maximum size (in bytes) of the heap for the young generation (nursery)" },
+      { names: ["-Xms"], value: "required", description: "set minimum and initial Java heap size" },
+      { names: ["-Xmx"], value: "required", description: "set maximum Java heap size" },
+      { names: ["-Xnoclassgc"], description: "disable class garbage collection" },
+      { names: ["-Xrs"], description: "reduce use of OS signals by Java/VM (see documentation)" },
+      { names: ["-Xshare:auto"], description: "use shared class data if possible (default)" },
+      { names: ["-Xshare:off"], description: "do not attempt to use shared class data" },
+      { names: ["-Xshare:on"], description: "require using shared class data, otherwise fail" },
+      { names: ["-XshowSettings"], description: "show all settings and continue" },
+      { names: ["-XshowSettings:all"], value: "optional", description: "show all settings in verbose detail and continue" },
+      { names: ["-XshowSettings:locale"], value: "optional", description: "show all locale related settings and continue" },
+      { names: ["-XshowSettings:properties"], value: "optional", description: "show all property settings and continue" },
+      { names: ["-XshowSettings:vm"], value: "optional", description: "show all vm related settings and continue" },
+      { names: ["-XshowSettings:security"], value: "optional", description: "show all security settings and continue" },
+      { names: ["-XshowSettings:security:all"], value: "optional", description: "show all security settings and continue" },
+      { names: ["-XshowSettings:security:properties"], value: "optional", description: "show security properties and continue" },
+      { names: ["-XshowSettings:security:providers"], value: "optional", description: "show static security provider settings and continue" },
+      { names: ["-XshowSettings:security:tls"], value: "optional", description: "show TLS related security settings and continue" },
+      { names: ["-XshowSettings:system"], value: "optional", description: "(Linux Only) show host system or container configuration and continue" },
+      { names: ["-Xss"], value: "required", description: "set java thread stack size The actual size may be rounded up to a multiple of the system page size as required by the operating system" },
+      { names: ["-Xverify"], value: "optional", description: "sets the mode of the bytecode verifier Note that option -Xverify:none is deprecated and may be removed in a future release" },
+      { names: ["--add-reads"], value: "optional", description: "updates <module> to read <target-module>, regardless of module declaration" },
+      { names: ["--add-exports"], value: "optional", description: "updates <module> to export <package> to <target-module>, regardless of module declaration" },
+      { names: ["--add-opens"], value: "optional", description: "updates <module> to open <package> to <target-module>, regardless of module declaration" },
+      { names: ["--limit-modules"], value: "required", description: "limit the universe of observable modules" },
+      { names: ["--patch-module"], value: "optional", description: "override or augment a module with classes and resources in JAR files or directories" },
+      { names: ["--source"], value: "required", description: "set the version of the source in source-file mode" },
+      { names: ["-D"], value: "required", prefix: true, description: "set a system property" },
+      { names: ["-verbose:"], value: "required", prefix: true, description: "enable verbose output for the given subsystem" },
+      { names: ["-agentlib:"], value: "required", prefix: true, description: "load native agent library" },
+      { names: ["-agentpath:"], value: "required", prefix: true, description: "load native agent library by full pathname" },
+      { names: ["-javaagent:"], value: "required", prefix: true, description: "load Java programming language agent" },
+      { names: ["-splash:"], value: "required", prefix: true, description: "show splash screen with specified image" },
+      { names: ["-ea:"], value: "required", prefix: true, description: "enable assertions with specified granularity" },
+      { names: ["-enableassertions:"], value: "required", prefix: true, description: "enable assertions with specified granularity" },
+      { names: ["-da:"], value: "required", prefix: true, description: "disable assertions with specified granularity" },
+      { names: ["-disableassertions:"], value: "required", prefix: true, description: "disable assertions with specified granularity" },
+      { names: ["-jar"], value: "required", stops: true, description: "execute a jar file" }
+    ]
+  }
+}
+
+// The command schema of javac 25.0.4, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal javac_command: CommandSchema = {
+  root: {
+    style: "single-dash",
+    intermixed: true,
+    options: [
+      { names: ["-Akey"], value: "optional", description: "Options to pass to annotation processors" },
+      { names: ["--add-modules"], value: "required", description: "Root modules to resolve in addition to the initial modules, or all modules on the module path if <module> is ALL-MODULE-PATH" },
+      { names: ["--boot-class-path", "-bootclasspath"], value: "required", description: "Override location of bootstrap class files" },
+      { names: ["--class-path", "-classpath", "-cp"], value: "required", description: "Specify where to find user class files and annotation processors" },
+      { names: ["-d"], value: "required", description: "Specify where to place generated class files" },
+      { names: ["-deprecation"], description: "Output source locations where deprecated APIs are used" },
+      { names: ["--enable-preview"], description: "Enable preview language features" },
+      { names: ["-encoding"], value: "required", description: "Specify character encoding used by source files" },
+      { names: ["-endorseddirs"], value: "required", description: "Override location of endorsed standards path" },
+      { names: ["-extdirs"], value: "required", description: "Override location of installed extensions" },
+      { names: ["-g"], description: "Generate all debugging info" },
+      { names: ["-g:none"], description: "Generate no debugging info" },
+      { names: ["-h"], value: "required", description: "Specify where to place generated native header files" },
+      { names: ["--help", "-help", "-?"], description: "Print this help message" },
+      { names: ["--help-extra", "-X"], value: "optional", prefix: true, description: "Print help on extra options Specify whether to generate class files for implicitly referenced files" },
+      { names: ["-J"], value: "required", prefix: true, description: "Pass <flag> directly to the runtime system" },
+      { names: ["--limit-modules"], value: "required", description: "Limit the universe of observable modules" },
+      { names: ["--module"], value: "required", description: "Compile only the specified module(s), check timestamps" },
+      { names: ["--module-path", "-p"], value: "required", description: "Specify where to find application modules" },
+      { names: ["--module-source-path"], value: "required", description: "Specify where to find input source files for multiple modules" },
+      { names: ["--module-version"], value: "required", description: "Specify version of modules that are being compiled" },
+      { names: ["-nowarn"], description: "Generate only mandatory warnings" },
+      { names: ["-parameters"], description: "Generate metadata for reflection on method parameters Control whether annotation processing and/or compilation is done" },
+      { names: ["-processor"], value: "required", description: "Names of the annotation processors to run; bypasses default discovery process" },
+      { names: ["--processor-module-path"], value: "required", description: "Specify a module path where to find annotation processors" },
+      { names: ["--processor-path", "-processorpath"], value: "required", description: "Specify where to find annotation processors" },
+      { names: ["-profile"], value: "required", description: "Check that API used is available in the specified profile" },
+      { names: ["--release"], value: "required", description: "Compile for the specified Java SE release" },
+      { names: ["-s"], value: "required", description: "Specify where to place generated source files" },
+      { names: ["--source", "-source"], value: "required", description: "Provide source compatibility with the specified Java SE release" },
+      { names: ["--source-path", "-sourcepath"], value: "required", description: "Specify where to find input source files" },
+      { names: ["--system"], value: "required", description: "Override location of system modules" },
+      { names: ["--target", "-target"], value: "required", description: "Generate class files suitable for the specified Java SE release" },
+      { names: ["--upgrade-module-path"], value: "required", description: "Override location of upgradeable modules" },
+      { names: ["-verbose"], description: "Output messages about what the compiler is doing" },
+      { names: ["--version", "-version"], description: "Version information" },
+      { names: ["-Werror"], value: "required", prefix: true, description: "Terminate compilation if warnings occur" },
+      { names: ["--add-exports"], value: "required", description: "Specify a package to be considered as exported from its defining module to additional modules, or to all unnamed modules if <other-module> i" },
+      { names: ["--add-reads"], value: "required", description: "Specify additional modules to be considered as required by a given module; <other-module> may be ALL-UNNAMED to require the unnamed module" },
+      { names: ["--default-module-for-created-files"], value: "required", description: "Fallback target module for files created by annotation processors, if none specified or inferred" },
+      { names: ["--disable-line-doc-comments"], description: "Disable support for documentation comments with lines beginning '///'" },
+      { names: ["--help-lint"], description: "Print the supported keys for -Xlint" },
+      { names: ["--patch-module"], value: "required", description: "Override or augment a module with classes and resources in JAR files or directories" },
+      { names: ["-Xdoclint"], description: "Enable recommended checks for problems in javadoc comments Enable or disable specific checks for problems in javadoc comments, where <group>" },
+      { names: ["-Xlint"], description: "Enable recommended warning categories Warning categories to enable or disable, separated by comma" },
+      { names: ["-Xmaxerrs"], value: "required", description: "Set the maximum number of errors to print" },
+      { names: ["-Xmaxwarns"], value: "required", description: "Set the maximum number of warnings to print Specify handling of package-info files Name and optional arguments for a plug-in to be run Speci" },
+      { names: ["-Xprint"], description: "Print out a textual representation of specified types" },
+      { names: ["-XprintProcessorInfo"], description: "Print information about which annotations a processor is asked to process" },
+      { names: ["-XprintRounds"], description: "Print information about rounds of annotation processing" },
+      { names: ["-Xstdout"], value: "required", description: "Redirect standard output" },
+      { names: ["--debug"], value: "optional" },
+      { names: ["-O"], value: "optional" },
+      { names: ["-m"], value: "optional" },
+      { names: ["-A"], value: "required", prefix: true, description: "options to pass to annotation processors" },
+      { names: ["-g:"], value: "required", prefix: true, description: "generate only some debugging info" },
+      { names: ["-implicit:"], value: "required", prefix: true, description: "whether to generate class files for implicitly referenced files" },
+      { names: ["-proc:"], value: "required", prefix: true, description: "control annotation processing" }
+    ]
+  }
+}
+
+// The command schema of jar 25.0.4, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal jar_command: CommandSchema = {
+  root: {
+    options: [
+      { names: ["-C"], value: "required" },
+      { names: ["-c", "--create"], description: "Create the archive" },
+      { names: ["-i", "--generate-index"], value: "required", description: "Generate index information for the specified jar archives" },
+      { names: ["-t", "--list"], description: "List the table of contents for the archive" },
+      { names: ["-u", "--update"], description: "Update an existing jar archive" },
+      { names: ["-x", "--extract"], description: "Extract named (or all) files from the archive" },
+      { names: ["-d", "--describe-module"], description: "Print the module descriptor, or automatic module name" },
+      { names: ["--validate"], description: "Validate the contents of the jar archive" },
+      { names: ["-f", "--file"], value: "required", description: "The archive file name" },
+      { names: ["--release"], value: "required", description: "Places all following files in a versioned directory of the jar (i.e" },
+      { names: ["-v", "--verbose"], description: "Generate verbose output on standard output" },
+      { names: ["-e", "--main-class"], value: "required", description: "applications bundled into a modular, or executable, jar archive" },
+      { names: ["-m", "--manifest"], value: "required", description: "Include the manifest information from the given manifest file" },
+      { names: ["-M", "--no-manifest"], description: "Do not create a manifest file for the entries" },
+      { names: ["--module-version"], value: "required", description: "The module version, when creating a modular jar, or updating a non-modular jar" },
+      { names: ["--hash-modules"], value: "required", description: "matched by the given pattern and that depend upon directly or indirectly on a modular jar being created or a non-modular jar being updated" },
+      { names: ["-p", "--module-path"], value: "required", description: "Location of module dependence for generating the hash" },
+      { names: ["-0", "--no-compress"], description: "Store only; use no ZIP compression" },
+      { names: ["--date"], value: "required", description: "The timestamp in ISO-8601 extended offset date-time with optional time-zone format, to use for the timestamps of entries, e.g" },
+      { names: ["-k", "--keep-old-files"], description: "Do not overwrite existing files" },
+      { names: ["--dir"], value: "optional", description: "Directory into which the jar will be extracted" },
+      { names: ["-?", "-h", "--help"], value: "optional", description: "Give this, or optionally the compatibility, help" },
+      { names: ["--help-extra"], description: "Give help on extra options" },
+      { names: ["--version"], description: "Print program version" },
+      { names: ["-J"], value: "optional" },
+      { names: ["-P"], value: "optional" }
+    ]
+  }
+}
+
+// The command schemas of java, javac, jar (lask spec ch. 5) for Eclipse Temurin 25.0.4,
+// the release in env()'s default image.
+schema_25_0_4: Map<CommandSchema> = { "java": java_command, "javac": javac_command, "jar": jar_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_25_0_4

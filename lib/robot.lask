@@ -28,4 +28,160 @@ env(
   network: network
 }
 
-command { "robot", "rebot", "libdoc" } on env()
+command { "robot", "rebot", "libdoc" } on env() schema schema
+
+// The command schema of robot 7.5, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal robot_command: CommandSchema = {
+  root: {
+    options: [
+      { names: ["--rpa"], value: "optional", description: "Turn on the generic automation mode" },
+      { names: ["--language"], value: "required", description: "Activate localization" },
+      { names: ["-F", "--extension"], value: "required", description: "Parse only files with this extension when executing a directory" },
+      { names: ["-I", "--parseinclude"], value: "required", description: "Parse only files matching `pattern`. It can be: - a file name or pattern like `example.robot` or `*.robot` to parse all files matching that " },
+      { names: ["-N", "--name"], value: "required", description: "Set the name of the top level suite" },
+      { names: ["-D", "--doc"], value: "required", description: "Set the documentation of the top level suite" },
+      { names: ["-M", "--metadata"], value: "required", description: "Set metadata of the top level suite" },
+      { names: ["-G", "--settag"], value: "required", description: "Sets given tag(s) to all executed tests" },
+      { names: ["-t", "--test"], value: "required", description: "Select tests by name or by long name containing also parent suite name like `Parent.Test`. Name is case and space insensitive and it can als" },
+      { names: ["--task"], value: "required", description: "Alias to --test" },
+      { names: ["-s", "--suite"], value: "required", description: "Select suites by name" },
+      { names: ["-i", "--include"], value: "required", description: "Select tests by tag" },
+      { names: ["-e", "--exclude"], value: "required", description: "Select test cases not to run by tag" },
+      { names: ["-R", "--rerunfailed"], value: "required", description: "Select failed tests from an earlier output file to be re-executed" },
+      { names: ["-S", "--rerunfailedsuites"], value: "required", description: "Select failed suites from an earlier output file to be re-executed" },
+      { names: ["--runemptysuite"], value: "optional", description: "Executes suite even if it contains no tests" },
+      { names: ["--skip"], value: "required", description: "Tests having given tag will be skipped" },
+      { names: ["--skiponfailure"], value: "required", description: "Tests having given tag will be skipped if they fail" },
+      { names: ["-v", "--variable"], value: "required", description: "Set variables in the test data" },
+      { names: ["-V", "--variablefile"], value: "required", description: "Python or YAML file file to read variables from" },
+      { names: ["-d", "--outputdir"], value: "required", description: "Where to create output files" },
+      { names: ["-o", "--output"], value: "required", description: "XML output file" },
+      { names: ["--legacyoutput"], value: "optional", description: "Create XML output file in format compatible with Robot Framework 6.x and earlier" },
+      { names: ["-l", "--log"], value: "required", description: "HTML log file" },
+      { names: ["-r", "--report"], value: "required", description: "HTML report file" },
+      { names: ["-x", "--xunit"], value: "required", description: "xUnit compatible result file" },
+      { names: ["-b", "--debugfile"], value: "required", description: "Debug file written during execution" },
+      { names: ["-T", "--timestampoutputs"], value: "optional", description: "When this option is used, timestamp in a format `YYYYMMDD-hhmmss` is added to all generated output files between their basename and extensio" },
+      { names: ["--splitlog"], value: "optional", description: "Split the log file into smaller pieces that open in browsers transparently" },
+      { names: ["--logtitle"], value: "required", description: "Title for the generated log file" },
+      { names: ["--reporttitle"], value: "required", description: "Title for the generated report file" },
+      { names: ["--reportbackground"], value: "required", description: "Background colors to use in the report file" },
+      { names: ["--maxerrorlines"], value: "required", description: "Maximum number of error message lines to show in report when tests fail" },
+      { names: ["--maxassignlength"], value: "required", description: "Maximum number of characters to show in log when variables are assigned" },
+      { names: ["-L", "--loglevel"], value: "required", description: "Threshold level for logging" },
+      { names: ["--suitestatlevel"], value: "required", description: "How many levels to show in `Statistics by Suite` in log and report" },
+      { names: ["--tagstatinclude"], value: "required", description: "Include only matching tags in `Statistics by Tag` in log and report" },
+      { names: ["--tagstatexclude"], value: "required", description: "Exclude matching tags from `Statistics by Tag`. This option can be used with --tagstatinclude similarly as --exclude is used with --include" },
+      { names: ["--tagstatcombine"], value: "required", description: "Create combined statistics based on tags" },
+      { names: ["--tagdoc"], value: "required", description: "Add documentation to tags matching the given pattern" },
+      { names: ["--tagstatlink"], value: "required", description: "Add external links into `Statistics by Tag`. Pattern can use `*`, `?` and `[]` as wildcards like --test" },
+      { names: ["--expandkeywords"], value: "required", description: "Matching keywords will be automatically expanded in the log file" },
+      { names: ["--removekeywords"], value: "required", description: "Remove keyword data from the generated log file" },
+      { names: ["--flattenkeywords"], value: "required", description: "Flattens matching keywords in the generated log file" },
+      { names: ["--nostatusrc"], value: "optional", description: "Sets the return code to zero regardless of failures in test cases" },
+      { names: ["--dryrun"], value: "optional", description: "Verifies test data and runs tests so that library keywords are not executed" },
+      { names: ["-X", "--exitonfailure"], value: "optional", description: "Stops test execution if any test fails" },
+      { names: ["--exitonerror"], value: "optional", description: "Stops test execution if any error occurs when parsing test data, importing libraries, and so on" },
+      { names: ["--skipteardownonexit"], value: "optional", description: "Causes teardowns to be skipped if test execution is stopped prematurely" },
+      { names: ["--randomize"], value: "required", description: "Randomizes the test execution order" },
+      { names: ["--listener"], value: "required", description: "Class or module for monitoring test execution" },
+      { names: ["--prerunmodifier"], value: "required", description: "Class to programmatically modify the suite structure before execution" },
+      { names: ["--prerebotmodifier"], value: "required", description: "Class to programmatically modify the result model before creating reports and logs" },
+      { names: ["--parser"], value: "required", description: "Custom parser class or module" },
+      { names: ["--console"], value: "required", description: "How to report execution on the console" },
+      { names: ["--quiet"], value: "optional", description: "Shortcut for `--console quiet`" },
+      { names: ["-W", "--consolewidth"], value: "required", description: "Width of the console output" },
+      { names: ["-C", "--consolecolors"], value: "required", description: "Use colors on console output or not" },
+      { names: ["--consolelinks"], value: "required", description: "Control making paths to results files hyperlinks" },
+      { names: ["-K", "--consolemarkers"], value: "required", description: "Show markers on the console when top level keywords in a test case end" },
+      { names: ["-P", "--pythonpath"], value: "required", description: "Additional locations (directories, ZIPs) where to search libraries and other extensions when they are imported" },
+      { names: ["-A", "--argumentfile"], value: "required", description: "Text file to read more arguments from" },
+      { names: ["-h", "-?", "--help"], value: "optional", description: "Print usage instructions" },
+      { names: ["--version"], value: "optional", description: "Print version information" }
+    ]
+  }
+}
+
+// The command schema of rebot 7.5, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal rebot_command: CommandSchema = {
+  root: {
+    options: [
+      { names: ["--rpa"], value: "optional", description: "Turn on the generic automation mode" },
+      { names: ["-R", "--merge"], value: "optional", description: "When combining results, merge outputs together instead of putting them under a new top level suite" },
+      { names: ["-N", "--name"], value: "required", description: "Set the name of the top level suite" },
+      { names: ["-D", "--doc"], value: "required", description: "Set the documentation of the top level suite" },
+      { names: ["-M", "--metadata"], value: "required", description: "Set metadata of the top level suite" },
+      { names: ["-G", "--settag"], value: "required", description: "Sets given tag(s) to all tests" },
+      { names: ["-t", "--test"], value: "required", description: "Select tests by name or by long name containing also parent suite name like `Parent.Test`. Name is case and space insensitive and it can als" },
+      { names: ["--task"], value: "required", description: "Alias to --test" },
+      { names: ["-s", "--suite"], value: "required", description: "Select suites by name" },
+      { names: ["-i", "--include"], value: "required", description: "Select tests by tag" },
+      { names: ["-e", "--exclude"], value: "required", description: "Specify tests not to be included by tag" },
+      { names: ["--processemptysuite"], value: "optional", description: "Processes output also if the top level suite is empty" },
+      { names: ["-d", "--outputdir"], value: "required", description: "Where to create output files" },
+      { names: ["-o", "--output"], value: "required", description: "XML output file" },
+      { names: ["--legacyoutput"], value: "optional", description: "Create XML output file in format compatible with Robot Framework 6.x and earlier" },
+      { names: ["-l", "--log"], value: "required", description: "HTML log file" },
+      { names: ["-r", "--report"], value: "required", description: "HTML report file" },
+      { names: ["-x", "--xunit"], value: "required", description: "xUnit compatible result file" },
+      { names: ["-T", "--timestampoutputs"], value: "optional", description: "When this option is used, timestamp in a format `YYYYMMDD-hhmmss` is added to all generated output files between their basename and extensio" },
+      { names: ["--splitlog"], value: "optional", description: "Split the log file into smaller pieces that open in browsers transparently" },
+      { names: ["--logtitle"], value: "required", description: "Title for the generated log file" },
+      { names: ["--reporttitle"], value: "required", description: "Title for the generated report file" },
+      { names: ["--reportbackground"], value: "required", description: "Background colors to use in the report file" },
+      { names: ["-L", "--loglevel"], value: "required", description: "Threshold for selecting messages" },
+      { names: ["--suitestatlevel"], value: "required", description: "How many levels to show in `Statistics by Suite` in log and report" },
+      { names: ["--tagstatinclude"], value: "required", description: "Include only matching tags in `Statistics by Tag` in log and report" },
+      { names: ["--tagstatexclude"], value: "required", description: "Exclude matching tags from `Statistics by Tag`. This option can be used with --tagstatinclude similarly as --exclude is used with --include" },
+      { names: ["--tagstatcombine"], value: "required", description: "Create combined statistics based on tags" },
+      { names: ["--tagdoc"], value: "required", description: "Add documentation to tags matching the given pattern" },
+      { names: ["--tagstatlink"], value: "required", description: "Add external links into `Statistics by Tag`. Pattern can use `*`, `?` and `[]` as wildcards like --test" },
+      { names: ["--expandkeywords"], value: "required", description: "Matching keywords will be automatically expanded in the log file" },
+      { names: ["--removekeywords"], value: "required", description: "Remove keyword data from all generated outputs" },
+      { names: ["--flattenkeywords"], value: "required", description: "Flattens matching keywords in all generated outputs" },
+      { names: ["--starttime"], value: "required", description: "Set execution start time" },
+      { names: ["--endtime"], value: "required", description: "Same as --starttime but for end time" },
+      { names: ["--nostatusrc"], value: "optional", description: "Sets the return code to zero regardless are there failures" },
+      { names: ["--prerebotmodifier"], value: "required", description: "Class to programmatically modify the result model before creating outputs" },
+      { names: ["--console"], value: "required", description: "How to report on the console" },
+      { names: ["--quiet"], value: "optional", description: "Shortcut for `--console quiet`" },
+      { names: ["-C", "--consolecolors"], value: "required", description: "Use colors on console output or not" },
+      { names: ["--consolelinks"], value: "required", description: "Control making paths to results files hyperlinks" },
+      { names: ["-P", "--pythonpath"], value: "required", description: "Additional locations to add to the module search path that is used when importing Python based extensions" },
+      { names: ["-A", "--argumentfile"], value: "required", description: "Text file to read more arguments from" },
+      { names: ["-h", "-?", "--help"], value: "optional", description: "Print usage instructions" },
+      { names: ["--version"], value: "optional", description: "Print version information" },
+      { names: ["--ReportTitle"], value: "required" },
+      { names: ["--TagStatCombine"], value: "required" }
+    ]
+  }
+}
+
+// The command schema of libdoc , read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal libdoc_command: CommandSchema = {
+  root: {
+    options: [
+      { names: ["-f", "--format"], value: "required", description: "Specifies whether to generate an HTML output for humans, a machine readable spec file in XML or JSON format, or a Markdown file" },
+      { names: ["-s", "--specdocformat"], value: "required", description: "Specifies the documentation format used with XML and JSON spec files" },
+      { names: ["-F", "--docformat"], value: "required", description: "Specifies the source documentation format" },
+      { names: ["--theme"], value: "required", description: "Use dark or light HTML theme" },
+      { names: ["--language"], value: "required", description: "Set the default language used in HTML outputs" },
+      { names: ["-n", "--name"], value: "required", description: "Sets the name of the documented library or resource" },
+      { names: ["-v", "--version"], value: "required", description: "Sets the version of the documented library or resource" },
+      { names: ["--quiet"], value: "optional", description: "Do not print the path of the generated output file to the console" },
+      { names: ["-P", "--pythonpath"], value: "required", description: "Additional locations where to search for libraries and resources" },
+      { names: ["-h", "-?", "--help"], value: "optional", description: "Print this help" }
+    ]
+  }
+}
+
+// The command schemas of robot, rebot, libdoc (lask spec ch. 5) for Robot Framework 7.5,
+// the release in env()'s default image.
+schema_7_5: Map<CommandSchema> = { "robot": robot_command, "rebot": rebot_command, "libdoc": libdoc_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_7_5

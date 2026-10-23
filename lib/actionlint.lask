@@ -19,4 +19,42 @@ env(
   volumes = layered_volumes(with, [])
 )
 
-command { "actionlint" } on env()
+command { "actionlint" } on env() schema schema
+
+// The command schema of actionlint 1.7.12, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal actionlint_command: CommandSchema = {
+  root: {
+    closed: true,
+    style: "single-dash",
+    intermixed: false,
+    options: [
+      { names: ["-color"], value: "optional", description: "Always enable colorful output" },
+      { names: ["-config-file"], value: "required", description: "File path to config file" },
+      { names: ["-debug"], value: "optional", description: "Enable debug output (for development)" },
+      { names: ["-format"], value: "required", description: "Custom template to format error messages in Go template syntax" },
+      { names: ["-ignore"], value: "required", description: "Regular expression matching to error messages you want to ignore" },
+      { names: ["-init-config"], value: "optional", description: "Generate default config file at .github/actionlint.yaml in current project" },
+      { names: ["-no-color"], value: "optional", description: "Disable colorful output" },
+      { names: ["-oneline"], value: "optional", description: "Use one line per one error" },
+      { names: ["-pyflakes"], value: "required", description: "Command name or file path of \"pyflakes\" external command" },
+      { names: ["-shellcheck"], value: "required", description: "Command name or file path of \"shellcheck\" external command" },
+      { names: ["-stdin-filename"], value: "required", description: "File name when reading input from stdin (default \"<stdin>\")" },
+      { names: ["-verbose"], value: "optional", description: "Enable verbose output" },
+      { names: ["-version"], value: "optional", description: "Show version and how this binary was installed" },
+      { names: ["--debug"], value: "optional" },
+      { names: ["--help"], value: "optional" },
+      { names: ["--verbose"], value: "optional" },
+      { names: ["--version"], value: "optional" },
+      { names: ["-h"], value: "optional" }
+    ]
+  }
+}
+
+// The command schemas of actionlint (lask spec ch. 5) for actionlint 1.7.12,
+// the release in env()'s default image.
+schema_1_7_12: Map<CommandSchema> = { "actionlint": actionlint_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_1_7_12

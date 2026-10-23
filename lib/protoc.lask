@@ -22,4 +22,91 @@ env(
   volumes: layered_volumes(with, [])
 }
 
-command { "protoc" } on env()
+command { "protoc" } on env() schema schema
+
+// The command schema of protoc 31.1, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal protoc_command: CommandSchema = {
+  root: {
+    options: [
+      { names: ["-IPATH", "--proto_path"], value: "required", description: "Specify the directory in which to search for imports" },
+      { names: ["--version"], value: "optional", description: "Show version info and exit" },
+      { names: ["-h", "--help"], value: "optional", description: "Show this text and exit" },
+      { names: ["--encode"], value: "required", description: "Read a text-format message of the given type from standard input and write it in binary to standard output" },
+      { names: ["--deterministic_output"], value: "optional", description: "When using --encode, ensure map fields are deterministically ordered" },
+      { names: ["--decode"], value: "required", description: "Read a binary message of the given type from standard input and write it in text format to standard output" },
+      { names: ["--decode_raw"], value: "optional", description: "Read an arbitrary protocol message from standard input and write the raw tag/value pairs in text format to standard output" },
+      { names: ["--descriptor_set_in"], value: "required", description: "Specifies a delimited list of FILES each containing a FileDescriptorSet (a protocol buffer defined in descriptor.proto)" },
+      { names: ["-oFILE"], description: "Writes a FileDescriptorSet (a protocol buffer," },
+      { names: ["--descriptor_set_out"], value: "required", description: "the input files to FILE" },
+      { names: ["--include_imports"], value: "optional", description: "When using --descriptor_set_out, also include all dependencies of the input files in the set, so that the set is self-contained" },
+      { names: ["--include_source_info"], value: "optional", description: "When using --descriptor_set_out, do not strip SourceCodeInfo from the FileDescriptorProto" },
+      { names: ["--retain_options"], value: "optional", description: "When using --descriptor_set_out, do not strip any options from the FileDescriptorProto" },
+      { names: ["--dependency_out"], value: "required", description: "Write a dependency output file in the format expected by make" },
+      { names: ["--error_format"], value: "required", description: "Set the format in which to print errors" },
+      { names: ["--fatal_warnings"], value: "optional", description: "Make warnings be fatal (similar to -Werr in gcc)" },
+      { names: ["--print_free_field_numbers"], value: "optional", description: "Print the free field numbers of the messages defined in the given proto files" },
+      { names: ["--enable_codegen_trace"], value: "optional", description: "Enables tracing which parts of protoc are responsible for what codegen output" },
+      { names: ["--notices"], value: "optional", description: "Show notice file and exit" },
+      { names: ["--plugin"], value: "required", description: "Specifies a plugin executable to use" },
+      { names: ["--cpp_out"], value: "required", description: "Generate C++ header and source" },
+      { names: ["--csharp_out"], value: "required", description: "Generate C# source file" },
+      { names: ["--java_out"], value: "required", description: "Generate Java source file" },
+      { names: ["--kotlin_out"], value: "required", description: "Generate Kotlin file" },
+      { names: ["--objc_out"], value: "required", description: "Generate Objective-C header and source" },
+      { names: ["--php_out"], value: "required", description: "Generate PHP source file" },
+      { names: ["--pyi_out"], value: "required", description: "Generate python pyi stub" },
+      { names: ["--python_out"], value: "required", description: "Generate Python source file" },
+      { names: ["--ruby_out"], value: "required", description: "Generate Ruby source file" },
+      { names: ["--rust_out"], value: "required", description: "Generate Rust sources" },
+      { names: ["--upb_minitable_out"], value: "required", description: "relative file path is specified, the file will be searched in the working directory" },
+      { names: ["-I"], value: "required", prefix: true, description: "the directory in which to search for imports" },
+      { names: ["--go_out"], value: "required", description: "the go plugin's output directory" },
+      { names: ["--go_opt"], value: "required", description: "the go plugin's options" },
+      { names: ["--go-grpc_out"], value: "required", description: "the go-grpc plugin's output directory" },
+      { names: ["--go-grpc_opt"], value: "required", description: "the go-grpc plugin's options" },
+      { names: ["--grpc-gateway_out"], value: "required", description: "the grpc-gateway plugin's output directory" },
+      { names: ["--grpc-gateway_opt"], value: "required", description: "the grpc-gateway plugin's options" },
+      { names: ["--openapiv2_out"], value: "required", description: "the openapiv2 plugin's output directory" },
+      { names: ["--openapiv2_opt"], value: "required", description: "the openapiv2 plugin's options" },
+      { names: ["--grpc_python_out"], value: "required", description: "the grpc_python plugin's output directory" },
+      { names: ["--grpc_python_opt"], value: "required", description: "the grpc_python plugin's options" },
+      { names: ["--grpc-web_out"], value: "required", description: "the grpc-web plugin's output directory" },
+      { names: ["--grpc-web_opt"], value: "required", description: "the grpc-web plugin's options" },
+      { names: ["--ts_out"], value: "required", description: "the ts plugin's output directory" },
+      { names: ["--ts_opt"], value: "required", description: "the ts plugin's options" },
+      { names: ["--ts_proto_out"], value: "required", description: "the ts_proto plugin's output directory" },
+      { names: ["--ts_proto_opt"], value: "required", description: "the ts_proto plugin's options" },
+      { names: ["--es_out"], value: "required", description: "the es plugin's output directory" },
+      { names: ["--es_opt"], value: "required", description: "the es plugin's options" },
+      { names: ["--connect-go_out"], value: "required", description: "the connect-go plugin's output directory" },
+      { names: ["--connect-go_opt"], value: "required", description: "the connect-go plugin's options" },
+      { names: ["--connect-es_out"], value: "required", description: "the connect-es plugin's output directory" },
+      { names: ["--connect-es_opt"], value: "required", description: "the connect-es plugin's options" },
+      { names: ["--doc_out"], value: "required", description: "the doc plugin's output directory" },
+      { names: ["--doc_opt"], value: "required", description: "the doc plugin's options" },
+      { names: ["--validate_out"], value: "required", description: "the validate plugin's output directory" },
+      { names: ["--validate_opt"], value: "required", description: "the validate plugin's options" },
+      { names: ["--java_grpc_out"], value: "required", description: "the java_grpc plugin's output directory" },
+      { names: ["--java_grpc_opt"], value: "required", description: "the java_grpc plugin's options" },
+      { names: ["--grpc_cpp_out"], value: "required", description: "the grpc_cpp plugin's output directory" },
+      { names: ["--grpc_cpp_opt"], value: "required", description: "the grpc_cpp plugin's options" },
+      { names: ["--swift_out"], value: "required", description: "the swift plugin's output directory" },
+      { names: ["--swift_opt"], value: "required", description: "the swift plugin's options" },
+      { names: ["--grpc-swift_out"], value: "required", description: "the grpc-swift plugin's output directory" },
+      { names: ["--grpc-swift_opt"], value: "required", description: "the grpc-swift plugin's options" },
+      { names: ["--dart_out"], value: "required", description: "the dart plugin's output directory" },
+      { names: ["--dart_opt"], value: "required", description: "the dart plugin's options" },
+      { names: ["--kotlin_grpc_out"], value: "required", description: "the kotlin_grpc plugin's output directory" },
+      { names: ["--kotlin_grpc_opt"], value: "required", description: "the kotlin_grpc plugin's options" }
+    ]
+  }
+}
+
+// The command schemas of protoc (lask spec ch. 5) for protoc 31.1,
+// the release in env()'s default image.
+schema_31_1: Map<CommandSchema> = { "protoc": protoc_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_31_1

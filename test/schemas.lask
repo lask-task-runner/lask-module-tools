@@ -4,7 +4,7 @@
 //
 //   lask check --module test/schemas.lask
 
-import command { "go", "gofmt", "python", "python3", "pip", "cargo", "make" } from "../main.lask"
+import command { "go", "gofmt", "python", "python3", "pip", "cargo", "make", "curl", "wget", "jq", "envsubst", "tar", "gzip", "xz", "bzip2", "zip", "unzip", "rsync", "shellcheck", "ab", "trivy", "gitleaks", "grype", "syft", "golangci-lint", "kustomize", "k6", "buf", "yq", "tflint", "grpcurl", "actionlint", "checkov", "semgrep", "robot", "rebot", "libdoc", "newman", "ruff", "hadolint", "protoc", "openssl", "rustc", "rustup", "cabal", "stack", "ruby", "gem", "bundle", "rake", "node", "deno", "java", "javac", "jar", "mvn", "gradle", "gcc", "ghc", "g++", "cc", "c++", "ghci" } from "../main.lask"
 
 a() = $ go build -o bin/app -ldflags "-s -w" -trimpath ./cmd/app
 b() = $ go test -race -count=1 -run 'TestA|TestB' ./... -v
@@ -25,3 +25,161 @@ p() = $ cargo run --release --bin server -- --port 8080
 q() = $ cargo clippy --all-targets -- -D warnings && cargo fmt -- --check
 s() = $ make -j8 -C build all CFLAGS=-O2 && make --dry install
 t() = $ make -k --no-print-directory test V=1 -Oline
+u1() = $ tar -czf out.tar.gz --exclude .git -C src . && tar xzf out.tar.gz
+u2() = $ curl -fsSL -H "Accept: application/json" -o out.json --retry 3 https://example.com
+u3() = $ curl --data-urlencode q=1 -X POST https://example.com
+u4() = $ jq -r '.items[] | .name' file.json && jq -n --arg x -1 '$x'
+u5() = $ wget -q -O - https://example.com && wget --no-check-cert https://example.com
+u6() = $ rsync -avz --delete --exclude node_modules src/ dst/ && rsync -e ssh -P a b
+u7() = $ gzip -9 file && gzip -dc file.gz && xz -T0 -z file && bzip2 -k file
+u8() = $ envsubst '$HOME' < a > b
+u10() = $ shellcheck -x -S warning script.sh
+u9() = $ zip -r out.zip dir -x '*.git*' && unzip -o out.zip -d dst
+u11() = $ ab -n 100 -c 10 http://localhost/
+v1() = $ trivy image --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed alpine:3.20
+v2() = $ trivy fs --scanners vuln,secret --format json -o out.json .
+v3() = $ trivy config --skip-dirs node_modules ./infra
+v4() = $ trivy --cache-dir /tmp/c image -q nginx
+v5() = $ trivy repo https://github.com/x/y
+v6() = $ trivy sbom --format cyclonedx sbom.json
+v7() = $ gitleaks detect --source . -v --redact --report-format json --report-path out.json
+v8() = $ gitleaks git --log-opts=--all .
+v9() = $ gitleaks dir -c .gitleaks.toml src
+v10() = $ grype alpine:3.20 --fail-on high -o json
+v11() = $ grype sbom:./sbom.json --only-fixed
+v12() = $ grype db update
+v13() = $ syft alpine:3.20 -o cyclonedx-json=sbom.json
+v14() = $ syft scan dir:. -o spdx-json
+v15() = $ syft packages alpine -q
+v16() = $ golangci-lint run ./... --timeout 5m
+v17() = $ golangci-lint run --fix -v --enable-only errcheck
+v18() = $ golangci-lint fmt
+v19() = $ golangci-lint linters
+v20() = $ kustomize build overlays/prod --enable-helm
+v21() = $ kustomize edit set image app=app:1.2
+v22() = $ kustomize build -o out.yaml .
+v23() = $ k6 run --vus 10 --duration 30s script.js
+v24() = $ k6 run -e BASE=http://x -o json=out.json script.js
+v25() = $ k6 version
+v26() = $ k6 inspect script.js
+v27() = $ buf lint
+v28() = $ buf generate --template buf.gen.yaml
+v29() = $ buf breaking --against '.git#branch=main'
+v30() = $ buf format -w
+v31() = $ buf dep update
+v32() = $ yq -i '.a = 1' f.yaml
+v33() = $ yq eval '.a' f.yaml
+v34() = $ yq -o json '.' f.yaml
+v35() = $ yq ea '. as $i ireduce ({}; . * $i)' a.yaml b.yaml
+v36() = $ tflint --init
+v37() = $ tflint --recursive --format compact
+v38() = $ tflint -c .tflint.hcl --minimum-failure-severity=error
+v39() = $ grpcurl -plaintext localhost:50051 list
+v40() = $ grpcurl -d '{"a":1}' -H 'x: y' -plaintext host:1 svc/Method
+v41() = $ actionlint
+v42() = $ actionlint -color -shellcheck= .github/workflows/ci.yml
+v43() = $ checkov -d . --framework terraform --quiet
+v44() = $ checkov -f main.tf --skip-check CKV_AWS_1 -o json
+v45() = $ semgrep scan --config auto --error .
+v46() = $ semgrep --config p/ci --json -o out.json
+v47() = $ semgrep --config auto --error .
+v48() = $ robot --outputdir out -v ENV:ci --include smoke tests/
+v49() = $ robot -d out tests
+v50() = $ rebot --outputdir out --merge a.xml b.xml
+v51() = $ libdoc MyLib.py MyLib.html
+v52() = $ newman run c.json -e env.json --reporters cli,junit
+v53() = $ newman run c.json --bail
+v54() = $ ruff check --fix .
+v55() = $ ruff format --check src
+v56() = $ ruff check --select E,F --ignore E501 .
+v57() = $ hadolint Dockerfile
+v58() = $ hadolint --ignore DL3008 -f json Dockerfile
+v59() = $ protoc -I proto --go_out=gen --go_opt=paths=source_relative proto/a.proto
+v60() = $ protoc --proto_path=proto --python_out=. a.proto
+v61() = $ openssl req -new -x509 -days 365 -nodes -keyout k.pem -out c.pem -subj '/CN=x'
+v62() = $ openssl genrsa -out k.pem 2048
+v63() = $ openssl x509 -in c.pem -noout -text
+v64() = $ openssl rand -hex 16
+v65() = $ openssl dgst -sha256 f
+v66() = $ openssl s_client -connect example.com:443 -servername example.com
+v67() = $ openssl sha256 file
+v68() = $ rustc --edition 2021 -O main.rs -o main
+v69() = $ rustc -C opt-level=3 --crate-type lib lib.rs
+v70() = $ rustup target add wasm32-unknown-unknown
+v71() = $ rustup component add clippy rustfmt
+v72() = $ rustup toolchain install stable --profile minimal
+v73() = $ rustup default stable
+v74() = $ rustup run stable cargo build
+v75() = $ rustup show
+v76() = $ rustup +nightly component add miri
+v77() = $ cabal build all --enable-tests
+v78() = $ cabal test --test-show-details=direct
+v79() = $ cabal update
+v80() = $ cabal run exe -- --flag
+v81() = $ cabal install --installdir=bin --install-method=copy
+v82() = $ stack build --fast --test --no-run-tests
+v83() = $ stack test --ta '--match foo'
+v84() = $ stack exec -- lask --help
+v85() = $ stack --resolver lts-22 build
+v86() = $ stack setup
+v87() = $ stack install --local-bin-path bin
+v88() = $ ruby -Ilib -rjson script.rb a b
+v89() = $ ruby -e 'puts 1'
+v90() = $ ruby -w -c x.rb
+v91() = $ gem install bundler -v 2.5.0 --no-document
+v92() = $ gem build x.gemspec
+v93() = $ gem push x.gem
+v94() = $ gem list
+v95() = $ bundle install --jobs 4
+v96() = $ bundle exec rake test
+v97() = $ bundle config set --local path vendor/bundle
+v98() = $ bundle update --conservative rails
+v99() = $ rake test
+v100() = $ rake -T
+v101() = $ rake -f Rakefile build
+v102() = $ node --enable-source-maps dist/index.js --port 3000
+v103() = $ node -e 'console.log(1)' x
+v104() = $ node --test
+v105() = $ node -r dotenv/config app.js
+v106() = $ node --max-old-space-size=4096 build.js
+v107() = $ deno run -A main.ts --port 8000
+v108() = $ deno test --allow-read --coverage=cov
+v109() = $ deno fmt --check
+v110() = $ deno lint
+v111() = $ deno task dev
+v112() = $ deno compile -o app main.ts
+v113() = $ deno run --allow-net=example.com main.ts
+v114() = $ java -jar app.jar --server.port=8080
+v115() = $ java -Xmx2g -XX:+UseG1GC -Dspring.profiles.active=prod -cp app.jar com.x.Main a
+v116() = $ java --class-path lib/* Main
+v117() = $ java -version
+v118() = $ java -ea -verbose:gc Main.java
+v119() = $ javac -d out -cp lib/a.jar --release 21 -Xlint:all src/A.java
+v120() = $ javac -g -encoding UTF-8 A.java
+v121() = $ javac -Werror -proc:none A.java
+v122() = $ jar --create --file app.jar -C out .
+v123() = $ jar cf app.jar -C out .
+v124() = $ mvn -B -ntp clean verify
+v125() = $ mvn -q -DskipTests package
+v126() = $ mvn -pl app -am install
+v127() = $ mvn --batch-mode -Dmaven.repo.local=.m2 test
+v128() = $ mvn -f sub/pom.xml versions:set -DnewVersion=1.2
+v129() = $ gradle build --no-daemon
+v130() = $ gradle test --tests 'a.B' -Pci=true
+v131() = $ gradle -q dependencies
+v132() = $ gradle --console=plain build -x test
+v133() = $ gcc -O2 -Wall -Wextra -std=c11 -Iinclude -c a.c -o a.o
+v134() = $ gcc -shared -fPIC -o libx.so a.o -lm -L/usr/lib
+v135() = $ gcc -g -O0 -DDEBUG=1 main.c
+v136() = $ gcc -Wl,-rpath,/opt/lib -pthread main.c
+v137() = $ ghc -O2 -Wall -threaded -rtsopts -isrc -outputdir build -o app Main.hs
+v138() = $ ghc --make -XGADTs -fno-code A.hs
+v139() = $ ghc -e 'print 1'
+v140() = $ ghc -package containers -optc-O2 Main.hs
+v141() = $ ghc --version
+v142() = $ ghc -rtsopts=all '-with-rtsopts=-N' -optl-static -hidir build -odir build -j4 -O0 Main.hs
+v143() = $ ghc -fplugin=Foo -ddump-simpl -dsuppress-all -Werror=incomplete-patterns -Wno-unused-imports A.hs
+v144() = $ ghc -static -dynamic-too -fPIC -c A.hs
+v145() = $ ghc -prof -fprof-auto -eventlog Main.hs
+v146() = $ g++ -O2 -std=c++20 -o app main.cpp && c++ -c a.cc && cc -Wall a.c
+v147() = $ ghci -isrc Main.hs

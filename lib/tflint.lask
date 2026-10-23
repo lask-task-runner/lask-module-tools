@@ -23,4 +23,49 @@ env(
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )
 
-command { "tflint" } on env()
+command { "tflint" } on env() schema schema
+
+// The command schema of tflint 0.64.0, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal tflint_command: CommandSchema = {
+  root: {
+    closed: true,
+    options: [
+      { names: ["-v", "--version"], value: "optional", description: "Print TFLint version" },
+      { names: ["--init"], value: "optional", description: "Install plugins" },
+      { names: ["--langserver"], value: "optional", description: "Start language server" },
+      { names: ["-f", "--format"], value: "required", description: "Output format" },
+      { names: ["-c", "--config"], value: "required", description: "Config file name (default: .tflint.hcl)" },
+      { names: ["--ignore-module"], value: "required", description: "Ignore module sources" },
+      { names: ["--enable-rule"], value: "required", description: "Enable rules from the command line" },
+      { names: ["--disable-rule"], value: "required", description: "Disable rules from the command line" },
+      { names: ["--only"], value: "required", description: "Enable only this rule, disabling all other defaults" },
+      { names: ["--enable-plugin"], value: "required", description: "Enable plugins from the command line" },
+      { names: ["--var-file"], value: "required", description: "Terraform variable file name" },
+      { names: ["--var"], value: "required", description: "Set a Terraform variable" },
+      { names: ["--call-module-type"], value: "required", description: "Types of module to call (default: local)" },
+      { names: ["--chdir"], value: "required", description: "Switch to a different working directory before executing the command" },
+      { names: ["--recursive"], value: "optional", description: "Run command in each directory recursively" },
+      { names: ["--filter"], value: "required", description: "Filter issues by file names or globs" },
+      { names: ["--force"], value: "optional", description: "Return zero exit status even if issues found" },
+      { names: ["--minimum-failure-severity"], value: "required", description: "Sets minimum severity level for exiting with a non-zero error code" },
+      { names: ["--color"], value: "optional", description: "Enable colorized output" },
+      { names: ["--no-color"], value: "optional", description: "Disable colorized output" },
+      { names: ["--fix"], value: "optional", description: "Fix issues automatically" },
+      { names: ["--no-parallel-runners"], value: "optional", description: "Disable per-runner parallelism" },
+      { names: ["--max-workers"], value: "required", description: "Set maximum number of workers in recursive inspection (default: number of CPUs)" },
+      { names: ["-h", "--help"], value: "optional", description: "Show this help message" },
+      { names: ["--debug"], value: "optional" },
+      { names: ["--quiet"], value: "optional" },
+      { names: ["-q"], value: "optional" }
+    ]
+  }
+}
+
+// The command schemas of tflint (lask spec ch. 5) for TFLint 0.64.0,
+// the release in env()'s default image.
+schema_0_64_0: Map<CommandSchema> = { "tflint": tflint_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_0_64_0
