@@ -1,5 +1,5 @@
-# The image of robot(): Robot Framework and RequestsLibrary on the
-# Python image of python().
+# The image of robot.env(): Robot Framework and RequestsLibrary on the
+# Python image of python.env().
 #
 # The base and both packages are pinned, so the image is the same
 # wherever it is built.

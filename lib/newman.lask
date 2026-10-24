@@ -22,4 +22,27 @@ env(
   network = network
 )
 
-command { "newman" } on env()
+command { "newman" } on env() schema schema
+
+// The command schema of newman 6.1.3, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal newman_command: CommandSchema = {
+  root: {
+    closed: true,
+    options: [
+      { names: ["-v", "--version"], description: "output the version number" },
+      { names: ["-h", "--help"], description: "display help for command" }
+    ]
+  },
+  subcommands: {
+    "run": { closed: true, options: [{ names: ["-e", "--environment"], value: "required", description: "Specify a URL or path to a Postman Environment" }, { names: ["-g", "--globals"], value: "required", description: "Specify a URL or path to a file containing Postman Globals" }, { names: ["-r", "--reporters"], value: "optional", description: "Specify the reporters to use for this run (default: [\"cli\"])" }, { names: ["-n", "--iteration-count"], value: "required", description: "Define the number of iterations to run" }, { names: ["-d", "--iteration-data"], value: "required", description: "Specify a data file to use for iterations (either JSON or CSV)" }, { names: ["--folder"], value: "required", description: "Specify the folder to run from a collection" }, { names: ["--global-var"], value: "required", description: "Allows the specification of global variables via the command line, in a key=value format (default: [])" }, { names: ["--env-var"], value: "required", description: "Allows the specification of environment variables via the command line, in a key=value format (default: [])" }, { names: ["--export-environment"], value: "required", description: "Exports the final environment to a file after completing the run" }, { names: ["--export-globals"], value: "required", description: "Exports the final globals to a file after completing the run" }, { names: ["--export-collection"], value: "required", description: "Exports the executed collection to a file after completing the run" }, { names: ["--postman-api-key"], value: "required", description: "API Key used to load the resources from the Postman API" }, { names: ["--bail"], value: "optional", description: "Specify whether or not to gracefully stop a collection run on encountering an error and whether to end the run with an error based on the op" }, { names: ["--ignore-redirects"], description: "Prevents Newman from automatically following 3XX redirect responses" }, { names: ["-x", "--suppress-exit-code"], description: "Specify whether or not to override the default exit code for the current run" }, { names: ["--silent"], description: "Prevents Newman from showing output to CLI" }, { names: ["--disable-unicode"], description: "Forces Unicode compliant symbols to be replaced by their plain text equivalents" }, { names: ["--color"], value: "required", description: "Enable/Disable colored output (auto|on|off) (default: \"auto\")" }, { names: ["--delay-request"], value: "optional", description: "Specify the extent of delay between requests (milliseconds) (default: 0)" }, { names: ["--timeout"], value: "optional", description: "Specify a timeout for collection run (milliseconds) (default: 0)" }, { names: ["--timeout-request"], value: "optional", description: "Specify a timeout for requests (milliseconds) (default: 0)" }, { names: ["--timeout-script"], value: "optional", description: "Specify a timeout for scripts (milliseconds) (default: 0)" }, { names: ["--working-dir"], value: "required", description: "Specify the path to the working directory" }, { names: ["--no-insecure-file-read"], description: "Prevents reading the files situated outside of the working directory" }, { names: ["-k", "--insecure"], description: "Disables SSL validations" }, { names: ["--ssl-client-cert-list"], value: "required", description: "Specify the path to a client certificates configurations (JSON)" }, { names: ["--ssl-client-cert"], value: "required", description: "Specify the path to a client certificate (PEM)" }, { names: ["--ssl-client-key"], value: "required", description: "Specify the path to a client certificate private key" }, { names: ["--ssl-client-passphrase"], value: "required", description: "Specify the client certificate passphrase (for protected key)" }, { names: ["--ssl-extra-ca-certs"], value: "required", description: "Specify additionally trusted CA certificates (PEM)" }, { names: ["--cookie-jar"], value: "required", description: "Specify the path to a custom cookie jar (serialized tough-cookie JSON)" }, { names: ["--export-cookie-jar"], value: "required", description: "Exports the cookie jar to a file after completing the run" }, { names: ["--verbose"], description: "Show detailed information of collection run and each request sent" }, { names: ["-h", "--help"], description: "display help for command" }, { names: ["--version"], value: "optional" }, { names: ["-v"], value: "optional" }], description: "Initiate a Postman Collection run from a given" }
+  }
+}
+
+// The command schemas of newman (lask spec ch. 5) for Newman 6.1.3,
+// the release in env()'s default image.
+schema_6_1_3: Map<CommandSchema> = { "newman": newman_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_6_1_3

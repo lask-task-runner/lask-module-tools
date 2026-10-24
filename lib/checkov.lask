@@ -22,4 +22,84 @@ env(
   volumes = layered_volumes(with, [])
 )
 
-command { "checkov" } on env()
+command { "checkov" } on env() schema schema
+
+// The command schema of checkov 3.3.19, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal checkov_command: CommandSchema = {
+  root: {
+    closed: true,
+    abbreviations: true,
+    options: [
+      { names: ["-h", "--help"], description: "show this help message and exit" },
+      { names: ["-v", "--version"], description: "version" },
+      { names: ["--support"], description: "Enable debug logs and upload the logs to the server" },
+      { names: ["-d", "--directory"], value: "required", description: "IaC root directory (can not be used together with --file)" },
+      { names: ["--add-check"], description: "Generate a new check via CLI prompt" },
+      { names: ["-f"], value: "required", description: "File to scan (can not be used together with --directory)" },
+      { names: ["--skip-path"], value: "required", description: "Path (file or directory) to skip, using regular expression logic, relative to current working directory" },
+      { names: ["--external-checks-dir"], value: "required", description: "Directory for custom checks to be loaded" },
+      { names: ["--external-checks-git"], value: "required", description: "GitHub url of external checks to be added" },
+      { names: ["--external-checks-public-key"], value: "required", description: "Path to a PEM-encoded ECDSA P-256 public key used to verify every .py file under --external-checks-dir / --external-checks-git before it is " },
+      { names: ["-l", "--list"], description: "List checks" },
+      { names: ["-o", "--output"], value: "required", values: ["cli", "csv", "cyclonedx", "cyclonedx_json", "json", "junitxml", "github_failed_only", "gitlab_sast", "sarif", "spdx"], description: "Report output format" },
+      { names: ["--output-file-path"], value: "required", description: "Name of the output folder to save the chosen output formats" },
+      { names: ["--output-bc-ids"], description: "Print Bridgecrew platform IDs (BC...) instead of Checkov IDs (CKV...), if the check exists in the platform" },
+      { names: ["--include-all-checkov-policies"], description: "When running with an API key, Checkov will omit any policies that do not exist in Prisma Cloud platform, except for local custom policies lo" },
+      { names: ["--quiet"], description: "in case of CLI output, display only failed checks" },
+      { names: ["--compact"], description: "in case of CLI output, do not display code blocks" },
+      { names: ["--framework"], value: "required", description: "Filter scan to run only on specific infrastructure as code frameworks" },
+      { names: ["--skip-framework"], value: "required", description: "Filter scan to skip specific infrastructure as code frameworks" },
+      { names: ["-c", "--check"], value: "required", description: "Checks to run; any other checks will be skipped" },
+      { names: ["--skip-check"], value: "required", description: "Checks to skip; any other checks will not be run" },
+      { names: ["--run-all-external-checks"], description: "Run all external checks (loaded via --external-checks options) even if the checks are not present in the --check list" },
+      { names: ["-s", "--soft-fail"], description: "Runs checks but always returns a 0 exit code" },
+      { names: ["--soft-fail-on"], value: "required", description: "Exits with a 0 exit code if only the specified items fail" },
+      { names: ["--hard-fail-on"], value: "required", description: "Exits with a non-zero exit code for specified checks" },
+      { names: ["--bc-api-key"], value: "required", description: "Bridgecrew API key or Prisma Cloud Access Key (see --prisma-api-url)" },
+      { names: ["--prisma-api-url"], value: "required", description: "The Prisma Cloud API URL (see: https://prisma.pan.dev/api/cloud/api-urls)" },
+      { names: ["--skip-results-upload"], description: "Do not upload scan results to the platform to view in the console" },
+      { names: ["--docker-image", "--image"], value: "required", description: "Scan docker images by name or ID. Only works with --bc-api-key flag" },
+      { names: ["--dockerfile-path"], value: "required", description: "Path to the Dockerfile of the scanned docker image" },
+      { names: ["--repo-id"], value: "required", description: "Identity string of the repository, with form <repo_owner>/<repo_name>. Required when using the platform integration (API key)" },
+      { names: ["-b", "--branch"], value: "required", description: "Selected branch of the persisted repository" },
+      { names: ["--skip-download"], description: "Do not download any data from Prisma Cloud" },
+      { names: ["--use-enforcement-rules"], description: "Use the Enforcement rules configured in the platform for hard / soft fail logic" },
+      { names: ["--download-external-modules"], value: "required", description: "download external terraform modules from public git repositories and terraform registry" },
+      { names: ["--var-file"], value: "required", description: "Variable files to load in addition to the default files (see https://www.terraform.io/docs/language/valu es/variables.html#variable-definiti" },
+      { names: ["--external-modules-download-path"], value: "required", description: "set the path for the download external terraform modules" },
+      { names: ["--evaluate-variables"], value: "required", description: "evaluate the values of variables and locals" },
+      { names: ["-ca", "--ca-certificate"], value: "required", description: "Custom CA certificate (bundle) file" },
+      { names: ["--no-cert-verify"], description: "Skip SSL certificate verification" },
+      { names: ["--repo-root-for-plan-enrichment"], value: "required", description: "Directory containing the hcl code used to generate a given plan file" },
+      { names: ["--config-file"], value: "required", description: "path to the Checkov configuration YAML file" },
+      { names: ["--create-config"], value: "required", description: "takes the current command line args and writes them out to a config file at the given path" },
+      { names: ["--show-config"], description: "prints all args and config settings and where they came from (eg" },
+      { names: ["--create-baseline"], description: "Alongside outputting the findings, save all results to .checkov.baseline file so future runs will not re-flag the same noise" },
+      { names: ["--baseline"], value: "required", description: "Use a .checkov.baseline file to compare current results with a known baseline" },
+      { names: ["--output-baseline-as-skipped"], description: "output checks that are skipped due to baseline file presence" },
+      { names: ["--skip-cve-package"], value: "required", description: "filter scan to run on all packages but a specific package identifier (denylist), You can specify this argument multiple times to skip multip" },
+      { names: ["--policy-metadata-filter"], value: "required", description: "comma separated key:value string to filter policies based on Prisma Cloud policy metadata" },
+      { names: ["--policy-metadata-filter-exception"], value: "required", description: "comma separated key:value string to exclude filtered policies based on Prisma Cloud policy metadata" },
+      { names: ["--secrets-scan-file-type"], value: "required", description: "not in use" },
+      { names: ["--enable-secret-scan-all-files"], description: "enable secret scan for all files" },
+      { names: ["--block-list-secret-scan"], value: "required", description: "List of files to filter out from the secret scanner" },
+      { names: ["--summary-position"], value: "required", values: ["bottom", "top"], description: "Chose whether the summary will be appended on top (before the checks results) or on bottom (after check results), default is on top" },
+      { names: ["--skip-resources-without-violations"], description: "exclude extra resources (resources without violations) from report output" },
+      { names: ["--deep-analysis"], description: "Combine the TF Plan and TF graphs to make connections not available in either" },
+      { names: ["--no-fail-on-crash"], description: "Return exit code 0 instead of 2" },
+      { names: ["--mask"], value: "required", description: "List of <resource_type>:<variable> OR <variable> only" },
+      { names: ["--scan-secrets-history"], description: "will scan the history of commits for secrets" },
+      { names: ["--secrets-history-timeout"], value: "required", description: "maximum time to stop the scan" },
+      { names: ["--custom-tool-name"], value: "required", description: "Add a tool name if you want your output to be tagged with a specific tool name,this is useful when integrating with other tools such as uplo" }
+    ]
+  }
+}
+
+// The command schemas of checkov (lask spec ch. 5) for Checkov 3.3.19,
+// the release in env()'s default image.
+schema_3_3_19: Map<CommandSchema> = { "checkov": checkov_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_3_3_19

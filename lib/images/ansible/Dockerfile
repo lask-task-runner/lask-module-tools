@@ -1,4 +1,4 @@
-# The image of ansible(): ansible-core on the Python image python()
+# The image of ansible.env(): ansible-core on the Python image python.env()
 # runs, with the SSH client a playbook connects through.
 #
 # Both the base and ansible-core are pinned, so the image is the same
