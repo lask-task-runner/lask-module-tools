@@ -4,7 +4,7 @@
 //
 //   lask check --module test/schemas.lask
 
-import command { "go", "gofmt", "python", "python3", "pip", "cargo", "make", "curl", "wget", "jq", "envsubst", "tar", "gzip", "xz", "bzip2", "zip", "unzip", "rsync", "shellcheck", "ab", "trivy", "gitleaks", "grype", "syft", "golangci-lint", "kustomize", "k6", "buf", "yq", "tflint", "grpcurl", "actionlint", "checkov", "semgrep", "robot", "rebot", "libdoc", "newman", "ruff", "hadolint", "protoc", "openssl", "rustc", "rustup", "cabal", "stack", "ruby", "gem", "bundle", "rake", "node", "deno", "java", "javac", "jar", "mvn", "gradle", "gcc", "ghc", "g++", "cc", "c++", "ghci" } from "../main.lask"
+import command { "go", "gofmt", "python", "python3", "pip", "cargo", "make", "curl", "wget", "jq", "envsubst", "tar", "gzip", "xz", "bzip2", "zip", "unzip", "rsync", "shellcheck", "ab", "trivy", "gitleaks", "grype", "syft", "golangci-lint", "kustomize", "k6", "buf", "yq", "tflint", "grpcurl", "actionlint", "checkov", "semgrep", "robot", "rebot", "libdoc", "newman", "ruff", "hadolint", "protoc", "openssl", "rustc", "rustup", "cabal", "stack", "ruby", "gem", "bundle", "rake", "node", "deno", "java", "javac", "jar", "mvn", "gradle", "gcc", "ghc", "g++", "cc", "c++", "ghci", "dotnet", "runghc" } from "../main.lask"
 
 a() = $ go build -o bin/app -ldflags "-s -w" -trimpath ./cmd/app
 b() = $ go test -race -count=1 -run 'TestA|TestB' ./... -v
@@ -183,3 +183,14 @@ v144() = $ ghc -static -dynamic-too -fPIC -c A.hs
 v145() = $ ghc -prof -fprof-auto -eventlog Main.hs
 v146() = $ g++ -O2 -std=c++20 -o app main.cpp && c++ -c a.cc && cc -Wall a.c
 v147() = $ ghci -isrc Main.hs
+v148() = $ dotnet build -c Release
+v149() = $ dotnet test --no-build --logger trx
+v150() = $ dotnet publish -c Release -o out -r linux-x64 --self-contained
+v151() = $ dotnet restore
+v152() = $ dotnet new console -n App
+v153() = $ dotnet tool install -g dotnet-ef
+v154() = $ dotnet run --project src/App -- --port 5000
+v155() = $ dotnet bin/app.dll --port 5000
+v156() = $ runghc Main.hs --flag x
+v157() = $ runghc -isrc --ghc-arg=-Wall Main.hs a b
+v158() = $ runghc -- Main.hs

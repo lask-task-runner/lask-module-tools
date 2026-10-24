@@ -40,12 +40,12 @@ Every tool is a namespace: `tools.<name>.env(...)` returns a `Runnable`, which `
 
 The exported command words come with a **command schema** (Lask 0.12.0 or later): a command string that runs one is checked before it runs, so `$ go biuld ./...` or `$ cargo build --relase` is an error rather than a failed task, and an editor completes and describes their options. These words have one:
 
-- languages: `go`, `gofmt`, `python`, `python3`, `pip`, `pip3`, `cargo`, `rustc`, `rustup`, `node`, `deno`, `java`, `javac`, `jar`, `mvn`, `gradle`, `gcc`, `g++`, `cc`, `c++`, `make`, `ruby`, `gem`, `bundle`, `rake`, `ghc`, `ghci`, `cabal`, `stack`
+- languages: `go`, `gofmt`, `python`, `python3`, `pip`, `pip3`, `cargo`, `rustc`, `rustup`, `node`, `deno`, `java`, `javac`, `jar`, `mvn`, `gradle`, `gcc`, `g++`, `cc`, `c++`, `make`, `ruby`, `gem`, `bundle`, `rake`, `ghc`, `ghci`, `runghc`, `cabal`, `stack`, `dotnet`
 - Unix tools: `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`, `xz`, `bzip2`, `zip`, `unzip`, `rsync`
 - linters and scanners: `shellcheck`, `hadolint`, `tflint`, `golangci-lint`, `ruff`, `actionlint`, `trivy`, `gitleaks`, `grype`, `syft`, `checkov`, `semgrep`
 - build and test: `buf`, `protoc`, `kustomize`, `k6`, `grpcurl`, `newman`, `robot`, `rebot`, `libdoc`, `ab`
 
-Where a program accepts options its help does not list — `node`'s V8 flags, `gcc`'s, `java`'s `-XX:` options, `mvn`'s, a subcommand of `gem` abbreviated — its schema is not closed, and an option it does not know is advised rather than rejected. `npm`, `npx`, `bun`, `bunx` and `corepack` have none: they take any configuration key as a flag. A tool's `schema` holds the schemas of its words for the release in its default image, and `schema_<version>` the same under that release's number (`tools.go.schema_1_27_1`); the two change together when the default image does. A project that declares a word itself gives it the tool's schemas:
+Where a program accepts options its help does not list — `node`'s V8 flags, `gcc`'s, `java`'s `-XX:` options, `mvn`'s, a subcommand of `gem` abbreviated, most of `dotnet`'s — its schema is not closed, and an option it does not know is advised rather than rejected. `npm`, `npx`, `bun`, `bunx` and `corepack` have none: they take any configuration key as a flag. Neither do `bazel` and `bazelisk`: the Bazel release is the one a project's `.bazelversion` names, and a project defines flags of its own. A tool's `schema` holds the schemas of its words for the release in its default image, and `schema_<version>` the same under that release's number (`tools.go.schema_1_27_1`); the two change together when the default image does. A project that declares a word itself gives it the tool's schemas:
 
 ```lask
 import * as tools from "tools"
