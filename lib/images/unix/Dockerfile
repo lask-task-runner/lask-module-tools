@@ -1,6 +1,6 @@
-# The image of unix(): the everyday command-line tools, in one image so
+# The image of unix.env(): the everyday command-line tools, in one image so
 # that a pipeline such as `curl ... | jq ...` runs in one container.
-# git(), gh() and glab() run in it too.
+# git.env(), gh.env() and glab.env() run in it too.
 #
 # The base is pinned by its digest. The packages are Alpine 3.24's, as
 # the repository has them when the image is built; lask tags the image

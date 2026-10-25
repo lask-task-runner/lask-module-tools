@@ -1,4 +1,4 @@
-# The image of grype() and syft(): Anchore's scanner and SBOM
+# The image of grype.env() and syft.env(): Anchore's scanner and SBOM
 # generator on Alpine. Their own images have no /bin/sh, which a lask
 # command runs through, so the binaries are copied out of them.
 #

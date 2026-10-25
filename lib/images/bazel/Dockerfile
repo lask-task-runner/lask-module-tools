@@ -1,4 +1,4 @@
-# The image of bazel(): Bazelisk, which runs the Bazel release a
+# The image of bazel.env(): Bazelisk, which runs the Bazel release a
 # project names in .bazelversion, on Debian with the toolchains most
 # rules expect (a C++ compiler, Python, Git). Bazel's own image is
 # published for amd64 only.

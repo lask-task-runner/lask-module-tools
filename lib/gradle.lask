@@ -37,4 +37,87 @@ env(
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )
 
-command { "gradle" } on env()
+command { "gradle" } on env() schema schema
+
+// The command schema of gradle 9.8.0, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal gradle_command: CommandSchema = {
+  root: {
+    intermixed: true,
+    stop_at_first_positional: true,
+    options: [
+      { names: ["--help", "-?", "-h"], description: "Shows this help message" },
+      { names: ["--show-version", "-V"], description: "Prints version information and continues" },
+      { names: ["--version", "-v"], description: "Prints version information and exits" },
+      { names: ["--debug", "-d"], description: "Sets log level to debug" },
+      { names: ["--full-stacktrace", "-S"], description: "Prints the full (very verbose) stacktrace for all exceptions" },
+      { names: ["--info", "-i"], description: "Sets the log level to info" },
+      { names: ["--quiet", "-q"], description: "Logs errors only" },
+      { names: ["--stacktrace", "-s"], description: "Prints the stacktrace for all exceptions" },
+      { names: ["--warn", "-w"], description: "Sets the log level to warn" },
+      { names: ["--console"], value: "optional", description: "Specifies which type of console output to generate" },
+      { names: ["--console-unicode"], value: "optional", description: "Specifies which character types are allowed in the console output" },
+      { names: ["--non-interactive"], description: "Do not do interactive prompting" },
+      { names: ["--gradle-user-home", "-g"], value: "optional", description: "Specifies the Gradle user home directory" },
+      { names: ["--include-build"], value: "optional", description: "Includes the specified build in the composite" },
+      { names: ["--init-script", "-I"], value: "optional", description: "Specifies an initialization script" },
+      { names: ["--offline"], description: "Runs the build without accessing network resources" },
+      { names: ["--project-cache-dir"], value: "optional", description: "Specifies the project-specific cache directory" },
+      { names: ["--project-dir", "-p"], value: "optional", description: "Specifies the start directory for Gradle" },
+      { names: ["--project-prop", "-P"], value: "required", prefix: true, description: "Sets a project property for the build script (for example, -Pmyprop=myvalue)" },
+      { names: ["--refresh-dependencies", "-U"], description: "Refreshes the state of dependencies" },
+      { names: ["--system-prop", "-D"], value: "required", prefix: true, description: "Sets a JVM system property (for example, -Dmyprop=myvalue)" },
+      { names: ["--continue"], description: "Continues task execution after a task failure" },
+      { names: ["--no-continue"], description: "Stops task execution after a task failure" },
+      { names: ["--continuous", "-t"], description: "Enables continuous build" },
+      { names: ["--dry-run", "-m"], description: "Runs the build with all task actions disabled" },
+      { names: ["--exclude-task", "-x"], value: "optional", description: "Specifies a task to exclude from execution" },
+      { names: ["--no-rebuild", "-a"], description: "Disables rebuilding of project dependencies" },
+      { names: ["--rerun-tasks"], description: "Ignores previously cached task results" },
+      { names: ["--build-cache"], description: "Enables the Gradle build cache" },
+      { names: ["--no-build-cache"], description: "Disables the Gradle build cache" },
+      { names: ["--configuration-cache"], description: "Enables the configuration cache" },
+      { names: ["--no-configuration-cache"], description: "Disables the configuration cache" },
+      { names: ["--configure-on-demand"], description: "Configures necessary projects only" },
+      { names: ["--no-configure-on-demand"], description: "Disables the use of configuration on demand" },
+      { names: ["--isolated-projects"], description: "Enables Isolated Projects" },
+      { names: ["--no-isolated-projects"], description: "Disables Isolated Projects" },
+      { names: ["--max-workers"], value: "optional", description: "Configures the maximum number of concurrent workers Gradle is allowed to use" },
+      { names: ["--parallel"], description: "Builds projects in parallel" },
+      { names: ["--no-parallel"], description: "Disables parallel project execution" },
+      { names: ["--priority"], value: "optional", description: "Specifies the scheduling priority for the Gradle daemon and all processes launched by it" },
+      { names: ["--watch-fs"], description: "Enables file system watching" },
+      { names: ["--no-watch-fs"], description: "Disables file system watching" },
+      { names: ["--dependency-verification", "-F"], value: "optional", description: "Configures the dependency verification mode" },
+      { names: ["--export-keys"], description: "Exports the public keys used for dependency verification" },
+      { names: ["--refresh-keys"], description: "Refreshes the public keys used for dependency verification" },
+      { names: ["--update-locks"], value: "optional", description: "Performs a partial update of the dependency lock" },
+      { names: ["--write-locks"], description: "Persists dependency resolution for locked configurations" },
+      { names: ["--write-verification-metadata", "-M"], value: "optional", description: "Generates checksums for dependencies used in the project" },
+      { names: ["--configuration-cache-problems"], value: "optional", description: "Configures how the configuration cache handles problems (fail or warn)" },
+      { names: ["--problems-report"], description: "Enables the HTML problems report" },
+      { names: ["--no-problems-report"], description: "Disables the HTML problems report" },
+      { names: ["--profile"], description: "Profiles build execution time" },
+      { names: ["--property-upgrade-report"], description: "Runs the build with the experimental property upgrade report" },
+      { names: ["--task-graph"], description: "Prints the task graph instead of executing tasks" },
+      { names: ["--warning-mode"], value: "optional", description: "Specifies which mode of warnings to generate" },
+      { names: ["--daemon"], description: "Uses the Gradle daemon to run the build" },
+      { names: ["--no-daemon"], description: "Runs the build without the Gradle daemon" },
+      { names: ["--foreground"], description: "Starts the Gradle daemon in the foreground" },
+      { names: ["--status"], description: "Shows the status of running and recently stopped Gradle daemons" },
+      { names: ["--stop"], description: "Stops the Gradle daemon if it is running" },
+      { names: ["--develocity-plugin-version"], value: "optional", description: "Version of the Develocity plugin to auto-apply, must be 4.4.0 or higher if Develocity URL is specified as well" },
+      { names: ["--develocity-url"], value: "optional", description: "Default URL of the Develocity server to publish Build Scan to" },
+      { names: ["--scan"], description: "Generates a Build Scan (powered by Develocity)" },
+      { names: ["--no-scan"], description: "Disables the creation of a Build Scan" }
+    ]
+  }
+}
+
+// The command schemas of gradle (lask spec ch. 5) for Gradle 9.8.0,
+// the release in env()'s default image.
+schema_9_8_0: Map<CommandSchema> = { "gradle": gradle_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_9_8_0

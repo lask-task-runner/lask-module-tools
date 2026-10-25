@@ -1,4 +1,4 @@
-# The image of protoc(): the Protocol Buffers compiler with the
+# The image of protoc.env(): the Protocol Buffers compiler with the
 # well-known types (/usr/include/google/protobuf) and the gRPC plugins
 # (grpc_cpp_plugin, grpc_python_plugin and the rest).
 #

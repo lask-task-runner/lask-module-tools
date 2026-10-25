@@ -19,4 +19,41 @@ env(
   volumes = layered_volumes(with, [])
 )
 
-command { "hadolint" } on env()
+command { "hadolint" } on env() schema schema
+
+// The command schema of hadolint 2.15.1, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal hadolint_command: CommandSchema = {
+  root: {
+    closed: true,
+    options: [
+      { names: ["-h", "--help"], value: "optional", description: "Show this help text" },
+      { names: ["-v", "--version"], description: "Show version" },
+      { names: ["-c", "--config"], value: "required", description: "Path to the configuration file" },
+      { names: ["--file-path-in-report"], value: "required", description: "The file path referenced in the generated report" },
+      { names: ["-o", "--output"], value: "required", description: "Output destination file" },
+      { names: ["--no-fail"], description: "Don't exit with a failure status code when any rule is violated" },
+      { names: ["--no-color"], description: "Don't colorize output" },
+      { names: ["-V", "--verbose"], description: "Enables verbose logging of hadolint's output to stderr" },
+      { names: ["-f", "--format"], value: "required", description: "The output format for the results [tty | json | checkstyle | codeclimate | gitlab_codeclimate | gnu | codacy | sonarqube | sarif | junit] (d" },
+      { names: ["--error"], value: "required", description: "Make the rule `RULECODE` have the level `error`" },
+      { names: ["--warning"], value: "required", description: "Make the rule `RULECODE` have the level `warning`" },
+      { names: ["--info"], value: "required", description: "Make the rule `RULECODE` have the level `info`" },
+      { names: ["--style"], value: "required", description: "Make the rule `RULECODE` have the level `style`" },
+      { names: ["--ignore"], value: "required", description: "A rule to ignore" },
+      { names: ["--trusted-registry"], value: "required", description: "A docker registry to allow to appear in FROM instructions" },
+      { names: ["--require-label"], value: "required", description: "The option --require-label=label:format makes Hadolint check that the label `label` conforms to format requirement `format`" },
+      { names: ["--strict-labels"], description: "Do not permit labels other than specified in `label-schema`" },
+      { names: ["--disable-ignore-pragma"], description: "Disable inline ignore pragmas `# hadolint ignore=DLxxxx`" },
+      { names: ["-t", "--failure-threshold"], value: "required", description: "Exit with failure code only when rules with a severity equal to or above THRESHOLD are violated" }
+    ]
+  }
+}
+
+// The command schemas of hadolint (lask spec ch. 5) for Hadolint 2.15.1,
+// the release in env()'s default image.
+schema_2_15_1: Map<CommandSchema> = { "hadolint": hadolint_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_2_15_1

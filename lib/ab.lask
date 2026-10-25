@@ -22,4 +22,62 @@ env(
   network = network
 )
 
-command { "ab" } on env()
+command { "ab" } on env() schema schema
+
+// The command schema of ab 2.3, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal ab_command: CommandSchema = {
+  root: {
+    intermixed: false,
+    options: [
+      { names: ["-n"], value: "required", description: "Number of requests to perform" },
+      { names: ["-c"], value: "required", description: "Number of multiple requests to make at a time" },
+      { names: ["-t"], value: "required", description: "Seconds to max" },
+      { names: ["-s"], value: "required", description: "Seconds to max" },
+      { names: ["-b"], value: "required", description: "Size of TCP send/receive buffer, in bytes" },
+      { names: ["-B"], value: "required", description: "Address to bind to when making outgoing connections" },
+      { names: ["-p"], value: "required", description: "File containing data to POST. Remember also to set -T" },
+      { names: ["-u"], value: "required", description: "File containing data to PUT. Remember also to set -T" },
+      { names: ["-T"], value: "required", description: "'application/x-www-form-urlencoded' Default is 'text/plain'" },
+      { names: ["-v"], value: "required", description: "How much troubleshooting info to print" },
+      { names: ["-w"], description: "Print out results in HTML tables" },
+      { names: ["-i"], description: "Use HEAD instead of GET" },
+      { names: ["-x"], value: "required", description: "String to insert as table attributes" },
+      { names: ["-y"], value: "required", description: "String to insert as tr attributes" },
+      { names: ["-z"], value: "required", description: "String to insert as td or th attributes" },
+      { names: ["-C"], value: "required", description: "Add cookie, eg" },
+      { names: ["-H"], value: "required", description: "Add Arbitrary header line, eg" },
+      { names: ["-A"], value: "required", description: "Add Basic WWW Authentication, the attributes are a colon separated username and password" },
+      { names: ["-P"], value: "required", description: "Add Basic Proxy Authentication, the attributes are a colon separated username and password" },
+      { names: ["-X"], value: "required", description: "Proxyserver and port number to use" },
+      { names: ["-V"], description: "Print version number and exit" },
+      { names: ["-k"], description: "Use HTTP KeepAlive feature" },
+      { names: ["-d"], description: "Do not show percentiles served table" },
+      { names: ["-S"], description: "Do not show confidence estimators and warnings" },
+      { names: ["-q"], description: "Do not show progress when doing more than 150 requests" },
+      { names: ["-l"], description: "Accept variable document length (use this for dynamic pages)" },
+      { names: ["-g"], value: "required", description: "Output collected data to gnuplot format file" },
+      { names: ["-e"], value: "required", description: "Output CSV file with percentages served" },
+      { names: ["-r"], description: "Don't exit on socket receive errors" },
+      { names: ["-m"], value: "required", description: "Method name" },
+      { names: ["-h"], description: "Display usage information (this message)" },
+      { names: ["-I"], description: "Disable TLS Server Name Indication (SNI) extension" },
+      { names: ["-Z"], value: "required", description: "Specify SSL/TLS cipher suite (See openssl ciphers)" },
+      { names: ["-f"], value: "required", description: "Specify SSL/TLS protocol (SSL2, TLS1, TLS1.1, TLS1.2, TLS1.3 or ALL)" },
+      { names: ["-E"], value: "required", description: "Specify optional client certificate chain and private key" },
+      { names: ["--debug"], value: "optional" },
+      { names: ["--help"], value: "optional" },
+      { names: ["--quiet"], value: "optional" },
+      { names: ["--verbose"], value: "optional" },
+      { names: ["--version"], value: "optional" }
+    ]
+  }
+}
+
+// The command schemas of ab (lask spec ch. 5) for the httpd 2.4.68 image (ab 2.3),
+// the release in env()'s default image.
+schema_2_4_68: Map<CommandSchema> = { "ab": ab_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_2_4_68

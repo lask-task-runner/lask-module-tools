@@ -47,4 +47,64 @@ env(
   volumes = layered_volumes(with, mount(cache_dir, "/cache"))
 )
 
-command { "mvn" } on env()
+command { "mvn" } on env() schema schema
+
+// The command schema of mvn 3.9.16, read from its help and checked against
+// the program: every option it lists is one the program accepts.
+internal mvn_command: CommandSchema = {
+  root: {
+    style: "single-dash",
+    intermixed: true,
+    options: [
+      { names: ["-am", "--also-make"], description: "If project list is specified, also build projects required by the list" },
+      { names: ["-amd", "--also-make-dependents"], description: "If project list is specified, also build projects that depend on projects on the list" },
+      { names: ["-B", "--batch-mode"], description: "Run in non-interactive (batch) mode (disables output color)" },
+      { names: ["-b", "--builder"], value: "required", description: "The id of the build strategy to use" },
+      { names: ["-C", "--strict-checksums"], description: "Fail the build if checksums don't match" },
+      { names: ["-c", "--lax-checksums"], description: "Warn if checksums don't match" },
+      { names: ["--color"], value: "required", description: "Defines the color mode of the output" },
+      { names: ["-cpu", "--check-plugin-updates"], description: "Ineffective, only kept for backward compatibility" },
+      { names: ["-D", "--define"], value: "required", prefix: true, description: "Define a user property" },
+      { names: ["-e", "--errors"], description: "Produce execution error messages" },
+      { names: ["-emp", "--encrypt-master-password"], value: "required", description: "Encrypt master security password" },
+      { names: ["-ep", "--encrypt-password"], value: "required", description: "Encrypt server password" },
+      { names: ["-f", "--file"], value: "required", description: "Force the use of an alternate POM file (or directory with pom.xml)" },
+      { names: ["-fae", "--fail-at-end"], description: "Only fail the build afterwards; allow all non-impacted builds to continue" },
+      { names: ["-ff", "--fail-fast"], description: "Stop at first failure in reactorized builds" },
+      { names: ["-fn", "--fail-never"], description: "NEVER fail the build, regardless of project result" },
+      { names: ["-gs", "--global-settings"], value: "required", description: "Alternate path for the global settings file" },
+      { names: ["-gt", "--global-toolchains"], value: "required", description: "Alternate path for the global toolchains file" },
+      { names: ["-h", "--help"], description: "Display help information" },
+      { names: ["-itr", "--ignore-transitive-repositories"], description: "If set, Maven will ignore remote repositories introduced by transitive dependencies" },
+      { names: ["-l", "--log-file"], value: "required", description: "Log file where all build output will go (disables output color)" },
+      { names: ["--legacy-local-repository"], description: "UNSUPPORTED: Use of this option will make Maven invocation fail" },
+      { names: ["-N", "--non-recursive"], description: "Do not recurse into sub-projects" },
+      { names: ["-npr", "--no-plugin-registry"], description: "Ineffective, only kept for backward compatibility" },
+      { names: ["-npu", "--no-plugin-updates"], description: "Ineffective, only kept for backward compatibility" },
+      { names: ["-nsu", "--no-snapshot-updates"], description: "Suppress SNAPSHOT updates" },
+      { names: ["-ntp", "--no-transfer-progress"], description: "Do not display transfer progress when downloading or uploading" },
+      { names: ["-o", "--offline"], description: "Work offline" },
+      { names: ["-P", "--activate-profiles"], value: "required", description: "Comma-delimited list of profiles to activate" },
+      { names: ["-pl", "--projects"], value: "required", description: "Comma-delimited list of specified reactor projects to build instead of all projects" },
+      { names: ["-q", "--quiet"], description: "Quiet output - only show errors" },
+      { names: ["--raw-streams"], description: "Ignored (Maven4 option)" },
+      { names: ["-rf", "--resume-from"], value: "required", description: "Resume reactor from specified project" },
+      { names: ["-s", "--settings"], value: "required", description: "Alternate path for the user settings file" },
+      { names: ["-t", "--toolchains"], value: "required", description: "Alternate path for the user toolchains file" },
+      { names: ["-T", "--threads"], value: "required", description: "Thread count, for instance 4 (int) or 2C/2.5C (int/float) where C is core multiplied" },
+      { names: ["-U", "--update-snapshots"], description: "Forces a check for missing releases and updated snapshots on remote repositories" },
+      { names: ["-up", "--update-plugins"], description: "Ineffective, only kept for backward compatibility" },
+      { names: ["-v", "--version"], description: "Display version information" },
+      { names: ["-V", "--show-version"], description: "Display version information WITHOUT stopping build" },
+      { names: ["-X", "--debug"], description: "Produce execution debug output" }
+    ]
+  }
+}
+
+// The command schemas of mvn (lask spec ch. 5) for Maven 3.9.16,
+// the release in env()'s default image.
+schema_3_9_16: Map<CommandSchema> = { "mvn": mvn_command }
+
+// The command schemas of the release in env()'s default image: the
+// ones a command string that runs these words is checked against.
+schema: Map<CommandSchema> = schema_3_9_16
