@@ -4,7 +4,7 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 
 // Go, configured by its parameters.
 //
-// The image is #golang:1.27.1-trixie unless --image names another: Debian
+// The image is #golang:1.27.2-trixie unless --image names another: Debian
 // rather than Alpine, so cgo and `go test -race` find a C toolchain.
 // `lask sync` pulls and pins whichever image is used (lask spec 10.3); a
 // run never pulls.
@@ -28,7 +28,7 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 // @return The environment, for `command { "go" } on ...` or `$[...]`.
 // @example lask eval go.env --goos linux --goarch amd64
 env(
-  --image: Environment = #golang:1.27.1-trixie,
+  --image: Environment = #golang:1.27.2-trixie,
   --goproxy: String | Null = null,
   --goprivate: String | Null = null,
   --goflags: String | Null = null,
@@ -63,7 +63,7 @@ env(
 command { "go", "gofmt" } on env() schema schema
 
 // The command schema of go (lask spec ch. 5), read from `go help` and the
-// flag definitions of cmd/go in #golang:1.27.1-trixie. A boolean flag
+// flag definitions of cmd/go in #golang:1.27.2-trixie. A boolean flag
 // also takes =true or =false, so its value is "optional". test, vet,
 // fix, doc and tool are not closed: test passes the flags it does not
 // know to the test binary, vet and fix take each analyzer's flags, and
@@ -280,10 +280,14 @@ internal gofmt_opt_w: CommandOption = { names: ["-w"], value: "optional", descri
 // The command schema of gofmt, from `gofmt -h`.
 internal gofmt_command: CommandSchema = { root: { closed: true, style: "single-dash", options: [gofmt_opt_cpuprofile, gofmt_opt_d, gofmt_opt_e, gofmt_opt_l, gofmt_opt_r, gofmt_opt_s, gofmt_opt_w], description: "format Go source" } }
 
-// The command schemas of go, gofmt (lask spec ch. 5) for Go 1.27.1,
+// The command schemas of go, gofmt (lask spec ch. 5) for Go 1.27.2,
 // the release in env()'s default image.
-schema_1_27_1: Map<CommandSchema> = { "go": go_command, "gofmt": gofmt_command }
+schema_1_27_2: Map<CommandSchema> = { "go": go_command, "gofmt": gofmt_command }
+
+// The same for Go 1.27.1, the release before: its `go help` and the flag
+// definitions of its cmd/go are those of 1.27.2, so the schemas are too.
+schema_1_27_1: Map<CommandSchema> = schema_1_27_2
 
 // The command schemas of the release in env()'s default image: the
 // ones a command string that runs these words is checked against.
-schema: Map<CommandSchema> = schema_1_27_1
+schema: Map<CommandSchema> = schema_1_27_2
