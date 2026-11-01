@@ -498,6 +498,15 @@ all(): Array<String> = [
   expect(
     "unix carries --extra_env and --with",
     unix.env(extra_env = {"HTTPS_PROXY": "http://proxy:3128"}) != unix.env() && unix.env(with = [aws.setup(profile = "dev")]) != unix.env()
+  ),
+  // The project directory is mounted read-write unless --base_access
+  // narrows it (lask spec 10.2); null leaves the option out.
+  expect(
+    "--base_access narrows the mount of the project directory",
+    aws.env(base_access = "ro") == #amazon/aws-cli:2.36.41{env: {"AWS_PAGER": ""}, volumes: [], base_access: "ro"}
+      && terraform.env(base_access = {".": "ro", ".terraform": "rw"}) == #hashicorp/terraform:1.16.4{env: {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"}, volumes: [], base_access: {".": "ro", ".terraform": "rw"}}
+      && aws.env(base_access = null) == aws.env()
+      && unix.env(base_access = "ro") != unix.env() && git.env(base_access = "none") != git.env()
   )
 ]
 

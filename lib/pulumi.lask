@@ -20,6 +20,7 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 // @param backend_url        PULUMI_BACKEND_URL, e.g. "s3://my-state" or "file:///work/.pulumi".
 // @param config_passphrase  PULUMI_CONFIG_PASSPHRASE, for a passphrase-encrypted stack; masked in the command log.
 // @param cache_dir          Host directory mounted at /cache; Pulumi's home, with its plugins, is /cache/pulumi (PULUMI_HOME).
+// @param base_access        What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
 // @param with               Setups of other tools this environment should also carry: a provider's credentials.
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "pulumi" } on ...` or `$[...]`.
@@ -30,6 +31,7 @@ env(
   --backend_url: String | Null = null,
   --config_passphrase!!: String | Null = null,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -44,5 +46,6 @@ env(
       "PULUMI_HOME": in_cache(cache_dir, "pulumi")
     })
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )

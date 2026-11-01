@@ -133,6 +133,8 @@ A tool built from a recipe (§5.3, §5.10, §5.11) takes no `--image`. Its versi
 
 A container option given `null` is left out (10.2), so a tool can take `--user: String | Null = null` and pass it straight to `runnable(...)`. A tool exposes an option only when it needs one: `network` for a client that reaches a server or a cluster — the database clients, `kubectl`, `helm`, the testing tools — and `init` and `shm_size` for `playwright`. Every other tool exposes variables and mounts only; one that needs more — a `user` for §11's root-owned files — adds the parameter and passes it through.
 
+Every tool takes `--base_access: String | Map<String> | Null = null` and passes it through, since every command mounts the project directory (10.5) and only the caller knows what of it a task may write: `"ro"` for a linter, `{".": "ro", ".terraform": "rw"}` for `terraform init`. It is what lets a task under a `within` constraint (10.11) run a tool at all: the run options are the tool's, given once, so a caller cannot add it afterwards (§4.4). It needs Lask 0.15.0 or later, which knows the option.
+
 ## 5. Catalog
 
 Every function below is implemented. The README lists each one's default image and command words, by genre; this chapter records why each is built the way it is.

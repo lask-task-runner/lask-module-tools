@@ -6,15 +6,17 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 // it was built with. The mounted project is trusted by Git
 // (safe.directory), since the linters that read history need it.
 //
-// @param image      The image to run; another release is passed as image = #golangci/golangci-lint:<tag>.
-// @param cache_dir  Host directory mounted at /cache: golangci-lint's cache (/cache/golangci-lint), and Go's module and build caches (/cache/mod, /cache/build), shared with go.env().
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #golangci/golangci-lint:<tag>.
+// @param cache_dir    Host directory mounted at /cache: golangci-lint's cache (/cache/golangci-lint), and Go's module and build caches (/cache/mod, /cache/build), shared with go.env().
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "golangci-lint" } on ...` or `$[...]`.
 // @example lask eval golangci_lint.env --cache_dir /tmp/cache
 env(
   --image: Environment = #golangci/golangci-lint:v2.14.0,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -28,7 +30,8 @@ env(
       "GOCACHE": in_cache(cache_dir, "build")
     })
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )
 
 command { "golangci-lint" } on env() schema schema

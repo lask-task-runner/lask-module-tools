@@ -11,21 +11,24 @@ import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
 // `pip install -r requirements.txt && robot tests`; a browser library is
 // better served by playwright.env().
 //
-// @param options    ROBOT_OPTIONS, which robot reads before its command line, e.g. "--outputdir results".
-// @param network    The container's network: a Compose network, or "host".
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable; below --with and the named parameters.
+// @param options      ROBOT_OPTIONS, which robot reads before its command line, e.g. "--outputdir results".
+// @param network      The container's network: a Compose network, or "host".
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "robot" } on ...` or `$[...]`.
 // @example lask eval robot.env --options "--outputdir results"
 env(
   --options: String | Null = null,
   --network: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = #./images/robot/Dockerfile{
   env: layered_env({"PYTHONUNBUFFERED": "1"}, extra_env, with, vars({"ROBOT_OPTIONS": options})),
   volumes: layered_volumes(with, []),
-  network: network
+  network: network,
+  base_access: base_access
 }
 
 command { "robot", "rebot", "libdoc" } on env() schema schema

@@ -6,18 +6,21 @@ import { ToolSetup, git_trust, layered_env, layered_volumes } from "./common.las
 // project's files and Git history. The mounted project is trusted by
 // Git (safe.directory), so its history can be read.
 //
-// @param image      The image to run; another release is passed as image = #zricethezav/gitleaks:<tag>.
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable; below --with.
+// @param image        The image to run; another release is passed as image = #zricethezav/gitleaks:<tag>.
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with.
 // @return The environment, for `command { "gitleaks" } on ...` or `$[...]`.
 // @example lask eval gitleaks.env
 env(
   --image: Environment = #zricethezav/gitleaks:v8.30.1,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
   env = layered_env(git_trust(), extra_env, with, {}),
-  volumes = layered_volumes(with, [])
+  volumes = layered_volumes(with, []),
+  base_access = base_access
 )
 
 command { "gitleaks" } on env() schema schema

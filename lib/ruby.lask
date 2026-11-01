@@ -12,15 +12,17 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // Bundler does not warn that it runs as root
 // (BUNDLE_SILENCE_ROOT_WARNING=1): every container here does.
 //
-// @param image      The image to run; another release is passed as image = #ruby:<tag>.
-// @param cache_dir  Host directory mounted at /cache; Bundler installs gems into /cache/bundle (BUNDLE_PATH), so they outlive the container.
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable, e.g. a BUNDLE_<HOST>__<DOMAIN> credential; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #ruby:<tag>.
+// @param cache_dir    Host directory mounted at /cache; Bundler installs gems into /cache/bundle (BUNDLE_PATH), so they outlive the container.
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable, e.g. a BUNDLE_<HOST>__<DOMAIN> credential; below --with and the named parameters.
 // @return The environment, for `command { "bundle" } on ...` or `$[...]`.
 // @example lask eval ruby.env --cache_dir /tmp/cache
 env(
   --image: Environment = #ruby:4.0.7-alpine3.24,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -30,7 +32,8 @@ env(
     with,
     vars({"BUNDLE_PATH": in_cache(cache_dir, "bundle")})
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )
 
 // Ruby works as it is, so its command words are exported.

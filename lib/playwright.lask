@@ -23,13 +23,14 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // exported: `npx` is node's. Give the environment where it is used,
 // `$[tools.playwright()] npx playwright test`.
 //
-// @param image      The image to run; another release is passed as image = #mcr.microsoft.com/playwright:<tag>.
-// @param shm_size   Size of /dev/shm; null leaves Docker's default.
-// @param registry   npm_config_registry: the registry npm installs from.
-// @param npm_token  NPM_TOKEN, for an .npmrc that reads ${NPM_TOKEN}; masked in the command log.
-// @param cache_dir  Host directory mounted at /cache, where npm keeps its cache (npm_config_cache).
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable, e.g. the base URL the tests read; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #mcr.microsoft.com/playwright:<tag>.
+// @param shm_size     Size of /dev/shm; null leaves Docker's default.
+// @param registry     npm_config_registry: the registry npm installs from.
+// @param npm_token    NPM_TOKEN, for an .npmrc that reads ${NPM_TOKEN}; masked in the command log.
+// @param cache_dir    Host directory mounted at /cache, where npm keeps its cache (npm_config_cache).
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable, e.g. the base URL the tests read; below --with and the named parameters.
 // @return The environment, for `$[...]` or `command { "npx" } on ...`.
 env(
   --image: Environment = #mcr.microsoft.com/playwright:v1.63.0-noble,
@@ -37,6 +38,7 @@ env(
   --registry: String | Null = null,
   --npm_token!!: String | Null = null,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -52,5 +54,6 @@ env(
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
   init = true,
-  shm_size = shm_size
+  shm_size = shm_size,
+  base_access = base_access
 )

@@ -5,16 +5,19 @@ import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
 // Syft, Anchore's SBOM generator, in the image of grype.
 // It checks for no update (SYFT_CHECK_FOR_APP_UPDATE=false).
 //
-// @param with       Setups of other tools this environment should also carry: registry_setup, docker_setup.
-// @param extra_env  Any other variable; below --with.
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry: registry_setup, docker_setup.
+// @param extra_env    Any other variable; below --with.
 // @return The environment, for `command { "syft" } on ...` or `$[...]`.
 // @example lask eval syft.env
 env(
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = #./images/anchore/Dockerfile{
   env: layered_env({"SYFT_CHECK_FOR_APP_UPDATE": "false"}, extra_env, with, {}),
-  volumes: layered_volumes(with, [])
+  volumes: layered_volumes(with, []),
+  base_access: base_access
 }
 
 command { "syft" } on env() schema schema

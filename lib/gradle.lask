@@ -12,6 +12,7 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // @param java_tool_options  JAVA_TOOL_OPTIONS.
 // @param gradle_opts        GRADLE_OPTS.
 // @param cache_dir          Host directory mounted at /cache; the Gradle user home is /cache/gradle (GRADLE_USER_HOME).
+// @param base_access        What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
 // @param with               Setups of other tools this environment should also carry.
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "gradle" } on ...` or `$[...]`.
@@ -21,6 +22,7 @@ env(
   --java_tool_options: String | Null = null,
   --gradle_opts: String | Null = null,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -34,7 +36,8 @@ env(
       "GRADLE_USER_HOME": in_cache(cache_dir, "gradle")
     })
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )
 
 command { "gradle" } on env() schema schema

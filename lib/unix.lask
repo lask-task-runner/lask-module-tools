@@ -17,16 +17,19 @@ import { ToolSetup, layered_env, layered_volumes } from "./common.lask"
 // `lask sync` builds it once per machine (lask spec 10.3). A run never
 // builds.
 //
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable, e.g. HTTPS_PROXY; below --with.
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable, e.g. HTTPS_PROXY; below --with.
 // @return The environment, for `command { "curl" } on ...` or `$[...]`.
 // @example lask eval unix.env
 env(
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = #./images/unix/Dockerfile{
   env: layered_env({}, extra_env, with, {}),
-  volumes: layered_volumes(with, [])
+  volumes: layered_volumes(with, []),
+  base_access: base_access
 }
 
 // The tools need nothing from the caller, so their command words are

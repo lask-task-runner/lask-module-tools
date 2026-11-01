@@ -23,6 +23,7 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 // @param goos         GOOS, to cross-compile.
 // @param goarch       GOARCH, to cross-compile.
 // @param cache_dir    Host directory mounted at /cache: the module cache (GOMODCACHE) and the build cache (GOCACHE).
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
 // @param with         Setups of other tools this environment should also carry.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "go" } on ...` or `$[...]`.
@@ -36,6 +37,7 @@ env(
   --goos: String | Null = null,
   --goarch: String | Null = null,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -54,7 +56,8 @@ env(
       "GOCACHE": in_cache(cache_dir, "build")
     })
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )
 
 // Go works as it is, so its command words are exported, declared on the
