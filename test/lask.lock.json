@@ -1,0 +1,427 @@
+{
+    "images": {
+        "#../lib/images/anchore/Dockerfile": {
+            "commands": {
+                "grype": "present",
+                "syft": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/5ebd81490a908fcf82cefc367f481be3436f490e57f08b09c5adcf8b41794eb3"
+        },
+        "#../lib/images/ansible/Dockerfile": {
+            "kind": "recipe",
+            "tag": "lask/68e69d6ff8aa7d738c4bb503bc67ef062e53935017a074a15b5b13cc971136d8"
+        },
+        "#../lib/images/bazel/Dockerfile": {
+            "commands": {
+                "bazel": "present",
+                "bazelisk": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/14e694040a4c2a9a969dd24fa3d14fded85aa23db55641d63b58298ff9a6c373"
+        },
+        "#../lib/images/protoc/Dockerfile": {
+            "commands": {
+                "protoc": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/f77462f8f4549605b6218753b2aaa0a19f919fcfb99aa771745c17260701fe4c"
+        },
+        "#../lib/images/robot/Dockerfile": {
+            "commands": {
+                "libdoc": "present",
+                "rebot": "present",
+                "robot": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/3a63bb019ff0ed13e6ecf1650e85e6397f23aba45bf3d2940c8873390e3cf214"
+        },
+        "#../lib/images/unix/Dockerfile": {
+            "commands": {
+                "bzip2": "present",
+                "curl": "present",
+                "envsubst": "present",
+                "gzip": "present",
+                "jq": "present",
+                "openssl": "present",
+                "rsync": "present",
+                "tar": "present",
+                "unzip": "present",
+                "wget": "present",
+                "xz": "present",
+                "yq": "present",
+                "zip": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/45c3c8d2eb693fba5c4fea1806b13a9af6cc0d662b9bf223b359b2171d88d39c"
+        },
+        "#1password/op:2.39.0": {
+            "digest": "sha256:3cd5a1febc662c93d46b944b983b301e710da5c016ef63be9d436cf2b1ed30d5",
+            "kind": "registry",
+            "ref": "1password/op:2.39.0"
+        },
+        "#alpine/k8s:1.37.0": {
+            "commands": {
+                "kustomize": "present"
+            },
+            "digest": "sha256:b421c2e9419edb98db39b6ab641669f4db7bb2acf354f22450c6b7e7176d1ff4",
+            "kind": "registry",
+            "ref": "alpine/k8s:1.37.0"
+        },
+        "#amazon/aws-cli:2.36.41": {
+            "commands": {
+                "aws": "present"
+            },
+            "digest": "sha256:be7c8de0160a2e2269159bc2634c002c85b1a21d6322e2ad513b3f7f48325c99",
+            "kind": "registry",
+            "ref": "amazon/aws-cli:2.36.41"
+        },
+        "#amazon/aws-cli:2.37.0": {
+            "digest": "sha256:337494c2047176fe9abcf45a5d1eaf1c2c62cae40953284fb1143b5c6170f065",
+            "kind": "registry",
+            "ref": "amazon/aws-cli:2.37.0"
+        },
+        "#aquasec/trivy:0.74.0": {
+            "commands": {
+                "trivy": "present"
+            },
+            "digest": "sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969",
+            "kind": "registry",
+            "ref": "aquasec/trivy:0.74.0"
+        },
+        "#bridgecrew/checkov:3.3.19": {
+            "commands": {
+                "checkov": "present"
+            },
+            "digest": "sha256:d3e96adafdb315ca82e792ca8708c01adae85292800fb064c8b309b3d0cb7b80",
+            "kind": "registry",
+            "ref": "bridgecrew/checkov:3.3.19"
+        },
+        "#bufbuild/buf:1.73.0": {
+            "commands": {
+                "buf": "present"
+            },
+            "digest": "sha256:75d8f756f0919dcded71e67968a91adfe55fe4dd62c4900c57bbfcd7fe625608",
+            "kind": "registry",
+            "ref": "bufbuild/buf:1.73.0"
+        },
+        "#denoland/deno:alpine-2.9.7": {
+            "commands": {
+                "deno": "present"
+            },
+            "digest": "sha256:8ce780168429c4bf5962652e6cbea3fd45254ae902069e90585fb33f74c56968",
+            "kind": "registry",
+            "ref": "denoland/deno:alpine-2.9.7"
+        },
+        "#eclipse-temurin:25.0.4.1_1-jdk-noble": {
+            "commands": {
+                "jar": "present",
+                "java": "present",
+                "javac": "present"
+            },
+            "digest": "sha256:a9c5ddd386f629518bd500ecfabf7d1e5d32d7ffed735d5c3b1604ae92c830f4",
+            "kind": "registry",
+            "ref": "eclipse-temurin:25.0.4.1_1-jdk-noble"
+        },
+        "#flyway/flyway:13.8.0-alpine": {
+            "digest": "sha256:533745f3b566788a3ba7e5bb238a4596cf96a3a4c4531b5efca20962ef5ff3b8",
+            "kind": "registry",
+            "ref": "flyway/flyway:13.8.0-alpine"
+        },
+        "#fullstorydev/grpcurl:v1.9.3-alpine": {
+            "commands": {
+                "grpcurl": "present"
+            },
+            "digest": "sha256:4614424ed58e9b9837c48b6b8eadb9ef40491d5af3499bcc8b378e9c64a9e4a9",
+            "kind": "registry",
+            "ref": "fullstorydev/grpcurl:v1.9.3-alpine"
+        },
+        "#gcc:16.2.0": {
+            "commands": {
+                "c++": "present",
+                "cc": "present",
+                "g++": "present",
+                "gcc": "present",
+                "make": "present"
+            },
+            "digest": "sha256:07280eb2e744f1b7a2d8d4a3894c089ea07266c109758afc388a634bd098e4eb",
+            "kind": "registry",
+            "ref": "gcc:16.2.0"
+        },
+        "#gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim": {
+            "digest": "sha256:9d36fba2eec1d1f10cebde5098e7d6a47daec69340dc024fe9705ffe08b23b09",
+            "kind": "registry",
+            "ref": "gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-slim"
+        },
+        "#ghcr.io/astral-sh/ruff:0.16.9-alpine": {
+            "commands": {
+                "ruff": "present"
+            },
+            "digest": "sha256:8aae98e9eca908e8af82d7bfea421dd6d89f92cf2b4e3c200752f5b221f0427b",
+            "kind": "registry",
+            "ref": "ghcr.io/astral-sh/ruff:0.16.9-alpine"
+        },
+        "#ghcr.io/getsops/sops:v3.13.3-alpine": {
+            "digest": "sha256:ae501277bf742f1662e0f881f43dd8fd6798b489a8058e921dbf6cda597140ea",
+            "kind": "registry",
+            "ref": "ghcr.io/getsops/sops:v3.13.3-alpine"
+        },
+        "#ghcr.io/opentofu/opentofu:1.12.6": {
+            "digest": "sha256:22cb52f6c5bf5c72a48a8f56d993d8df3e9462b1cdfb5db7e77143c87e8d159f",
+            "kind": "registry",
+            "ref": "ghcr.io/opentofu/opentofu:1.12.6"
+        },
+        "#ghcr.io/terraform-linters/tflint:v0.64.0": {
+            "commands": {
+                "tflint": "present"
+            },
+            "digest": "sha256:1c595f42d794c32c45a6ea8b58655fd66433d4ca3b1bc631c574a48d120bd19f",
+            "kind": "registry",
+            "ref": "ghcr.io/terraform-linters/tflint:v0.64.0"
+        },
+        "#golang:1.27.2-trixie": {
+            "commands": {
+                "go": "present",
+                "gofmt": "present"
+            },
+            "digest": "sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e",
+            "kind": "registry",
+            "ref": "golang:1.27.2-trixie"
+        },
+        "#golangci/golangci-lint:v2.14.0": {
+            "commands": {
+                "golangci-lint": "present"
+            },
+            "digest": "sha256:ad862ba6b3798cbe0fd9fd7408d498fd74fbd2623a92406b2fd3898faf0bf98f",
+            "kind": "registry",
+            "ref": "golangci/golangci-lint:v2.14.0"
+        },
+        "#gradle:9.8.0-jdk25-noble": {
+            "commands": {
+                "gradle": "present"
+            },
+            "digest": "sha256:47cb7270db91b1a58742e19d9d6ca27387d953b1cfc67ee48ab567702e600135",
+            "kind": "registry",
+            "ref": "gradle:9.8.0-jdk25-noble"
+        },
+        "#grafana/k6:1.8.1": {
+            "commands": {
+                "k6": "present"
+            },
+            "digest": "sha256:23f2279054c3e01535455c4d92914a625df12aeb631ea0e3ea7a43f96bcbc843",
+            "kind": "registry",
+            "ref": "grafana/k6:1.8.1"
+        },
+        "#hadolint/hadolint:v2.15.1-alpine": {
+            "commands": {
+                "hadolint": "present"
+            },
+            "digest": "sha256:a1d49ae1a4e83c1dbad26b8c1ad7588c8bd1e04f4866b34ad3cac50335198552",
+            "kind": "registry",
+            "ref": "hadolint/hadolint:v2.15.1-alpine"
+        },
+        "#hashicorp/packer:1.16.1": {
+            "digest": "sha256:9fd66d5a4ea0598036e6b50ac6f8c0e72c27746648a5abe480463119e9486ea7",
+            "kind": "registry",
+            "ref": "hashicorp/packer:1.16.1"
+        },
+        "#hashicorp/terraform:1.15.0": {
+            "digest": "sha256:015350b1d4482a767d4bab61ca8ee60e838b195e6fc6de8435a267bed267f610",
+            "kind": "registry",
+            "ref": "hashicorp/terraform:1.15.0"
+        },
+        "#hashicorp/terraform:1.16.4": {
+            "commands": {
+                "terraform": "present"
+            },
+            "digest": "sha256:985cdc6c1d9b0a65b83377f666efd2f740b47f02ac55be1ced3d18f7d3b0e829",
+            "kind": "registry",
+            "ref": "hashicorp/terraform:1.16.4"
+        },
+        "#hashicorp/vault:1.21.4": {
+            "digest": "sha256:4e33b126a59c0c333b76fb4e894722462659a6bec7c48c9ee8cea56fccfd2569",
+            "kind": "registry",
+            "ref": "hashicorp/vault:1.21.4"
+        },
+        "#haskell:9.12.4-slim-bookworm": {
+            "commands": {
+                "cabal": "present",
+                "ghc": "present",
+                "ghci": "present",
+                "runghc": "present",
+                "stack": "present"
+            },
+            "digest": "sha256:4e31ab38c4b87dd51fcef424a7cea074c7b4e32883e73ab4b5731706a1d9ac6b",
+            "kind": "registry",
+            "ref": "haskell:9.12.4-slim-bookworm"
+        },
+        "#httpd:2.4.68-alpine3.24": {
+            "commands": {
+                "ab": "present"
+            },
+            "digest": "sha256:4e585da9d0125dec36d4500a9f5c5df7b2c0a01f67cb47865a91a4b05bdbec1b",
+            "kind": "registry",
+            "ref": "httpd:2.4.68-alpine3.24"
+        },
+        "#koalaman/shellcheck-alpine:v0.11.0": {
+            "commands": {
+                "shellcheck": "present"
+            },
+            "digest": "sha256:9955be09ea7f0dbf7ae942ac1f2094355bb30d96fffba0ec09f5432207544002",
+            "kind": "registry",
+            "ref": "koalaman/shellcheck-alpine:v0.11.0"
+        },
+        "#maven:3.9.16-eclipse-temurin-25-noble": {
+            "commands": {
+                "mvn": "present"
+            },
+            "digest": "sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976",
+            "kind": "registry",
+            "ref": "maven:3.9.16-eclipse-temurin-25-noble"
+        },
+        "#mcr.microsoft.com/azure-cli:2.90.0": {
+            "digest": "sha256:e3768dde8142efa45d8f356a317aaac77abd7da15ba3719b0a150e9453f251db",
+            "kind": "registry",
+            "ref": "mcr.microsoft.com/azure-cli:2.90.0"
+        },
+        "#mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24": {
+            "commands": {
+                "dotnet": "present"
+            },
+            "digest": "sha256:3cc3bbbbf93d82104892f42aa9106b6be4d120346dea0649643a97c801525256",
+            "kind": "registry",
+            "ref": "mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24"
+        },
+        "#mcr.microsoft.com/playwright:v1.62.1-jammy": {
+            "digest": "sha256:b3251f7ff1a9fa559a28d1c67eaa15fc1a9800f7845e82756caea7842967f615",
+            "kind": "registry",
+            "ref": "mcr.microsoft.com/playwright:v1.62.1-jammy"
+        },
+        "#mcr.microsoft.com/playwright:v1.63.0-noble": {
+            "digest": "sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
+            "kind": "registry",
+            "ref": "mcr.microsoft.com/playwright:v1.63.0-noble"
+        },
+        "#migrate/migrate:v4.20.1": {
+            "digest": "sha256:76cc2074cb6642631f34a898ced71e6aeaa6b1a4d78c4daa743275a22e0c5be7",
+            "kind": "registry",
+            "ref": "migrate/migrate:v4.20.1"
+        },
+        "#mysql:8.4.11": {
+            "digest": "sha256:0f51e63e537a1f176423fa03ef559aabe6fa4372a53160a44bc7e75da7d15364",
+            "kind": "registry",
+            "ref": "mysql:8.4.11"
+        },
+        "#node:24.22.1-alpine3.24": {
+            "commands": {
+                "corepack": "present",
+                "node": "present",
+                "npm": "present",
+                "npx": "present"
+            },
+            "digest": "sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53",
+            "kind": "registry",
+            "ref": "node:24.22.1-alpine3.24"
+        },
+        "#oven/bun:1.4.2-alpine": {
+            "commands": {
+                "bun": "present",
+                "bunx": "present"
+            },
+            "digest": "sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f",
+            "kind": "registry",
+            "ref": "oven/bun:1.4.2-alpine"
+        },
+        "#postgres:18.6-alpine3.24": {
+            "digest": "sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5",
+            "kind": "registry",
+            "ref": "postgres:18.6-alpine3.24"
+        },
+        "#postman/newman:6.1.3-alpine": {
+            "commands": {
+                "newman": "present"
+            },
+            "digest": "sha256:d9b5e780ead0026bbb37f3759cd7b10fc8a88cd4030c8266a7c5e343d75a5198",
+            "kind": "registry",
+            "ref": "postman/newman:6.1.3-alpine"
+        },
+        "#pulumi/pulumi-nodejs:3.265.0": {
+            "digest": "sha256:bbb8c58654ce97cf58c6eefe4ecf4d063f8f0de5a81f69d6f035533c965e0e97",
+            "kind": "registry",
+            "ref": "pulumi/pulumi-nodejs:3.265.0"
+        },
+        "#pulumi/pulumi-python:3.265.0": {
+            "digest": "sha256:4d815fdf8a16a7856b0cc2e3a1e7397ef81ba5f97099c56ef048e0569e5ce9c5",
+            "kind": "registry",
+            "ref": "pulumi/pulumi-python:3.265.0"
+        },
+        "#python:3.12.14-alpine3.24": {
+            "commands": {
+                "pip": "present",
+                "pip3": "present",
+                "python": "present",
+                "python3": "present"
+            },
+            "digest": "sha256:4c47124a8391cb7a9f571164147d154777cf012a4ece5f86097130d7a4478111",
+            "kind": "registry",
+            "ref": "python:3.12.14-alpine3.24"
+        },
+        "#python:3.13.5-alpine3.22": {
+            "digest": "sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf",
+            "kind": "registry",
+            "ref": "python:3.13.5-alpine3.22"
+        },
+        "#redis:8.10.2-alpine": {
+            "digest": "sha256:9f8d2d789b9a1d1e3f283f979aa9cbf393373806472e1ccd460e2f9c869b833b",
+            "kind": "registry",
+            "ref": "redis:8.10.2-alpine"
+        },
+        "#rhysd/actionlint:1.7.12": {
+            "commands": {
+                "actionlint": "present"
+            },
+            "digest": "sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667",
+            "kind": "registry",
+            "ref": "rhysd/actionlint:1.7.12"
+        },
+        "#ruby:4.0.7-alpine3.24": {
+            "commands": {
+                "bundle": "present",
+                "gem": "present",
+                "rake": "present",
+                "ruby": "present"
+            },
+            "digest": "sha256:7fe9cfc6976912a171faaeb93d8c2770ef483c1622e45d9c88aeee626058fcca",
+            "kind": "registry",
+            "ref": "ruby:4.0.7-alpine3.24"
+        },
+        "#rust:1.98.1-slim-trixie": {
+            "commands": {
+                "cargo": "present",
+                "rustc": "present",
+                "rustup": "present"
+            },
+            "digest": "sha256:4cd829461bd5c4d511c32e269da9cb8929223b666519d8004e35fc8d1d771ab7",
+            "kind": "registry",
+            "ref": "rust:1.98.1-slim-trixie"
+        },
+        "#semgrep/semgrep:1.178.0": {
+            "commands": {
+                "semgrep": "present"
+            },
+            "digest": "sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b",
+            "kind": "registry",
+            "ref": "semgrep/semgrep:1.178.0"
+        },
+        "#zricethezav/gitleaks:v8.30.1": {
+            "commands": {
+                "gitleaks": "present"
+            },
+            "digest": "sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f",
+            "kind": "registry",
+            "ref": "zricethezav/gitleaks:v8.30.1"
+        }
+    },
+    "lock_version": 1,
+    "modules": {}
+}

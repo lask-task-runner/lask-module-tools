@@ -256,7 +256,7 @@ all(): Array<String> = [
   ),
   expect(
     "each language at its defaults",
-    go.env() == #golang:1.27.1-trixie{env: merge({"GOTOOLCHAIN": "local"}, trusted()), volumes: []}
+    go.env() == #golang:1.27.2-trixie{env: merge({"GOTOOLCHAIN": "local"}, trusted()), volumes: []}
       && java.env() == #eclipse-temurin:25.0.4.1_1-jdk-noble{env: {}, volumes: []}
       && maven.env() == #maven:3.9.16-eclipse-temurin-25-noble{env: {"MAVEN_ARGS": "--batch-mode --no-transfer-progress"}, volumes: []}
       && gradle.env() == #gradle:9.8.0-jdk25-noble{env: {}, volumes: []}
@@ -422,7 +422,7 @@ all(): Array<String> = [
   expect(
     "go: the caches, and a cross-compile",
     go.env(goos = "linux", goarch = "amd64", cgo_enabled = "0", cache_dir = "/h/cache")
-      == #golang:1.27.1-trixie{
+      == #golang:1.27.2-trixie{
         env: merge(merge({"GOTOOLCHAIN": "local"}, trusted()), {
           "GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0",
           "GOMODCACHE": "/cache/mod", "GOCACHE": "/cache/build"

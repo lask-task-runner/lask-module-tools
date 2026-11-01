@@ -219,7 +219,7 @@ Defaults: `PYTHONUNBUFFERED=1`, so a playbook's output reaches the command log a
 
 | Parameter | Sets |
 | --- | --- |
-| `--image` | the image, `#golang:<tag>`; default `#golang:1.27.1-trixie` |
+| `--image` | the image, `#golang:<tag>`; default `#golang:1.27.2-trixie` |
 | `--goproxy` | `GOPROXY` |
 | `--goprivate` | `GOPRIVATE` |
 | `--goflags` | `GOFLAGS` |

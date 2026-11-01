@@ -45,7 +45,7 @@ The exported command words come with a **command schema** (Lask 0.12.0 or later)
 - linters and scanners: `shellcheck`, `hadolint`, `tflint`, `golangci-lint`, `ruff`, `actionlint`, `trivy`, `gitleaks`, `grype`, `syft`, `checkov`, `semgrep`
 - build and test: `buf`, `protoc`, `kustomize`, `k6`, `grpcurl`, `newman`, `robot`, `rebot`, `libdoc`, `ab`
 
-Where a program accepts options its help does not list — `node`'s V8 flags, `gcc`'s, `java`'s `-XX:` options, `mvn`'s, a subcommand of `gem` abbreviated, most of `dotnet`'s — its schema is not closed, and an option it does not know is advised rather than rejected. `npm`, `npx`, `bun`, `bunx` and `corepack` have none: they take any configuration key as a flag. Neither do `bazel` and `bazelisk`: the Bazel release is the one a project's `.bazelversion` names, and a project defines flags of its own. A tool's `schema` holds the schemas of its words for the release in its default image, and `schema_<version>` the same under that release's number (`tools.go.schema_1_27_1`); the two change together when the default image does. A project that declares a word itself gives it the tool's schemas:
+Where a program accepts options its help does not list — `node`'s V8 flags, `gcc`'s, `java`'s `-XX:` options, `mvn`'s, a subcommand of `gem` abbreviated, most of `dotnet`'s — its schema is not closed, and an option it does not know is advised rather than rejected. `npm`, `npx`, `bun`, `bunx` and `corepack` have none: they take any configuration key as a flag. Neither do `bazel` and `bazelisk`: the Bazel release is the one a project's `.bazelversion` names, and a project defines flags of its own. A tool's `schema` holds the schemas of its words for the release in its default image, and `schema_<version>` the same under that release's number (`tools.go.schema_1_27_2`); the two change together when the default image does. A project that declares a word itself gives it the tool's schemas:
 
 ```lask
 import * as tools from "tools"
@@ -68,7 +68,7 @@ A schema describes one release. A project that runs another, with `--image`, dec
 |---|---|---|
 | `python` | `python:3.12.14-alpine3.24` | `python`, `python3`, `pip`, `pip3` |
 | `node` | `node:24.22.1-alpine3.24` | `node`, `npm`, `npx`, `corepack` |
-| `go` | `golang:1.27.1-trixie` | `go`, `gofmt` |
+| `go` | `golang:1.27.2-trixie` | `go`, `gofmt` |
 | `java` | `eclipse-temurin:25.0.4.1_1-jdk-noble` | `java`, `javac`, `jar` |
 | `maven` | `maven:3.9.16-eclipse-temurin-25-noble` | `mvn` |
 | `gradle` | `gradle:9.8.0-jdk25-noble` | `gradle` |
