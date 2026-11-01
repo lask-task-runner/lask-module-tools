@@ -9,14 +9,15 @@ import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
 // the environment, and sends no telemetry
 // (REDGATE_DISABLE_TELEMETRY=true).
 //
-// @param image      The image to run; another release is passed as image = #flyway/flyway:<tag>.
-// @param url        FLYWAY_URL, a JDBC URL.
-// @param user       FLYWAY_USER.
-// @param password   FLYWAY_PASSWORD; masked in the command log.
-// @param locations  FLYWAY_LOCATIONS, e.g. "filesystem:db/migration".
-// @param network    The container's network: a Compose network, or "host".
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #flyway/flyway:<tag>.
+// @param url          FLYWAY_URL, a JDBC URL.
+// @param user         FLYWAY_USER.
+// @param password     FLYWAY_PASSWORD; masked in the command log.
+// @param locations    FLYWAY_LOCATIONS, e.g. "filesystem:db/migration".
+// @param network      The container's network: a Compose network, or "host".
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "flyway" } on ...` or `$[...]`.
 // @example lask eval flyway.env --url jdbc:postgresql://host.docker.internal:5432/app --user app
 env(
@@ -26,6 +27,7 @@ env(
   --password!!: String | Null = null,
   --locations: String | Null = null,
   --network: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -41,5 +43,6 @@ env(
     })
   ),
   volumes = layered_volumes(with, []),
-  network = network
+  network = network,
+  base_access = base_access
 )

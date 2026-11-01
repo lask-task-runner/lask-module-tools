@@ -16,13 +16,14 @@ import * as kube from "./kube.lask"
 // A cluster the kubeconfig reaches at 127.0.0.1 — kind, minikube — is
 // the host's, not the container's: give network = "host".
 //
-// @param image       The image to run; another release is passed as image = #alpine/k8s:<tag>.
-// @param kubeconfig  Host path of the kubeconfig, mounted read-only (KUBECONFIG).
-// @param context     HELM_KUBECONTEXT and KUBE_CTX; kubectl itself takes `--context`.
-// @param namespace   HELM_NAMESPACE; kubectl itself takes `-n`.
-// @param network     The container's network, e.g. "host".
-// @param with        Setups of other tools this environment should also carry: a cloud's credentials for the kubeconfig's exec plugin.
-// @param extra_env   Any other variable; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #alpine/k8s:<tag>.
+// @param kubeconfig   Host path of the kubeconfig, mounted read-only (KUBECONFIG).
+// @param context      HELM_KUBECONTEXT and KUBE_CTX; kubectl itself takes `--context`.
+// @param namespace    HELM_NAMESPACE; kubectl itself takes `-n`.
+// @param network      The container's network, e.g. "host".
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry: a cloud's credentials for the kubeconfig's exec plugin.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "kubectl" } on ...` or `$[...]`.
 // @example lask eval kubectl.env --kubeconfig /home/me/.kube/config
 env(
@@ -31,6 +32,7 @@ env(
   --context: String | Null = null,
   --namespace: String | Null = null,
   --network: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = do {
@@ -38,6 +40,7 @@ env(
   runnable(image,
     env = layered_env({}, extra_env, with, own.env),
     volumes = layered_volumes(with, own.volumes),
-    network = network
+    network = network,
+    base_access = base_access
   )
 }

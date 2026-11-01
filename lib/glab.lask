@@ -9,15 +9,17 @@ import { ToolSetup, git_trust, layered_env, layered_volumes, vars } from "./comm
 // gh, a command that runs git over https takes git_setup as well, with
 // token_user = "oauth2".
 //
-// @param token      GITLAB_TOKEN; masked in the command log.
-// @param host       GITLAB_HOST, for a self-managed instance.
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable; below --with and the named parameters.
+// @param token        GITLAB_TOKEN; masked in the command log.
+// @param host         GITLAB_HOST, for a self-managed instance.
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "glab" } on ...` or `$[...]`.
 // @example lask eval glab.env --host gitlab.example.com
 env(
   --token!!: String | Null = null,
   --host: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = #./images/unix/Dockerfile{
@@ -27,5 +29,6 @@ env(
     with,
     vars({"GITLAB_TOKEN": token, "GITLAB_HOST": host})
   ),
-  volumes: layered_volumes(with, [])
+  volumes: layered_volumes(with, []),
+  base_access: base_access
 }

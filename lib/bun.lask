@@ -7,17 +7,19 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // The image is #oven/bun:1.4.2-alpine unless --image names another. Bun
 // sends no telemetry (DO_NOT_TRACK=1).
 //
-// @param image      The image to run; another release is passed as image = #oven/bun:<tag>.
-// @param npm_token  NPM_TOKEN, for a bunfig.toml or .npmrc that reads it; masked in the command log.
-// @param cache_dir  Host directory mounted at /cache; Bun's install cache is /cache/bun (BUN_INSTALL_CACHE_DIR).
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #oven/bun:<tag>.
+// @param npm_token    NPM_TOKEN, for a bunfig.toml or .npmrc that reads it; masked in the command log.
+// @param cache_dir    Host directory mounted at /cache; Bun's install cache is /cache/bun (BUN_INSTALL_CACHE_DIR).
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "bun" } on ...` or `$[...]`.
 // @example lask eval bun.env --cache_dir /tmp/cache
 env(
   --image: Environment = #oven/bun:1.4.2-alpine,
   --npm_token!!: String | Null = null,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -27,7 +29,8 @@ env(
     with,
     vars({"NPM_TOKEN": npm_token, "BUN_INSTALL_CACHE_DIR": in_cache(cache_dir, "bun")})
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )
 
 command { "bun", "bunx" } on env()

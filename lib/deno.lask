@@ -15,6 +15,7 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // @param image        The image to run; another release is passed as image = #denoland/deno:<tag>.
 // @param auth_tokens  DENO_AUTH_TOKENS, for private modules; masked in the command log.
 // @param cache_dir    Host directory mounted at /cache; Deno's cache is /cache/deno (DENO_DIR).
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
 // @param with         Setups of other tools this environment should also carry.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "deno" } on ...` or `$[...]`.
@@ -23,6 +24,7 @@ env(
   --image: Environment = #denoland/deno:alpine-2.9.7,
   --auth_tokens!!: String | Null = null,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -32,7 +34,8 @@ env(
     with,
     vars({"DENO_AUTH_TOKENS": auth_tokens, "DENO_DIR": in_cache(cache_dir, "deno")})
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )
 
 // Deno and Bun work as they are, so their command words are exported.

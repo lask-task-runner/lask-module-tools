@@ -11,15 +11,17 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // The CLI sends no telemetry and prints no banner
 // (DOTNET_CLI_TELEMETRY_OPTOUT=1, DOTNET_NOLOGO=1).
 //
-// @param image      The image to run; another release is passed as image = #mcr.microsoft.com/dotnet/sdk:<tag>.
-// @param cache_dir  Host directory mounted at /cache; NuGet keeps packages in /cache/nuget (NUGET_PACKAGES).
-// @param with       Setups of other tools this environment should also carry.
-// @param extra_env  Any other variable; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #mcr.microsoft.com/dotnet/sdk:<tag>.
+// @param cache_dir    Host directory mounted at /cache; NuGet keeps packages in /cache/nuget (NUGET_PACKAGES).
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "dotnet" } on ...` or `$[...]`.
 // @example lask eval dotnet.env --cache_dir /tmp/cache
 env(
   --image: Environment = #mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -29,7 +31,8 @@ env(
     with,
     vars({"NUGET_PACKAGES": in_cache(cache_dir, "nuget")})
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )
 
 // .NET works as it is, so its command word is exported.

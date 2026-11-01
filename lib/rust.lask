@@ -8,17 +8,19 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 // carries the C toolchain Cargo links with. `lask sync` pulls and pins
 // whichever image is used (lask spec 10.3); a run never pulls.
 //
-// @param image      The image to run; another release is passed as image = #rust:<tag>.
-// @param rustflags  RUSTFLAGS.
-// @param cache_dir  Host directory mounted at /cache; Cargo's home is /cache/cargo (CARGO_HOME), which holds the registry and the git checkouts. The toolchain stays where the image has it.
-// @param with       Setups of other tools this environment should also carry; git_setup for a private git dependency.
-// @param extra_env  Any other variable; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #rust:<tag>.
+// @param rustflags    RUSTFLAGS.
+// @param cache_dir    Host directory mounted at /cache; Cargo's home is /cache/cargo (CARGO_HOME), which holds the registry and the git checkouts. The toolchain stays where the image has it.
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry; git_setup for a private git dependency.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "cargo" } on ...` or `$[...]`.
 // @example lask eval rust.env --cache_dir /tmp/cache
 env(
   --image: Environment = #rust:1.98.1-slim-trixie,
   --rustflags: String | Null = null,
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -28,7 +30,8 @@ env(
     with,
     vars({"RUSTFLAGS": rustflags, "CARGO_HOME": in_cache(cache_dir, "cargo")})
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )
 
 // Rust works as it is, so its command words are exported, cargo with the

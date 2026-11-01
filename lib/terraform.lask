@@ -15,13 +15,14 @@ import { ToolSetup, layered_env, layered_volumes, mount, tf_env } from "./common
 // --variables as TF_VAR_* variables of the container, never on the command
 // line; bind them with `!!` where they come from, and they are masked.
 //
-// @param image      The image to run; another release is passed as image = #hashicorp/terraform:<tag>.
-// @param workspace  TF_WORKSPACE.
-// @param log        TF_LOG, e.g. "DEBUG".
-// @param variables  Input variables, each set as TF_VAR_<name>.
-// @param cache_dir  Host directory mounted at /cache and used as the plugin cache itself (TF_PLUGIN_CACHE_DIR), e.g. home(".terraform.d/plugin-cache"). `terraform init` reports an error for a cache directory that does not exist yet, so the cache is the mount point, which always does.
-// @param with       Setups of other tools this environment should also carry: a provider's credentials.
-// @param extra_env  Any other variable; below --with and the named parameters.
+// @param image        The image to run; another release is passed as image = #hashicorp/terraform:<tag>.
+// @param workspace    TF_WORKSPACE.
+// @param log          TF_LOG, e.g. "DEBUG".
+// @param variables    Input variables, each set as TF_VAR_<name>.
+// @param cache_dir    Host directory mounted at /cache and used as the plugin cache itself (TF_PLUGIN_CACHE_DIR), e.g. home(".terraform.d/plugin-cache"). `terraform init` reports an error for a cache directory that does not exist yet, so the cache is the mount point, which always does.
+// @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param with         Setups of other tools this environment should also carry: a provider's credentials.
+// @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "terraform" } on ...` or `$[...]`.
 // @example lask eval terraform.env --workspace staging
 env(
@@ -30,6 +31,7 @@ env(
   --log: String | Null = null,
   --variables: Map<String> = {},
   --cache_dir: String | Null = null,
+  --base_access: String | Map<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -39,5 +41,6 @@ env(
     with,
     tf_env(workspace, log, variables, cache_dir)
   ),
-  volumes = layered_volumes(with, mount(cache_dir, "/cache"))
+  volumes = layered_volumes(with, mount(cache_dir, "/cache")),
+  base_access = base_access
 )

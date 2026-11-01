@@ -31,6 +31,7 @@ Every tool follows the same rules:
 - **Secrets are `!!` parameters**, so they are masked in the command log, including in the environment it records — whatever the caller passed. They default to `null` like the rest, and a `null` secret registers nothing for masking.
 - **A host path is mounted, never expanded.** Lask starts `docker` without a shell, so `~` would reach the daemon as a directory named `~`. Use `tools.home(".aws")`.
 - **`--with: Array<ToolSetup>`** carries another tool's variables and mounts, so the Terraform AWS provider can run with the same account as the AWS CLI: `tools.terraform.env(with = [tools.aws.setup(profile = "dev")])`.
+- **`--base_access`** narrows what the container may do with the project directory, which is otherwise mounted read-write at `/work`: `"ro"`, `"none"`, or a table of paths where the longest wins, `tools.terraform.env(base_access = {".": "ro", ".terraform": "rw"})`. A task under a `within` constraint runs a tool this way, and `lask check` reads the value from the call (Lask 0.15.0 or later).
 - **`--extra_env: Map<String>`** sets any variable the tool has no parameter for.
 - **Precedence**, later wins: the tool's defaults, `--extra_env`, each setup in `--with`, the tool's own named parameters.
 
