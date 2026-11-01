@@ -1,0 +1,312 @@
+{
+    "images": {
+        "#alpine/k8s:1.37.0": {
+            "commands": {
+                "kustomize": "present"
+            },
+            "digest": "sha256:b421c2e9419edb98db39b6ab641669f4db7bb2acf354f22450c6b7e7176d1ff4",
+            "kind": "registry",
+            "ref": "alpine/k8s:1.37.0"
+        },
+        "#aquasec/trivy:0.74.0": {
+            "commands": {
+                "trivy": "present"
+            },
+            "digest": "sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969",
+            "kind": "registry",
+            "ref": "aquasec/trivy:0.74.0"
+        },
+        "#bridgecrew/checkov:3.3.19": {
+            "commands": {
+                "checkov": "present"
+            },
+            "digest": "sha256:d3e96adafdb315ca82e792ca8708c01adae85292800fb064c8b309b3d0cb7b80",
+            "kind": "registry",
+            "ref": "bridgecrew/checkov:3.3.19"
+        },
+        "#bufbuild/buf:1.73.0": {
+            "commands": {
+                "buf": "present"
+            },
+            "digest": "sha256:75d8f756f0919dcded71e67968a91adfe55fe4dd62c4900c57bbfcd7fe625608",
+            "kind": "registry",
+            "ref": "bufbuild/buf:1.73.0"
+        },
+        "#denoland/deno:alpine-2.9.7": {
+            "commands": {
+                "deno": "present"
+            },
+            "digest": "sha256:8ce780168429c4bf5962652e6cbea3fd45254ae902069e90585fb33f74c56968",
+            "kind": "registry",
+            "ref": "denoland/deno:alpine-2.9.7"
+        },
+        "#eclipse-temurin:25.0.4.1_1-jdk-noble": {
+            "commands": {
+                "jar": "present",
+                "java": "present",
+                "javac": "present"
+            },
+            "digest": "sha256:a9c5ddd386f629518bd500ecfabf7d1e5d32d7ffed735d5c3b1604ae92c830f4",
+            "kind": "registry",
+            "ref": "eclipse-temurin:25.0.4.1_1-jdk-noble"
+        },
+        "#fullstorydev/grpcurl:v1.9.3-alpine": {
+            "commands": {
+                "grpcurl": "present"
+            },
+            "digest": "sha256:4614424ed58e9b9837c48b6b8eadb9ef40491d5af3499bcc8b378e9c64a9e4a9",
+            "kind": "registry",
+            "ref": "fullstorydev/grpcurl:v1.9.3-alpine"
+        },
+        "#gcc:16.2.0": {
+            "commands": {
+                "c++": "present",
+                "cc": "present",
+                "g++": "present",
+                "gcc": "present",
+                "make": "present"
+            },
+            "digest": "sha256:07280eb2e744f1b7a2d8d4a3894c089ea07266c109758afc388a634bd098e4eb",
+            "kind": "registry",
+            "ref": "gcc:16.2.0"
+        },
+        "#ghcr.io/astral-sh/ruff:0.16.9-alpine": {
+            "commands": {
+                "ruff": "present"
+            },
+            "digest": "sha256:8aae98e9eca908e8af82d7bfea421dd6d89f92cf2b4e3c200752f5b221f0427b",
+            "kind": "registry",
+            "ref": "ghcr.io/astral-sh/ruff:0.16.9-alpine"
+        },
+        "#ghcr.io/terraform-linters/tflint:v0.64.0": {
+            "commands": {
+                "tflint": "present"
+            },
+            "digest": "sha256:1c595f42d794c32c45a6ea8b58655fd66433d4ca3b1bc631c574a48d120bd19f",
+            "kind": "registry",
+            "ref": "ghcr.io/terraform-linters/tflint:v0.64.0"
+        },
+        "#golang:1.27.2-trixie": {
+            "commands": {
+                "go": "present",
+                "gofmt": "present"
+            },
+            "digest": "sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e",
+            "kind": "registry",
+            "ref": "golang:1.27.2-trixie"
+        },
+        "#golangci/golangci-lint:v2.14.0": {
+            "commands": {
+                "golangci-lint": "present"
+            },
+            "digest": "sha256:ad862ba6b3798cbe0fd9fd7408d498fd74fbd2623a92406b2fd3898faf0bf98f",
+            "kind": "registry",
+            "ref": "golangci/golangci-lint:v2.14.0"
+        },
+        "#gradle:9.8.0-jdk25-noble": {
+            "commands": {
+                "gradle": "present"
+            },
+            "digest": "sha256:47cb7270db91b1a58742e19d9d6ca27387d953b1cfc67ee48ab567702e600135",
+            "kind": "registry",
+            "ref": "gradle:9.8.0-jdk25-noble"
+        },
+        "#grafana/k6:1.8.1": {
+            "commands": {
+                "k6": "present"
+            },
+            "digest": "sha256:23f2279054c3e01535455c4d92914a625df12aeb631ea0e3ea7a43f96bcbc843",
+            "kind": "registry",
+            "ref": "grafana/k6:1.8.1"
+        },
+        "#hadolint/hadolint:v2.15.1-alpine": {
+            "commands": {
+                "hadolint": "present"
+            },
+            "digest": "sha256:a1d49ae1a4e83c1dbad26b8c1ad7588c8bd1e04f4866b34ad3cac50335198552",
+            "kind": "registry",
+            "ref": "hadolint/hadolint:v2.15.1-alpine"
+        },
+        "#haskell:9.12.4-slim-bookworm": {
+            "commands": {
+                "cabal": "present",
+                "ghc": "present",
+                "ghci": "present",
+                "runghc": "present",
+                "stack": "present"
+            },
+            "digest": "sha256:4e31ab38c4b87dd51fcef424a7cea074c7b4e32883e73ab4b5731706a1d9ac6b",
+            "kind": "registry",
+            "ref": "haskell:9.12.4-slim-bookworm"
+        },
+        "#httpd:2.4.68-alpine3.24": {
+            "commands": {
+                "ab": "present"
+            },
+            "digest": "sha256:4e585da9d0125dec36d4500a9f5c5df7b2c0a01f67cb47865a91a4b05bdbec1b",
+            "kind": "registry",
+            "ref": "httpd:2.4.68-alpine3.24"
+        },
+        "#koalaman/shellcheck-alpine:v0.11.0": {
+            "commands": {
+                "shellcheck": "present"
+            },
+            "digest": "sha256:9955be09ea7f0dbf7ae942ac1f2094355bb30d96fffba0ec09f5432207544002",
+            "kind": "registry",
+            "ref": "koalaman/shellcheck-alpine:v0.11.0"
+        },
+        "#lib/images/anchore/Dockerfile": {
+            "commands": {
+                "grype": "present",
+                "syft": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/a69808f7f0764177e58efa61abf47272b3362bd0266fcdd36eab3cbb90fbbeed"
+        },
+        "#lib/images/bazel/Dockerfile": {
+            "commands": {
+                "bazel": "present",
+                "bazelisk": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/56d3898128d5c0475738a093a8a4c68027be74676a13fb26521432c8a7d72c67"
+        },
+        "#lib/images/protoc/Dockerfile": {
+            "commands": {
+                "protoc": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/0732834a6f7c51a039a280bf9d846e20b79a162dee44e0447b2e8969ec0933ae"
+        },
+        "#lib/images/robot/Dockerfile": {
+            "commands": {
+                "libdoc": "present",
+                "rebot": "present",
+                "robot": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/315417156342d3a3ed4a0fb3b14a09c1d385f8da4a26dbc44901fc8633477cd8"
+        },
+        "#lib/images/unix/Dockerfile": {
+            "commands": {
+                "bzip2": "present",
+                "curl": "present",
+                "envsubst": "present",
+                "gzip": "present",
+                "jq": "present",
+                "openssl": "present",
+                "rsync": "present",
+                "tar": "present",
+                "unzip": "present",
+                "wget": "present",
+                "xz": "present",
+                "yq": "present",
+                "zip": "present"
+            },
+            "kind": "recipe",
+            "tag": "lask/93ddccffb749d165e6256c4610f27c909a8fc78907fca47360ed318d5a204c57"
+        },
+        "#maven:3.9.16-eclipse-temurin-25-noble": {
+            "commands": {
+                "mvn": "present"
+            },
+            "digest": "sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976",
+            "kind": "registry",
+            "ref": "maven:3.9.16-eclipse-temurin-25-noble"
+        },
+        "#mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24": {
+            "commands": {
+                "dotnet": "present"
+            },
+            "digest": "sha256:3cc3bbbbf93d82104892f42aa9106b6be4d120346dea0649643a97c801525256",
+            "kind": "registry",
+            "ref": "mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24"
+        },
+        "#node:24.22.1-alpine3.24": {
+            "commands": {
+                "corepack": "present",
+                "node": "present",
+                "npm": "present",
+                "npx": "present"
+            },
+            "digest": "sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53",
+            "kind": "registry",
+            "ref": "node:24.22.1-alpine3.24"
+        },
+        "#oven/bun:1.4.2-alpine": {
+            "commands": {
+                "bun": "present",
+                "bunx": "present"
+            },
+            "digest": "sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f",
+            "kind": "registry",
+            "ref": "oven/bun:1.4.2-alpine"
+        },
+        "#postman/newman:6.1.3-alpine": {
+            "commands": {
+                "newman": "present"
+            },
+            "digest": "sha256:d9b5e780ead0026bbb37f3759cd7b10fc8a88cd4030c8266a7c5e343d75a5198",
+            "kind": "registry",
+            "ref": "postman/newman:6.1.3-alpine"
+        },
+        "#python:3.12.14-alpine3.24": {
+            "commands": {
+                "pip": "present",
+                "pip3": "present",
+                "python": "present",
+                "python3": "present"
+            },
+            "digest": "sha256:4c47124a8391cb7a9f571164147d154777cf012a4ece5f86097130d7a4478111",
+            "kind": "registry",
+            "ref": "python:3.12.14-alpine3.24"
+        },
+        "#rhysd/actionlint:1.7.12": {
+            "commands": {
+                "actionlint": "present"
+            },
+            "digest": "sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667",
+            "kind": "registry",
+            "ref": "rhysd/actionlint:1.7.12"
+        },
+        "#ruby:4.0.7-alpine3.24": {
+            "commands": {
+                "bundle": "present",
+                "gem": "present",
+                "rake": "present",
+                "ruby": "present"
+            },
+            "digest": "sha256:7fe9cfc6976912a171faaeb93d8c2770ef483c1622e45d9c88aeee626058fcca",
+            "kind": "registry",
+            "ref": "ruby:4.0.7-alpine3.24"
+        },
+        "#rust:1.98.1-slim-trixie": {
+            "commands": {
+                "cargo": "present",
+                "rustc": "present",
+                "rustup": "present"
+            },
+            "digest": "sha256:4cd829461bd5c4d511c32e269da9cb8929223b666519d8004e35fc8d1d771ab7",
+            "kind": "registry",
+            "ref": "rust:1.98.1-slim-trixie"
+        },
+        "#semgrep/semgrep:1.178.0": {
+            "commands": {
+                "semgrep": "present"
+            },
+            "digest": "sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b",
+            "kind": "registry",
+            "ref": "semgrep/semgrep:1.178.0"
+        },
+        "#zricethezav/gitleaks:v8.30.1": {
+            "commands": {
+                "gitleaks": "present"
+            },
+            "digest": "sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f",
+            "kind": "registry",
+            "ref": "zricethezav/gitleaks:v8.30.1"
+        }
+    },
+    "lock_version": 1,
+    "modules": {}
+}

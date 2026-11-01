@@ -1,0 +1,14 @@
+{
+    "images": {
+        "#amazon/aws-cli:2.36.41": {
+            "commands": {
+                "aws": "present"
+            },
+            "digest": "sha256:be7c8de0160a2e2269159bc2634c002c85b1a21d6322e2ad513b3f7f48325c99",
+            "kind": "registry",
+            "ref": "amazon/aws-cli:2.36.41"
+        }
+    },
+    "lock_version": 1,
+    "modules": {}
+}
