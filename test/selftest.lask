@@ -507,6 +507,19 @@ all(): Array<String> = [
       && terraform.env(base_access = {".": "ro", ".terraform": "rw"}) == #hashicorp/terraform:1.16.4{env: {"TF_IN_AUTOMATION": "1", "TF_INPUT": "0"}, volumes: [], base_access: {".": "ro", ".terraform": "rw"}}
       && aws.env(base_access = null) == aws.env()
       && unix.env(base_access = "ro") != unix.env() && git.env(base_access = "none") != git.env()
+  ),
+  // A container given --egress reaches only what it lists (lask spec
+  // 10.12); null leaves the network as it is. A JVM, which reads no
+  // proxy variable, is told the proxy, and Maven goes through it.
+  expect(
+    "--egress restricts the network to what it lists",
+    aws.env(egress = ["sts.amazonaws.com:443"]) == #amazon/aws-cli:2.36.41{env: {"AWS_PAGER": ""}, volumes: [], egress: ["sts.amazonaws.com:443"]}
+      && aws.env(egress = null) == aws.env()
+      && node.env(egress = node.registry_egress) != node.env()
+      && java.env(egress = []) == #eclipse-temurin:25.0.4.1_1-jdk-noble{env: {"JAVA_TOOL_OPTIONS": "-Dhttp.proxyHost=lask-egress-proxy -Dhttp.proxyPort=3128 -Dhttps.proxyHost=lask-egress-proxy -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=localhost|127.0.0.1"}, volumes: [], egress: []}
+      && java.env(egress = [], java_tool_options = "-Xmx2g") != java.env(egress = [])
+      && java.env(java_tool_options = "-Xmx2g") == #eclipse-temurin:25.0.4.1_1-jdk-noble{env: {"JAVA_TOOL_OPTIONS": "-Xmx2g"}, volumes: []}
+      && maven.env(egress = maven.registry_egress) != maven.env()
   )
 ]
 

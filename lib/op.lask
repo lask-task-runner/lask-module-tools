@@ -12,6 +12,7 @@ import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
 // @param connect_host           OP_CONNECT_HOST.
 // @param connect_token          OP_CONNECT_TOKEN; masked in the command log.
 // @param base_access            What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress                 The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with                   Setups of other tools this environment should also carry.
 // @param extra_env              Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "op" } on ...` or `$[...]`.
@@ -22,6 +23,7 @@ env(
   --connect_host: String | Null = null,
   --connect_token!!: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -36,5 +38,6 @@ env(
     })
   ),
   volumes = layered_volumes(with, []),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )

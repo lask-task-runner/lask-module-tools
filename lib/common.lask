@@ -31,6 +31,19 @@ mount(dir: String | Null, target: String): Array<String> = case (dir) {
   else -> ["#{dir}:#{target}"]
 }
 
+// JAVA_TOOL_OPTIONS for a JVM: given egress, the proxy every container
+// given egress reaches (lask spec 10.12), since a JVM reads no proxy
+// variable, followed by the caller's own options.
+java_options(egress: Array<String> | Null, own: String | Null): String | Null = case (egress) {
+  Null -> own
+  else -> case (own) {
+    Null -> java_proxy
+    else -> "#{java_proxy} #{own}"
+  }
+}
+
+internal java_proxy: String = "-Dhttp.proxyHost=lask-egress-proxy -Dhttp.proxyPort=3128 -Dhttps.proxyHost=lask-egress-proxy -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=localhost|127.0.0.1"
+
 // The variables of an environment, in layers where a later one wins:
 // the tool's own defaults, then --extra_env, then each setup of --with,
 // then the tool's named parameters, which arrive with the ones not

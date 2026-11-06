@@ -14,6 +14,7 @@ import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
 // @param options      ROBOT_OPTIONS, which robot reads before its command line, e.g. "--outputdir results".
 // @param network      The container's network: a Compose network, or "host".
 // @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress       The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with         Setups of other tools this environment should also carry.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "robot" } on ...` or `$[...]`.
@@ -22,13 +23,15 @@ env(
   --options: String | Null = null,
   --network: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = #./images/robot/Dockerfile{
   env: layered_env({"PYTHONUNBUFFERED": "1"}, extra_env, with, vars({"ROBOT_OPTIONS": options})),
   volumes: layered_volumes(with, []),
   network: network,
-  base_access: base_access
+  base_access: base_access,
+  egress: egress
 }
 
 command { "robot", "rebot", "libdoc" } on env() schema schema

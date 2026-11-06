@@ -19,6 +19,7 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // @param extra_index_url  PIP_EXTRA_INDEX_URL; masked in the command log.
 // @param cache_dir        Host directory mounted at /cache, where pip keeps its cache (PIP_CACHE_DIR).
 // @param base_access      What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress           The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with             Setups of other tools this environment should also carry.
 // @param extra_env        Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "python" } on ...` or `$[...]`.
@@ -29,6 +30,7 @@ env(
   --extra_index_url!!: String | Null = null,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -43,7 +45,8 @@ env(
     })
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 // Python works as it is, so its command words are exported, declared on
@@ -51,6 +54,10 @@ env(
 // them is checked against (lask spec ch. 5). A project imports the ones
 // it runs: `import command { "python", "pip" } from "tools"`.
 command { "python", "python3", "pip", "pip3" } on env() schema schema
+
+// PyPI, for --egress: the index pip reads, and the host it downloads
+// the files from.
+registry_egress: Array<String> = ["pypi.org:443", "files.pythonhosted.org:443"]
 
 // The command schema of python (lask spec ch. 5), from `python -h` in
 // #python:3.12.14-alpine3.24, and the option letters it accepts though

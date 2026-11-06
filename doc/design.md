@@ -135,6 +135,12 @@ A container option given `null` is left out (10.2), so a tool can take `--user: 
 
 Every tool takes `--base_access: String | Map<String> | Null = null` and passes it through, since every command mounts the project directory (10.5) and only the caller knows what of it a task may write: `"ro"` for a linter, `{".": "ro", ".terraform": "rw"}` for `terraform init`. It is what lets a task under a `within` constraint (10.11) run a tool at all: the run options are the tool's, given once, so a caller cannot add it afterwards (§4.4). It needs Lask 0.15.0 or later, which knows the option.
 
+Every tool takes `--egress: Array<String> | Null = null` and passes it through as well, for the same reason: a container given `egress` reaches only the destinations it lists, through the proxy Lask starts beside it (10.12), and only the caller knows where a task may go. `null`, the default, leaves the network as it is, and `[]` lets the container reach nothing. A tool that also takes `--network` passes both on: Lask refuses the two together when the command runs, which is the caller's to resolve.
+
+A tool whose program does not read the proxy variables Lask gives is told the proxy another way when `egress` is given. The JVM reads none, so `java`, `maven` and `gradle` put the proxy's system properties before `--java_tool_options` in `JAVA_TOOL_OPTIONS`, under the name and port every such container reaches the proxy by (`lask-egress-proxy:3128`). Maven's default transport reads a proxy only from `settings.xml`, so `maven` also selects its wagon transport, which takes the JVM's. ssh reads neither, and is left to the caller.
+
+A tool whose registry is fixed by default exports the destinations it reaches, `registry_egress`, checked by fetching a package through the proxy with no other destination: `node` (`registry.npmjs.org:443`), `python` (`pypi.org:443`, `files.pythonhosted.org:443`), `go` (`proxy.golang.org:443`, `sum.golang.org:443`), and `maven` and `gradle` (Maven Central, `repo.maven.apache.org:443`). A project that adds a registry adds its host.
+
 ## 5. Catalog
 
 Every function below is implemented. The README lists each one's default image and command words, by genre; this chapter records why each is built the way it is.

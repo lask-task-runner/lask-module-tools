@@ -9,6 +9,7 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // @param github_token  GITHUB_TOKEN, which lifts GitHub's rate limit on plugin downloads; masked in the command log.
 // @param cache_dir     Host directory mounted at /cache; plugins are kept in /cache/tflint (TFLINT_PLUGIN_DIR).
 // @param base_access   What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress        The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with          Setups of other tools this environment should also carry.
 // @param extra_env     Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "tflint" } on ...` or `$[...]`.
@@ -18,12 +19,14 @@ env(
   --github_token!!: String | Null = null,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
   env = layered_env({}, extra_env, with, vars({"GITHUB_TOKEN": github_token, "TFLINT_PLUGIN_DIR": in_cache(cache_dir, "tflint")})),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 command { "tflint" } on env() schema schema

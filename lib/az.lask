@@ -54,6 +54,7 @@ setup(
 // @param client_secret    ARM_CLIENT_SECRET and AZURE_CLIENT_SECRET; masked in the command log.
 // @param config_dir       Host directory mounted as /root/.azure.
 // @param base_access      What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress           The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with             Setups of other tools this environment should also carry.
 // @param extra_env        Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "az" } on ...` or `$[...]`.
@@ -66,6 +67,7 @@ env(
   --client_secret!!: String | Null = null,
   --config_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = do {
@@ -79,6 +81,7 @@ env(
   runnable(image,
     env = layered_env({"AZURE_CORE_COLLECT_TELEMETRY": "false"}, extra_env, with, own.env),
     volumes = layered_volumes(with, own.volumes),
-    base_access = base_access
+    base_access = base_access,
+    egress = egress
   )
 }

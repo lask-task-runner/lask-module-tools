@@ -19,6 +19,7 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // @param npm_token     NPM_TOKEN, for an .npmrc that reads ${NPM_TOKEN}; masked in the command log.
 // @param cache_dir     Host directory mounted at /cache, where npm keeps its cache (npm_config_cache).
 // @param base_access   What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress        The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with          Setups of other tools this environment should also carry.
 // @param extra_env     Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "npm" } on ...` or `$[...]`.
@@ -31,6 +32,7 @@ env(
   --npm_token!!: String | Null = null,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -47,13 +49,18 @@ env(
     })
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 // Node.js works as it is, so its command words are exported, declared
 // on the default environment. A project imports the ones it runs:
 // `import command { "node", "npm", "npx" } from "tools"`.
 command { "node", "npm", "npx", "corepack" } on env() schema schema
+
+// The npm registry, for --egress: what npm installs packages from when
+// no other registry is configured.
+registry_egress: Array<String> = ["registry.npmjs.org:443"]
 
 // The command schema of node 24.22.1, read from its help and checked against
 // the program: every option it lists is one the program accepts.

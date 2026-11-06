@@ -12,6 +12,7 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 // @param rustflags    RUSTFLAGS.
 // @param cache_dir    Host directory mounted at /cache; Cargo's home is /cache/cargo (CARGO_HOME), which holds the registry and the git checkouts. The toolchain stays where the image has it.
 // @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress       The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with         Setups of other tools this environment should also carry; git_setup for a private git dependency.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "cargo" } on ...` or `$[...]`.
@@ -21,6 +22,7 @@ env(
   --rustflags: String | Null = null,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -31,7 +33,8 @@ env(
     vars({"RUSTFLAGS": rustflags, "CARGO_HOME": in_cache(cache_dir, "cargo")})
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 // Rust works as it is, so its command words are exported, cargo with the

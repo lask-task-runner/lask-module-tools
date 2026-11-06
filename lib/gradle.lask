@@ -1,6 +1,6 @@
 // Gradle, on Temurin 25.
 
-import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
+import { ToolSetup, java_options, in_cache, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // Gradle, on Temurin 25, configured by its parameters.
 //
@@ -9,10 +9,11 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // it is no command word: give the environment with `$[...]`.
 //
 // @param image              The image to run; another release is passed as image = #gradle:<tag>.
-// @param java_tool_options  JAVA_TOOL_OPTIONS.
+// @param java_tool_options  JAVA_TOOL_OPTIONS, which every JVM in the container reads, after the proxy's options when egress is given.
 // @param gradle_opts        GRADLE_OPTS.
 // @param cache_dir          Host directory mounted at /cache; the Gradle user home is /cache/gradle (GRADLE_USER_HOME).
 // @param base_access        What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress             The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with               Setups of other tools this environment should also carry.
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "gradle" } on ...` or `$[...]`.
@@ -23,6 +24,7 @@ env(
   --gradle_opts: String | Null = null,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -31,16 +33,20 @@ env(
     extra_env,
     with,
     vars({
-      "JAVA_TOOL_OPTIONS": java_tool_options,
+      "JAVA_TOOL_OPTIONS": java_options(egress, java_tool_options),
       "GRADLE_OPTS": gradle_opts,
       "GRADLE_USER_HOME": in_cache(cache_dir, "gradle")
     })
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 command { "gradle" } on env() schema schema
+
+// Maven Central, for --egress: where mavenCentral() resolves.
+registry_egress: Array<String> = ["repo.maven.apache.org:443"]
 
 // The command schema of gradle 9.8.0, read from its help and checked against
 // the program: every option it lists is one the program accepts.

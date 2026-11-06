@@ -9,6 +9,7 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 // @param image        The image to run; another release is passed as image = #golangci/golangci-lint:<tag>.
 // @param cache_dir    Host directory mounted at /cache: golangci-lint's cache (/cache/golangci-lint), and Go's module and build caches (/cache/mod, /cache/build), shared with go.env().
 // @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress       The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with         Setups of other tools this environment should also carry.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "golangci-lint" } on ...` or `$[...]`.
@@ -17,6 +18,7 @@ env(
   --image: Environment = #golangci/golangci-lint:v2.14.0,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -31,7 +33,8 @@ env(
     })
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 command { "golangci-lint" } on env() schema schema

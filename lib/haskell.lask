@@ -15,6 +15,7 @@ import { ToolSetup, git_trust, in_cache, layered_env, layered_volumes, mount, va
 // @param image        The image to run; another release is passed as image = #haskell:<tag>.
 // @param cache_dir    Host directory mounted at /cache; Cabal's directory is /cache/cabal (CABAL_DIR) and Stack's root /cache/stack (STACK_ROOT), so the package store and downloaded compilers outlive the container.
 // @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress       The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with         Setups of other tools this environment should also carry.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "cabal" } on ...` or `$[...]`.
@@ -23,6 +24,7 @@ env(
   --image: Environment = #haskell:9.12.4-slim-bookworm,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -33,7 +35,8 @@ env(
     vars({"CABAL_DIR": in_cache(cache_dir, "cabal"), "STACK_ROOT": in_cache(cache_dir, "stack")})
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 // GHC, Cabal and Stack work as they are, so their command words are
