@@ -13,6 +13,7 @@ import { ToolSetup, git_trust, given, in_cache, layered_env, layered_volumes, mo
 //
 // @param cache_dir    Host directory mounted at /cache: Bazelisk's downloads (BAZELISK_HOME=/cache/bazelisk) and Bazel's output root (XDG_CACHE_HOME=/cache), so a build is incremental across runs.
 // @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress       The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with         Setups of other tools this environment should also carry.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "bazel" } on ...` or `$[...]`.
@@ -20,6 +21,7 @@ import { ToolSetup, git_trust, given, in_cache, layered_env, layered_volumes, mo
 env(
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = #./images/bazel/Dockerfile{
@@ -30,7 +32,8 @@ env(
     vars({"BAZELISK_HOME": in_cache(cache_dir, "bazelisk"), "XDG_CACHE_HOME": given(cache_dir, "/cache")})
   ),
   volumes: layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access: base_access
+  base_access: base_access,
+  egress: egress
 }
 
 command { "bazel", "bazelisk" } on env()

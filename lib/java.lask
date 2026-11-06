@@ -1,6 +1,6 @@
 // The Eclipse Temurin JDK.
 
-import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
+import { ToolSetup, java_options, layered_env, layered_volumes, vars } from "./common.lask"
 
 // The Eclipse Temurin JDK, configured by its parameters.
 //
@@ -9,8 +9,9 @@ import { ToolSetup, layered_env, layered_volumes, vars } from "./common.lask"
 // whichever image is used (lask spec 10.3); a run never pulls.
 //
 // @param image              The image to run; another release is passed as image = #eclipse-temurin:<tag>.
-// @param java_tool_options  JAVA_TOOL_OPTIONS, which every JVM in the container reads.
+// @param java_tool_options  JAVA_TOOL_OPTIONS, which every JVM in the container reads, after the proxy's options when egress is given.
 // @param base_access        What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress             The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with               Setups of other tools this environment should also carry.
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "java" } on ...` or `$[...]`.
@@ -19,12 +20,14 @@ env(
   --image: Environment = #eclipse-temurin:25.0.4.1_1-jdk-noble,
   --java_tool_options: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
-  env = layered_env({}, extra_env, with, vars({"JAVA_TOOL_OPTIONS": java_tool_options})),
+  env = layered_env({}, extra_env, with, vars({"JAVA_TOOL_OPTIONS": java_options(egress, java_tool_options)})),
   volumes = layered_volumes(with, []),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 // The JDK, Maven and Gradle work as they are, so their command words

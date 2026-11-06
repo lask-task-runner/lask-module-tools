@@ -14,6 +14,7 @@ import { ToolSetup, in_cache, layered_env, layered_volumes, mount, vars } from "
 // @param image        The image to run; another release is passed as image = #mcr.microsoft.com/dotnet/sdk:<tag>.
 // @param cache_dir    Host directory mounted at /cache; NuGet keeps packages in /cache/nuget (NUGET_PACKAGES).
 // @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress       The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with         Setups of other tools this environment should also carry.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "dotnet" } on ...` or `$[...]`.
@@ -22,6 +23,7 @@ env(
   --image: Environment = #mcr.microsoft.com/dotnet/sdk:10.0.401-alpine3.24,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
@@ -32,7 +34,8 @@ env(
     vars({"NUGET_PACKAGES": in_cache(cache_dir, "nuget")})
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 // .NET works as it is, so its command word is exported.

@@ -15,6 +15,7 @@ import * as kube from "./kube.lask"
 // @param network      The container's network, e.g. "host".
 // @param cache_dir    Host directory mounted at /cache; Helm's cache, configuration and data live under /cache/helm (HELM_CACHE_HOME, HELM_CONFIG_HOME, HELM_DATA_HOME), so added repositories and plugins outlive the container.
 // @param base_access  What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress       The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with         Setups of other tools this environment should also carry.
 // @param extra_env    Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "helm" } on ...` or `$[...]`.
@@ -27,6 +28,7 @@ env(
   --network: String | Null = null,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = do {
@@ -40,6 +42,7 @@ env(
     env = layered_env({}, extra_env, with, merge(own.env, cache)),
     volumes = layered_volumes(with, concat_array(own.volumes, mount(cache_dir, "/cache"))),
     network = network,
-    base_access = base_access
+    base_access = base_access,
+    egress = egress
   )
 }

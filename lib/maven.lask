@@ -1,6 +1,6 @@
 // Maven, on Temurin 25.
 
-import { ToolSetup, layered_env, layered_volumes, mount, vars } from "./common.lask"
+import { ToolSetup, java_options, layered_env, layered_volumes, mount, vars } from "./common.lask"
 
 // The system property that points Maven's local repository into the
 // cache, after whatever MAVEN_OPTS the caller gave.
@@ -20,10 +20,11 @@ internal maven_opts_with(opts: String | Null, cache_dir: String | Null): String 
 // build rather than a download meter.
 //
 // @param image              The image to run; another release is passed as image = #maven:<tag>.
-// @param java_tool_options  JAVA_TOOL_OPTIONS.
+// @param java_tool_options  JAVA_TOOL_OPTIONS, which every JVM in the container reads, after the proxy's options when egress is given.
 // @param maven_opts         MAVEN_OPTS.
 // @param cache_dir          Host directory mounted at /cache; the local repository is /cache/m2 (-Dmaven.repo.local, added to MAVEN_OPTS).
 // @param base_access        What the container may do with the project directory: "rw" (the default), "ro", "none", or a table of paths such as {".": "ro", "dist": "rw"} (lask spec 10.2).
+// @param egress             The only destinations, as <host>:<port>, the container may reach, through Lask's proxy (lask spec 10.12); null leaves the network as it is.
 // @param with               Setups of other tools this environment should also carry.
 // @param extra_env          Any other variable; below --with and the named parameters.
 // @return The environment, for `command { "mvn" } on ...` or `$[...]`.
@@ -34,23 +35,38 @@ env(
   --maven_opts: String | Null = null,
   --cache_dir: String | Null = null,
   --base_access: String | Map<String> | Null = null,
+  --egress: Array<String> | Null = null,
   --with: Array<ToolSetup> = [],
   --extra_env: Map<String> = {}
 ): Runnable = runnable(image,
   env = layered_env(
-    {"MAVEN_ARGS": "--batch-mode --no-transfer-progress"},
+    {"MAVEN_ARGS": maven_args(egress)},
     extra_env,
     with,
     vars({
-      "JAVA_TOOL_OPTIONS": java_tool_options,
+      "JAVA_TOOL_OPTIONS": java_options(egress, java_tool_options),
       "MAVEN_OPTS": maven_opts_with(maven_opts, cache_dir)
     })
   ),
   volumes = layered_volumes(with, mount(cache_dir, "/cache")),
-  base_access = base_access
+  base_access = base_access,
+  egress = egress
 )
 
 command { "mvn" } on env() schema schema
+
+// Maven's arguments: batch mode without transfer progress, and, given
+// egress, the wagon transport, the one of Maven's that goes through the
+// proxy JAVA_TOOL_OPTIONS names (lask spec 10.12); its native transport
+// reads a proxy only from settings.xml.
+internal maven_args(egress: Array<String> | Null): String = case (egress) {
+  Null -> "--batch-mode --no-transfer-progress"
+  else -> "--batch-mode --no-transfer-progress -Dmaven.resolver.transport=wagon"
+}
+
+// Maven Central, for --egress: what Maven resolves plugins and
+// dependencies from when the project names no other repository.
+registry_egress: Array<String> = ["repo.maven.apache.org:443"]
 
 // The command schema of mvn 3.9.16, read from its help and checked against
 // the program: every option it lists is one the program accepts.
