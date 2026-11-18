@@ -123,7 +123,7 @@ An image is named only by the head of an environment expression (lask 6.7), so e
 - A run uses the pinned image, and never pulls it: an image that is not there is `E-IO-IMAGE-MISSING`, whose diagnostic names `lask sync`.
 - `--image` cannot be given on the command line: no CLI argument can name an image (lask 11.2). `lask eval aws.env` runs the default.
 
-`--image` is an `Environment`, never a `Runnable`: it carries the image and its image options (`platform`), and no run option. The run options are the tool's, given once in its `runnable` call (lask 8.8), so a caller's value for one of them goes in through the tool's parameters — `--extra_env`, `--with`, `--network` and the rest — and `aws.env(image = #amazon/aws-cli:2.37.0{memory: "1g"})` is a type error.
+`--image` is an `Environment`, never a `Runnable`: it carries the image and its image options (`platform`), and no run option. The run options are the tool's, given once in its `runnable` call (lask 8.8), so a caller's value for one of them goes in through the tool's parameters — `--extra_env`, `--with`, `--network` and the rest — and `aws.env(image = #amazon/aws-cli:2.37.0{ memory: "1g" })` is a type error.
 
 Nothing checks that the image passed is the tool's: `aws.env(image = #node:24)` builds an environment that runs node with the AWS variables. It is the caller's choice, written where they make it.
 
