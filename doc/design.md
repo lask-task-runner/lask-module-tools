@@ -374,7 +374,7 @@ Each tool lives in `lib/<name>.lask`, one file per tool, and `main.lask` re-expo
 
 A recipe lives under `lib/`, because a `dockerfile` path must stay inside the tree of the module that writes it (10.2): `lib/unix.lask` cannot name `images/unix/Dockerfile` at the repository root. For the same reason the selftest cannot write a recipe environment as a literal, and compares a recipe tool with itself.
 
-The command line of this repository reaches a re-exported function as it reaches a declared one: `lask eval aws.env --profile dev`, `lask run aws.env --help`.
+The command line of this repository reaches a re-exported function as it reaches a declared one: `lask eval aws.env --profile dev`, `lask run aws.env --help`. From Lask 0.19.0 it also takes the path as words, `lask eval aws env --profile dev`, which is how the help and completion write it, and `lask run aws --help` lists the functions of the namespace. The `@example` lines keep the `.` form, which every supported Lask accepts.
 
 ## 8. Testing
 
