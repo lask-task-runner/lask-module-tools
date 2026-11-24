@@ -387,7 +387,7 @@ Exported words: `curl`, `wget`, `openssl`, `jq`, `yq`, `envsubst`, `tar`, `gzip`
 
 ## Layout
 
-Each tool, or each family of tools, lives in `lib/<name>.lask`, built from `lib/common.lask`, and `main.lask` re-exports its public functions. A recipe lives in `lib/images/<name>/`, since a Dockerfile must be inside the tree of the module that names it. Only what `main.lask` lists reaches a project, and the command line of this repository reaches each of them as well: `lask eval aws.env --profile dev`, `lask run aws.env --help`.
+Each tool, or each family of tools, lives in `lib/<name>.lask`, built from `lib/common.lask`, and `main.lask` re-exports its public functions. A recipe lives in `lib/images/<name>/`, since a Dockerfile must be inside the tree of the module that names it. Only what `main.lask` lists reaches a project, and the command line of this repository reaches each of them as well: `lask eval aws.env --profile dev`, `lask run aws.env --help`. Lask 0.19.0 or later also takes the path as words, `lask eval aws env --profile dev`, and lists the functions of one tool with `lask run aws --help`.
 
 ## Testing
 
